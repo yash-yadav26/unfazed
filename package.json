@@ -1,0 +1,30 @@
+{
+  "dependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "tailwindcss": "^4.3.3"
+  },
+  "name": "unfazed",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  },
+   "scripts": {
+    "dev": "concurrently \"npm run dev --prefix unfazed-backend\" \"npm run dev --prefix unfazed-frontend\"",
+    "backend": "npm run dev --prefix unfazed-backend",
+    "frontend": "npm run dev --prefix unfazed-frontend"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yash-yadav26/unfazed.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/yash-yadav26/unfazed/issues"
+  },
+  "homepage": "https://github.com/yash-yadav26/unfazed#readme"
+}

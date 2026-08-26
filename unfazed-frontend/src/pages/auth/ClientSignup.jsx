@@ -16,6 +16,8 @@ import {
   User,
 } from "lucide-react";
 
+import { registerUser } from "../../api/authapi";
+
 function ClientSignup() {
   const navigate = useNavigate();
 
@@ -87,54 +89,37 @@ function ClientSignup() {
   ========================================================== */
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!validateForm()) {
-      return;
-    }
+  if (!validateForm()) {
+    return;
+  }
 
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
 
-      /*
-       * Backend API later:
-       *
-       * POST /auth/register
-       *
-       * Payload:
-       * {
-       *   name,
-       *   email,
-       *   password,
-       *   role: "CLIENT"
-       * }
-       */
+    const response = await registerUser({
+      name: formData.name,
+      email: formData.email,
+      password: formData.password,
+      role: "CLIENT",
+    });
 
-      console.log("Client signup data:", {
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        role: "CLIENT",
-      });
+    console.log("Client signup successful:", response);
 
-      /*
-       * Demo delay
-       * Backend API connect hone ke baad ye remove hoga.
-       */
-      await new Promise((resolve) => setTimeout(resolve, 700));
+    navigate("/login");
+  } catch (error) {
+    console.error("Client signup failed:", error);
 
-
-      navigate("/login");
-    } catch (error) {
-      console.error("Client signup failed:", error);
-
-      setErrors({
-        general: "Unable to create account. Please try again.",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    setErrors({
+      general:
+        error.response?.data?.message ||
+        "Unable to create account. Please try again.",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-slate-100 p-0 sm:p-4 lg:p-6">

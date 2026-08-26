@@ -16,6 +16,7 @@ import {
   Sparkles,
   Users,
 } from "lucide-react";
+import { loginUser } from "../../api/authapi";
 
 function Login() {
   const navigate = useNavigate();
@@ -121,73 +122,45 @@ function Login() {
   ========================================================== */
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!validateForm()) {
-      return;
+  if (!validateForm()) {
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    const response = await loginUser({
+      email: currentForm.email,
+      password: currentForm.password,
+      role: role.toUpperCase(),
+    });
+
+    console.log("Login successful:", response);
+
+    const { token, user } = response.data;
+
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(user));
+
+    if (role === "therapist") {
+      navigate("/therapist/profile-setup");
+    } else {
+      navigate("/client/profile-setup");
     }
+  } catch (error) {
+    console.error("Login failed:", error);
 
-    try {
-      setLoading(true);
-
-      /*
-       * Backend later:
-       *
-       * POST /auth/login
-       *
-       * {
-       *   email,
-       *   password,
-       *   role
-       * }
-       *
-       * Response:
-       * {
-       *   token,
-       *   user
-       * }
-       */
-
-      console.log("Login data:", {
-        email: currentForm.email,
-        password: currentForm.password,
-        role: role.toUpperCase(),
-      });
-
-      /*
-       * Demo delay
-       */
-
-      await new Promise((resolve) => setTimeout(resolve, 700));
-
-      /*
-       * =====================================================
-       * DEMO NAVIGATION
-       * =====================================================
-       *
-       * Login ke baad token future backend flow mein milega.
-       *
-       * Abhi direct navigation:
-       *
-       * Therapist → Therapist Profile Setup
-       * Client    → Client Profile Setup
-       */
-
-      if (role === "therapist") {
-        navigate("/therapist/profile-setup");
-      } else {
-        navigate("/client/profile-setup");
-      }
-    } catch (error) {
-      console.error("Login failed:", error);
-
-      setErrors({
-        general: "Unable to login. Please try again.",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    setErrors({
+      general:
+        error.response?.data?.message ||
+        "Unable to login. Please try again.",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-slate-100 p-0 sm:p-4 lg:p-6">

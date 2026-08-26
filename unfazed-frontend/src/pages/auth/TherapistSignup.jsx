@@ -14,6 +14,8 @@ import {
   User,
 } from "lucide-react";
 
+import { registerUser } from "../../api/authapi";
+
 function TherapistSignup() {
   const navigate = useNavigate();
 
@@ -106,72 +108,37 @@ function TherapistSignup() {
   ========================================================== */
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!validateForm()) {
-      return;
-    }
+  if (!validateForm()) {
+    return;
+  }
 
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
 
-      /*
-       * Backend API later:
-       *
-       * POST /auth/register
-       *
-       * Payload:
-       * {
-       *   name,
-       *   email,
-       *   password,
-       *   role: "THERAPIST"
-       * }
-       */
+    const response = await registerUser({
+      name: formData.name,
+      email: formData.email,
+      password: formData.password,
+      role: "THERAPIST",
+    });
 
-      console.log("Therapist signup data:", {
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        role: "THERAPIST",
-      });
+    console.log("Therapist signup successful:", response);
 
-      /*
-       * Demo delay
-       * Backend connect hone ke baad remove hoga.
-       */
+    navigate("/login");
+  } catch (error) {
+    console.error("Therapist signup failed:", error);
 
-      await new Promise((resolve) =>
-        setTimeout(resolve, 700)
-      );
-
-      /*
-       * IMPORTANT:
-       *
-       * Signup
-       *   ↓
-       * Login
-       *
-       * Login ke baad JWT milega.
-       * Phir Login.jsx therapist ko
-       * Profile Setup par bhejega.
-       */
-
-      navigate("/login");
-    } catch (error) {
-      console.error(
-        "Therapist signup failed:",
-        error
-      );
-
-      setErrors({
-        general:
-          "Unable to create account. Please try again.",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    setErrors({
+      general:
+        error.response?.data?.message ||
+        "Unable to create account. Please try again.",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-slate-100 p-0 sm:p-4 lg:p-6">
