@@ -89,37 +89,38 @@ function ClientSignup() {
   ========================================================== */
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (!validateForm()) {
-    return;
-  }
+    if (!validateForm()) {
+      return;
+    }
 
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const response = await registerUser({
-      name: formData.name,
-      email: formData.email,
-      password: formData.password,
-      role: "CLIENT",
-    });
+      const response = await registerUser({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword,
+        role: "CLIENT",
+      });
 
-    console.log("Client signup successful:", response);
+      console.log("Client signup successful:", response);
 
-    navigate("/login");
-  } catch (error) {
-    console.error("Client signup failed:", error);
+      navigate("/login");
+    } catch (error) {
+      console.error("Client signup failed:", error);
 
-    setErrors({
-      general:
-        error.response?.data?.message ||
-        "Unable to create account. Please try again.",
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+      setErrors({
+        general:
+          error.response?.data?.message ||
+          "Unable to create account. Please try again.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-100 p-0 sm:p-4 lg:p-6">

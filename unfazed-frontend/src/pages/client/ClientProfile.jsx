@@ -1,34 +1,79 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft,
   Edit3,
   HeartHandshake,
-  Mail,
   Phone,
   Save,
   UserRound,
 } from "lucide-react";
 
+import { getMyClientProfile, updateMyClientProfile } from "../../api/clientApi";
+
 function ClientProfile() {
-  const [client, setClient] = useState({
-    name: "Yash Yadav",
-    email: "yash@example.com",
-    phone: "+91 98765 43210",
-    age: "24",
-    gender: "Male",
-    occupation: "Software Developer",
-  });
+  const [client, setClient] = useState(null);
 
   const [editMode, setEditMode] = useState(false);
 
   const [editForm, setEditForm] = useState({
-    name: client.name,
-    phone: client.phone,
-    age: client.age,
-    gender: client.gender,
-    occupation: client.occupation,
+    name: "",
+    phone: "",
+    age: "",
+    gender: "",
+    occupation: "",
   });
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // ===============================
+  // Get My Client Profile
+  // ===============================
+
+  useEffect(() => {
+    const fetchClientProfile = async () => {
+      try {
+        setLoading(true);
+
+        const response = await getMyClientProfile();
+
+        const data = response.data;
+
+        const formattedClient = {
+          id: data._id,
+          name: data.name || "",
+          phone: data.phone || "",
+          age:
+            data.age !== undefined && data.age !== null ? String(data.age) : "",
+          gender: formatGender(data.gender),
+          occupation: data.occupation || "",
+        };
+
+        setClient(formattedClient);
+
+        setEditForm({
+          name: formattedClient.name,
+          phone: formattedClient.phone,
+          age: formattedClient.age,
+          gender: formattedClient.gender,
+          occupation: formattedClient.occupation,
+        });
+      } catch (error) {
+        console.error("Failed to fetch client profile:", error);
+
+        alert(error.response?.data?.message || "Unable to load your profile.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchClientProfile();
+  }, []);
+
+  // ===============================
+  // Handle Input Change
+  // ===============================
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -39,24 +84,82 @@ function ClientProfile() {
     }));
   };
 
+  // ===============================
+  // Update Client Profile
+  // ===============================
+
   const handleSave = async (e) => {
     e.preventDefault();
 
-    /*
-      Backend later:
+    try {
+      setSaving(true);
 
-      PATCH /clients/me
-    */
+      const response = await updateMyClientProfile({
+        name: editForm.name.trim(),
+        phone: editForm.phone.trim(),
+        age: Number(editForm.age),
+        gender: normalizeGender(editForm.gender),
+        occupation: editForm.occupation.trim(),
+      });
 
-    setClient((prev) => ({
-      ...prev,
-      ...editForm,
-    }));
+      const data = response.data;
 
-    setEditMode(false);
+      const updatedClient = {
+        id: data._id,
+        name: data.name || "",
+        phone: data.phone || "",
+        age:
+          data.age !== undefined && data.age !== null ? String(data.age) : "",
+        gender: formatGender(data.gender),
+        occupation: data.occupation || "",
+      };
 
-    console.log("PATCH /clients/me", editForm);
+      setClient(updatedClient);
+
+      setEditForm({
+        name: updatedClient.name,
+        phone: updatedClient.phone,
+        age: updatedClient.age,
+        gender: updatedClient.gender,
+        occupation: updatedClient.occupation,
+      });
+
+      setEditMode(false);
+    } catch (error) {
+      console.error("Client profile update failed:", error);
+
+      alert(
+        error.response?.data?.message ||
+          "Unable to update profile. Please try again.",
+      );
+    } finally {
+      setSaving(false);
+    }
   };
+
+  // ===============================
+  // Loading State
+  // ===============================
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <p className="text-sm text-slate-500">Loading profile...</p>
+      </div>
+    );
+  }
+
+  // ===============================
+  // Profile Not Found
+  // ===============================
+
+  if (!client) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <p className="text-sm text-red-500">Unable to load profile.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -97,6 +200,7 @@ function ClientProfile() {
       <main className="px-5 py-8 sm:px-8">
         <div className="mx-auto max-w-3xl">
           {/* Heading */}
+
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-wide text-violet-600">
@@ -125,8 +229,10 @@ function ClientProfile() {
           </div>
 
           {/* Profile Card */}
+
           <section className="mt-7 rounded-2xl border border-slate-200 bg-white">
             {/* Profile Header */}
+
             <div className="border-b border-slate-100 px-5 py-6">
               <div className="flex items-center gap-4">
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-100 text-lg font-bold text-violet-700">
@@ -144,18 +250,13 @@ function ClientProfile() {
             </div>
 
             {/* View */}
+
             {!editMode && (
               <div className="grid gap-5 p-5 sm:grid-cols-2">
                 <InfoCard
                   icon={<UserRound size={16} />}
                   label="Full Name"
                   value={client.name}
-                />
-
-                <InfoCard
-                  icon={<Mail size={16} />}
-                  label="Email"
-                  value={client.email}
                 />
 
                 <InfoCard
@@ -185,65 +286,62 @@ function ClientProfile() {
             )}
 
             {/* Edit Form */}
+
             {editMode && (
               <form onSubmit={handleSave} className="space-y-5 p-5">
                 <div className="grid gap-5 sm:grid-cols-2">
                   {/* Name */}
+
                   <FormField label="Full Name">
                     <input
                       name="name"
                       value={editForm.name}
                       onChange={handleChange}
+                      required
                       className="h-11 w-full rounded-xl border border-slate-200 px-4 text-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
                     />
                   </FormField>
 
-                  {/* Email */}
-                  <FormField label="Email">
-                    <input
-                      type="email"
-                      value={client.email}
-                      disabled
-                      className="h-11 w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-400 outline-none"
-                    />
-
-                    <p className="mt-1 text-[10px] text-slate-400">
-                      Email is linked to your account.
-                    </p>
-                  </FormField>
-
                   {/* Phone */}
+
                   <FormField label="Phone Number">
                     <input
                       name="phone"
                       value={editForm.phone}
                       onChange={handleChange}
+                      required
                       className="h-11 w-full rounded-xl border border-slate-200 px-4 text-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
                     />
                   </FormField>
 
                   {/* Age */}
+
                   <FormField label="Age">
                     <input
                       name="age"
                       type="number"
                       value={editForm.age}
                       onChange={handleChange}
+                      required
+                      min="1"
+                      max="120"
                       className="h-11 w-full rounded-xl border border-slate-200 px-4 text-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
                     />
                   </FormField>
 
                   {/* Gender */}
+
                   <FormField label="Gender">
                     <select
                       name="gender"
                       value={editForm.gender}
                       onChange={handleChange}
+                      required
                       className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
                     >
-                      <option value="Female">Female</option>
-
                       <option value="Male">Male</option>
+
+                      <option value="Female">Female</option>
 
                       <option value="Other">Other</option>
 
@@ -254,17 +352,20 @@ function ClientProfile() {
                   </FormField>
 
                   {/* Occupation */}
+
                   <FormField label="Occupation">
                     <input
                       name="occupation"
                       value={editForm.occupation}
                       onChange={handleChange}
+                      required
                       className="h-11 w-full rounded-xl border border-slate-200 px-4 text-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
                     />
                   </FormField>
                 </div>
 
                 {/* Actions */}
+
                 <div className="flex justify-end gap-2 border-t border-slate-100 pt-5">
                   <button
                     type="button"
@@ -279,17 +380,20 @@ function ClientProfile() {
 
                       setEditMode(false);
                     }}
-                    className="h-10 rounded-xl border border-slate-200 px-4 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                    disabled={saving}
+                    className="h-10 rounded-xl border border-slate-200 px-4 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     Cancel
                   </button>
 
                   <button
                     type="submit"
-                    className="inline-flex h-10 items-center gap-2 rounded-xl bg-violet-600 px-4 text-xs font-semibold text-white transition hover:bg-violet-700"
+                    disabled={saving}
+                    className="inline-flex h-10 items-center gap-2 rounded-xl bg-violet-600 px-4 text-xs font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <Save size={14} />
-                    Save Changes
+
+                    {saving ? "Saving..." : "Save Changes"}
                   </button>
                 </div>
               </form>
@@ -301,9 +405,9 @@ function ClientProfile() {
   );
 }
 
-/* =========================================================
-   INFO CARD
-========================================================= */
+// =========================================================
+// INFO CARD
+// =========================================================
 
 function InfoCard({ icon, label, value }) {
   return (
@@ -327,9 +431,9 @@ function InfoCard({ icon, label, value }) {
   );
 }
 
-/* =========================================================
-   FORM FIELD
-========================================================= */
+// =========================================================
+// FORM FIELD
+// =========================================================
 
 function FormField({ label, children }) {
   return (
@@ -343,13 +447,44 @@ function FormField({ label, children }) {
   );
 }
 
-/* =========================================================
-   HELPERS
-========================================================= */
+// =========================================================
+// GENDER HELPERS
+// =========================================================
+
+function formatGender(gender) {
+  const genderMap = {
+    MALE: "Male",
+    FEMALE: "Female",
+    OTHER: "Other",
+    PREFER_NOT_TO_SAY: "Prefer not to say",
+  };
+
+  return genderMap[gender] || "";
+}
+
+function normalizeGender(gender) {
+  const genderMap = {
+    Male: "MALE",
+    Female: "FEMALE",
+    Other: "OTHER",
+    "Prefer not to say": "PREFER_NOT_TO_SAY",
+  };
+
+  return genderMap[gender] || gender;
+}
+
+// =========================================================
+// GET INITIALS
+// =========================================================
 
 function getInitials(name) {
+  if (!name) {
+    return "";
+  }
+
   return name
     .split(" ")
+    .filter(Boolean)
     .map((word) => word[0])
     .join("")
     .slice(0, 2)

@@ -122,45 +122,52 @@ function Login() {
   ========================================================== */
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (!validateForm()) {
-    return;
-  }
-
-  try {
-    setLoading(true);
-
-    const response = await loginUser({
-      email: currentForm.email,
-      password: currentForm.password,
-      role: role.toUpperCase(),
-    });
-
-    console.log("Login successful:", response);
-
-    const { token, user } = response.data;
-
-    localStorage.setItem("token", token);
-    localStorage.setItem("user", JSON.stringify(user));
-
-    if (role === "therapist") {
-      navigate("/therapist/profile-setup");
-    } else {
-      navigate("/client/profile-setup");
+    if (!validateForm()) {
+      return;
     }
-  } catch (error) {
-    console.error("Login failed:", error);
 
-    setErrors({
-      general:
-        error.response?.data?.message ||
-        "Unable to login. Please try again.",
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      setLoading(true);
+
+      const response = await loginUser({
+        email: currentForm.email,
+        password: currentForm.password,
+        role: role.toUpperCase(),
+      });
+
+      console.log("Login successful:", response);
+
+      const { token, user } = response.data;
+
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+
+      if (role === "therapist") {
+        if (user.profileCompleted) {
+          navigate("/therapist/dashboard");
+        } else {
+          navigate("/therapist/profile-setup");
+        }
+      } else {
+        if (user.profileCompleted) {
+          navigate("/client");
+        } else {
+          navigate("/client/profile-setup");
+        }
+      }
+    } catch (error) {
+      console.error("Login failed:", error);
+
+      setErrors({
+        general:
+          error.response?.data?.message || "Unable to login. Please try again.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-100 p-0 sm:p-4 lg:p-6">

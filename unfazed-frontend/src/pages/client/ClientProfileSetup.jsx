@@ -7,6 +7,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
+import { createClient } from "../../api/clientApi";
+
 function ClientProfileSetup() {
   const navigate = useNavigate();
 
@@ -70,18 +72,15 @@ function ClientProfileSetup() {
     }
 
     if (!formData.presentingConcern.trim()) {
-      newErrors.presentingConcern =
-        "Please enter your presenting concern.";
+      newErrors.presentingConcern = "Please enter your presenting concern.";
     }
 
     if (!formData.history.trim()) {
-      newErrors.history =
-        "Please enter your relevant history.";
+      newErrors.history = "Please enter your relevant history.";
     }
 
     if (!formData.consent) {
-      newErrors.consent =
-        "Please provide your consent to continue.";
+      newErrors.consent = "Please provide your consent to continue.";
     }
 
     setErrors(newErrors);
@@ -103,44 +102,26 @@ function ClientProfileSetup() {
     try {
       setSaving(true);
 
-      /*
-        Backend APIs later:
-
-        PATCH /clients/me
-        POST /clients/me/intake
-        POST /clients/me/consent
-      */
-
-      console.log("Profile data:", {
+      const response = await createClient({
         name: formData.name,
         phone: formData.phone,
         age: formData.age,
         gender: formData.gender,
         occupation: formData.occupation,
-      });
-
-      console.log("Intake data:", {
         presentingConcern: formData.presentingConcern,
-        history: formData.history,
+        relevantHistory: formData.history,
+        consent: formData.consent,
       });
 
-      console.log("Consent:", formData.consent);
-
-      await new Promise((resolve) =>
-        setTimeout(resolve, 700),
-      );
-
-      /*
-        Setup complete.
-        User ko login page par bhej rahe hain
-        according to our planned flow.
-      */
+      console.log("Client profile created:", response);
 
       navigate("/client");
     } catch (error) {
-      console.error(
-        "Client setup failed:",
-        error,
+      console.error("Client setup failed:", error);
+
+      alert(
+        error.response?.data?.message ||
+          "Unable to save client profile. Please try again.",
       );
     } finally {
       setSaving(false);
@@ -155,22 +136,15 @@ function ClientProfileSetup() {
 
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex h-16 max-w-5xl items-center px-5 sm:px-8">
-          <Link
-            to="/"
-            className="flex items-center gap-3"
-          >
+          <Link to="/" className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-600 text-white">
               <HeartHandshake size={19} />
             </div>
 
             <div>
-              <p className="text-base font-bold tracking-tight">
-                Unfazed
-              </p>
+              <p className="text-base font-bold tracking-tight">Unfazed</p>
 
-              <p className="text-[9px] text-slate-500">
-                Client Setup
-              </p>
+              <p className="text-[9px] text-slate-500">Client Setup</p>
             </div>
           </Link>
         </div>
@@ -197,8 +171,8 @@ function ClientProfileSetup() {
             </h1>
 
             <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500">
-              Complete your profile and intake details before
-              starting your therapy journey.
+              Complete your profile and intake details before starting your
+              therapy journey.
             </p>
           </div>
 
@@ -209,9 +183,7 @@ function ClientProfileSetup() {
                 Profile & Intake
               </p>
 
-              <p className="text-[10px] text-slate-400">
-                Setup
-              </p>
+              <p className="text-[10px] text-slate-400">Setup</p>
             </div>
 
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
@@ -219,10 +191,7 @@ function ClientProfileSetup() {
             </div>
           </div>
 
-          <form
-            onSubmit={handleSubmit}
-            className="mt-6 space-y-6"
-          >
+          <form onSubmit={handleSubmit} className="mt-6 space-y-6">
             {/* =================================================
                 BASIC DETAILS
             ================================================== */}
@@ -239,11 +208,7 @@ function ClientProfileSetup() {
               </div>
 
               <div className="grid gap-5 p-5 sm:grid-cols-2">
-                <Field
-                  label="Full Name"
-                  required
-                  error={errors.name}
-                >
+                <Field label="Full Name" required error={errors.name}>
                   <input
                     name="name"
                     value={formData.name}
@@ -253,11 +218,7 @@ function ClientProfileSetup() {
                   />
                 </Field>
 
-                <Field
-                  label="Phone Number"
-                  required
-                  error={errors.phone}
-                >
+                <Field label="Phone Number" required error={errors.phone}>
                   <input
                     name="phone"
                     type="tel"
@@ -268,11 +229,7 @@ function ClientProfileSetup() {
                   />
                 </Field>
 
-                <Field
-                  label="Age"
-                  required
-                  error={errors.age}
-                >
+                <Field label="Age" required error={errors.age}>
                   <input
                     name="age"
                     type="number"
@@ -285,53 +242,33 @@ function ClientProfileSetup() {
                   />
                 </Field>
 
-                <Field
-                  label="Gender"
-                  required
-                  error={errors.gender}
-                >
+                <Field label="Gender" required error={errors.gender}>
                   <select
                     name="gender"
                     value={formData.gender}
                     onChange={handleChange}
                     className={inputClass(errors.gender)}
                   >
-                    <option value="">
-                      Select gender
-                    </option>
+                    <option value="">Select gender</option>
 
-                    <option value="female">
-                      Female
-                    </option>
+                    <option value="female">Female</option>
 
-                    <option value="male">
-                      Male
-                    </option>
+                    <option value="male">Male</option>
 
-                    <option value="other">
-                      Other
-                    </option>
+                    <option value="other">Other</option>
 
-                    <option value="prefer-not-to-say">
-                      Prefer not to say
-                    </option>
+                    <option value="prefer-not-to-say">Prefer not to say</option>
                   </select>
                 </Field>
 
                 <div className="sm:col-span-2">
-                  <Field
-                    label="Occupation"
-                    required
-                    error={errors.occupation}
-                  >
+                  <Field label="Occupation" required error={errors.occupation}>
                     <input
                       name="occupation"
                       value={formData.occupation}
                       onChange={handleChange}
                       placeholder="e.g. Software Engineer"
-                      className={inputClass(
-                        errors.occupation,
-                      )}
+                      className={inputClass(errors.occupation)}
                     />
                   </Field>
                 </div>
@@ -371,11 +308,7 @@ function ClientProfileSetup() {
                   />
                 </Field>
 
-                <Field
-                  label="Relevant History"
-                  required
-                  error={errors.history}
-                >
+                <Field label="Relevant History" required error={errors.history}>
                   <textarea
                     name="history"
                     rows={5}
@@ -440,9 +373,8 @@ function ClientProfileSetup() {
                     </div>
 
                     <p className="mt-2 text-xs leading-5 text-slate-500">
-                      I understand that the information I provide
-                      will be used as part of my therapy intake and
-                      care process.
+                      I understand that the information I provide will be used
+                      as part of my therapy intake and care process.
                     </p>
                   </div>
                 </label>
@@ -501,28 +433,19 @@ function ClientProfileSetup() {
    FIELD
 ========================================================= */
 
-function Field({
-  label,
-  required,
-  error,
-  children,
-}) {
+function Field({ label, required, error, children }) {
   return (
     <div>
       <label className="mb-2 block text-xs font-semibold text-slate-700">
         {label}
 
-        {required && (
-          <span className="ml-1 text-red-500">*</span>
-        )}
+        {required && <span className="ml-1 text-red-500">*</span>}
       </label>
 
       {children}
 
       {error && (
-        <p className="mt-1.5 text-[11px] font-medium text-red-500">
-          {error}
-        </p>
+        <p className="mt-1.5 text-[11px] font-medium text-red-500">{error}</p>
       )}
     </div>
   );
