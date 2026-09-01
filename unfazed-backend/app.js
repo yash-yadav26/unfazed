@@ -6,8 +6,17 @@ const helmet = require("helmet");
 const compression = require("compression");
 const cookieParser = require("cookie-parser");
 
-const authRoutes = require("./src/routes/authRoutes");
+
 const errorHandler = require("./src/middleware/errorHandler");
+const swaggerUi = require("swagger-ui-express");
+const swaggerSpec = require("./src/config/swagger");
+
+const authRoutes = require("./src/modules/auth");
+const therapistRoutes = require("./src/modules/therapist");
+const clientRoutes = require("./src/modules/client");
+
+
+
 
 const app = express();
 
@@ -15,9 +24,21 @@ const app = express();
 app.use(helmet());
 
 // CORS
+
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+];
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
@@ -41,14 +62,20 @@ app.get("/health", (req, res) => {
   });
 });
 
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 // Routes will come here
 // app.use("/api/auth", authRoutes);
 // app.use("/api/therapists", therapistRoutes);
 
 app.use("/api/auth", authRoutes);
 
+app.use("/api/therapists", therapistRoutes);
+
+app.use("/api/clients", clientRoutes);
+
+
 // Error handler
 app.use(errorHandler);
-
 
 module.exports = app;

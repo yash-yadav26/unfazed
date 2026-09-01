@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -11,6 +11,11 @@ import {
   UserRound,
   X,
 } from "lucide-react";
+
+import {
+  getMyTherapistProfile,
+  updateMyTherapistProfile,
+} from "../../api/therapistApi";
 
 const specializationOptions = [
   "Anxiety & Stress",
@@ -26,15 +31,60 @@ const languageOptions = ["English", "Hindi", "Hinglish"];
 function TherapistProfile() {
   const [isEditing, setIsEditing] = useState(false);
 
-  const [profile, setProfile] = useState({
-    name: "Therapist",
-    slug: "therapist",
-    bio: "I provide a safe and supportive space where clients can work through challenges and build healthier ways of living.",
-    specializations: ["Anxiety & Stress", "Relationships"],
-    languages: ["English", "Hindi"],
+  const [profile, setProfile] = useState(null);
+
+  const [formData, setFormData] = useState({
+    name: "",
+    slug: "",
+    bio: "",
+    specializations: [],
+    languages: [],
   });
 
-  const [formData, setFormData] = useState(profile);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // =========================================================
+  // GET MY THERAPIST PROFILE
+  // =========================================================
+
+  useEffect(() => {
+    const fetchTherapistProfile = async () => {
+      try {
+        setLoading(true);
+
+        const response = await getMyTherapistProfile();
+
+        const data = response.data;
+
+        const formattedProfile = {
+          id: data._id,
+          name: data.name || "",
+          slug: data.slug || "",
+          bio: data.bio || "",
+          specializations: data.specializations || [],
+          languages: data.languages || [],
+        };
+
+        setProfile(formattedProfile);
+        setFormData(formattedProfile);
+      } catch (error) {
+        console.error("Failed to fetch therapist profile:", error);
+
+        alert(
+          error.response?.data?.message || "Unable to load therapist profile.",
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTherapistProfile();
+  }, []);
+
+  // =========================================================
+  // GENERATE SLUG
+  // =========================================================
 
   const generateSlug = (name) => {
     return name
@@ -44,6 +94,10 @@ function TherapistProfile() {
       .replace(/\s+/g, "-")
       .replace(/-+/g, "-");
   };
+
+  // =========================================================
+  // HANDLE CHANGE
+  // =========================================================
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -64,6 +118,10 @@ function TherapistProfile() {
     }));
   };
 
+  // =========================================================
+  // TOGGLE SELECTION
+  // =========================================================
+
   const toggleSelection = (field, value) => {
     setFormData((prev) => {
       const exists = prev[field].includes(value);
@@ -77,17 +135,29 @@ function TherapistProfile() {
     });
   };
 
+  // =========================================================
+  // EDIT
+  // =========================================================
+
   const handleEdit = () => {
     setFormData(profile);
     setIsEditing(true);
   };
+
+  // =========================================================
+  // CANCEL
+  // =========================================================
 
   const handleCancel = () => {
     setFormData(profile);
     setIsEditing(false);
   };
 
-  const handleSave = (e) => {
+  // =========================================================
+  // UPDATE PROFILE
+  // =========================================================
+
+  const handleSave = async (e) => {
     e.preventDefault();
 
     if (formData.specializations.length === 0) {
@@ -100,14 +170,68 @@ function TherapistProfile() {
       return;
     }
 
-    setProfile(formData);
-    setIsEditing(false);
+    try {
+      setSaving(true);
 
-    // API later:
-    // GET profile when page loads
-    // PATCH profile when saved
-    console.log("Therapist profile updated:", formData);
+      const response = await updateMyTherapistProfile({
+        name: formData.name.trim(),
+        slug: formData.slug.trim(),
+        bio: formData.bio.trim(),
+        specializations: formData.specializations,
+        languages: formData.languages,
+      });
+
+      const data = response.data;
+
+      const updatedProfile = {
+        id: data._id,
+        name: data.name || "",
+        slug: data.slug || "",
+        bio: data.bio || "",
+        specializations: data.specializations || [],
+        languages: data.languages || [],
+      };
+
+      setProfile(updatedProfile);
+      setFormData(updatedProfile);
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Therapist profile update failed:", error);
+
+      alert(
+        error.response?.data?.message ||
+          "Unable to update therapist profile. Please try again.",
+      );
+    } finally {
+      setSaving(false);
+    }
   };
+
+  // =========================================================
+  // LOADING
+  // =========================================================
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <p className="text-sm text-slate-500">Loading profile...</p>
+      </div>
+    );
+  }
+
+  // =========================================================
+  // PROFILE NOT FOUND
+  // =========================================================
+
+  if (!profile) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <p className="text-sm text-red-500">
+          Unable to load therapist profile.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -148,6 +272,7 @@ function TherapistProfile() {
       <main className="px-5 py-8 sm:px-8 lg:px-10">
         <div className="mx-auto max-w-5xl">
           {/* Heading */}
+
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-wide text-violet-600">
@@ -177,8 +302,10 @@ function TherapistProfile() {
           </div>
 
           {/* Profile Card */}
+
           <section className="mt-7 rounded-2xl border border-slate-200 bg-white p-5 sm:p-7">
             {/* Profile Header */}
+
             <div className="flex flex-col gap-5 border-b border-slate-100 pb-6 sm:flex-row sm:items-center">
               <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-2xl font-bold text-violet-700">
                 {getInitials(profile.name)}
@@ -205,6 +332,7 @@ function TherapistProfile() {
             {!isEditing && (
               <div className="mt-7 space-y-7">
                 {/* Basic Information */}
+
                 <div>
                   <div className="flex items-center gap-3">
                     <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
@@ -233,6 +361,7 @@ function TherapistProfile() {
                 </div>
 
                 {/* Bio */}
+
                 <div className="border-t border-slate-100 pt-7">
                   <h3 className="text-sm font-bold text-slate-900">Bio</h3>
 
@@ -242,6 +371,7 @@ function TherapistProfile() {
                 </div>
 
                 {/* Specializations */}
+
                 <div className="border-t border-slate-100 pt-7">
                   <h3 className="text-sm font-bold text-slate-900">
                     Specializations
@@ -260,6 +390,7 @@ function TherapistProfile() {
                 </div>
 
                 {/* Languages */}
+
                 <div className="border-t border-slate-100 pt-7">
                   <h3 className="text-sm font-bold text-slate-900">
                     Languages
@@ -278,6 +409,7 @@ function TherapistProfile() {
                 </div>
 
                 {/* Public Profile Note */}
+
                 <div className="rounded-xl border border-violet-100 bg-violet-50 p-4">
                   <div className="flex items-start gap-3">
                     <ShieldCheck
@@ -307,6 +439,7 @@ function TherapistProfile() {
             {isEditing && (
               <form onSubmit={handleSave} className="mt-7 space-y-8">
                 {/* Basic Information */}
+
                 <div>
                   <div className="mb-5">
                     <h3 className="text-sm font-bold text-slate-900">
@@ -320,6 +453,7 @@ function TherapistProfile() {
 
                   <div className="grid gap-5 sm:grid-cols-2">
                     {/* Name */}
+
                     <div>
                       <label
                         htmlFor="name"
@@ -340,6 +474,7 @@ function TherapistProfile() {
                     </div>
 
                     {/* Slug */}
+
                     <div>
                       <label
                         htmlFor="slug"
@@ -372,6 +507,7 @@ function TherapistProfile() {
                 </div>
 
                 {/* Bio */}
+
                 <div className="border-t border-slate-100 pt-7">
                   <label
                     htmlFor="bio"
@@ -399,6 +535,7 @@ function TherapistProfile() {
                 </div>
 
                 {/* Specializations */}
+
                 <div className="border-t border-slate-100 pt-7">
                   <h3 className="text-sm font-bold text-slate-900">
                     Specializations
@@ -443,6 +580,7 @@ function TherapistProfile() {
                 </div>
 
                 {/* Languages */}
+
                 <div className="border-t border-slate-100 pt-7">
                   <h3 className="text-sm font-bold text-slate-900">
                     Languages
@@ -475,11 +613,13 @@ function TherapistProfile() {
                 </div>
 
                 {/* Save */}
+
                 <div className="flex flex-col gap-3 border-t border-slate-100 pt-6 sm:flex-row sm:justify-end">
                   <button
                     type="button"
                     onClick={handleCancel}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                    disabled={saving}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <X size={15} />
                     Cancel
@@ -487,10 +627,11 @@ function TherapistProfile() {
 
                   <button
                     type="submit"
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-violet-600 px-6 text-xs font-bold text-white shadow-lg shadow-violet-200 transition hover:bg-violet-700"
+                    disabled={saving}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-violet-600 px-6 text-xs font-bold text-white shadow-lg shadow-violet-200 transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <Save size={16} />
-                    Save Changes
+                    {saving ? "Saving..." : "Save Changes"}
                   </button>
                 </div>
               </form>
@@ -498,9 +639,9 @@ function TherapistProfile() {
           </section>
 
           {/* Bottom Note */}
+
           <div className="mt-5 flex items-center justify-center gap-2 text-[11px] text-slate-400">
             <HeartHandshake size={14} />
-
             <span>Keep your therapist profile information up to date.</span>
           </div>
         </div>
@@ -509,9 +650,9 @@ function TherapistProfile() {
   );
 }
 
-/* =========================================================
-   INFO CARD
-========================================================= */
+// =========================================================
+// PROFILE INFO
+// =========================================================
 
 function ProfileInfo({ label, value }) {
   return (
@@ -525,13 +666,18 @@ function ProfileInfo({ label, value }) {
   );
 }
 
-/* =========================================================
-   HELPERS
-========================================================= */
+// =========================================================
+// HELPERS
+// =========================================================
 
 function getInitials(name) {
+  if (!name) {
+    return "";
+  }
+
   return name
     .split(" ")
+    .filter(Boolean)
     .map((word) => word[0])
     .join("")
     .slice(0, 2)

@@ -20,8 +20,7 @@ function TherapistSignup() {
   const navigate = useNavigate();
 
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] =
-    useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -65,31 +64,20 @@ function TherapistSignup() {
 
     if (!formData.email.trim()) {
       newErrors.email = "Email is required.";
-    } else if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-        formData.email
-      )
-    ) {
-      newErrors.email =
-        "Please enter a valid email address.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Please enter a valid email address.";
     }
 
     if (!formData.password) {
       newErrors.password = "Password is required.";
     } else if (formData.password.length < 6) {
-      newErrors.password =
-        "Password must be at least 6 characters.";
+      newErrors.password = "Password must be at least 6 characters.";
     }
 
     if (!formData.confirmPassword) {
-      newErrors.confirmPassword =
-        "Please confirm your password.";
-    } else if (
-      formData.password !==
-      formData.confirmPassword
-    ) {
-      newErrors.confirmPassword =
-        "Passwords do not match.";
+      newErrors.confirmPassword = "Please confirm your password.";
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match.";
     }
 
     setErrors(newErrors);
@@ -108,48 +96,46 @@ function TherapistSignup() {
   ========================================================== */
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (!validateForm()) {
-    return;
-  }
+    if (!validateForm()) {
+      return;
+    }
 
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const response = await registerUser({
-      name: formData.name,
-      email: formData.email,
-      password: formData.password,
-      role: "THERAPIST",
-    });
+      const response = await registerUser({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword,
+        role: "THERAPIST",
+      });
+      console.log("Therapist signup successful:", response);
 
-    console.log("Therapist signup successful:", response);
+      navigate("/login");
+    } catch (error) {
+      console.error("Therapist signup failed:", error);
 
-    navigate("/login");
-  } catch (error) {
-    console.error("Therapist signup failed:", error);
-
-    setErrors({
-      general:
-        error.response?.data?.message ||
-        "Unable to create account. Please try again.",
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+      setErrors({
+        general:
+          error.response?.data?.message ||
+          "Unable to create account. Please try again.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-100 p-0 sm:p-4 lg:p-6">
       <div className="mx-auto flex min-h-screen max-w-7xl overflow-hidden bg-white shadow-xl sm:min-h-[calc(100vh-32px)] sm:rounded-3xl lg:min-h-[calc(100vh-48px)]">
-
         {/* =====================================================
             LEFT SIDE
         ====================================================== */}
 
         <section className="relative hidden w-[45%] overflow-hidden bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-100 lg:flex">
-          
           {/* Background decorations */}
 
           <div className="absolute -left-24 -top-24 h-80 w-80 rounded-full bg-violet-300/40 blur-3xl" />
@@ -159,13 +145,9 @@ function TherapistSignup() {
           <div className="absolute bottom-[-100px] left-[-80px] h-80 w-[500px] rounded-[50%] bg-violet-200/50" />
 
           <div className="relative z-10 flex w-full flex-col p-8 xl:p-11">
-
             {/* Logo */}
 
-            <Link
-              to="/"
-              className="flex w-fit items-center gap-3"
-            >
+            <Link to="/" className="flex w-fit items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-600 text-white shadow-sm">
                 <HeartHandshake size={21} />
               </div>
@@ -184,7 +166,6 @@ function TherapistSignup() {
             {/* Main content */}
 
             <div className="mt-14 xl:mt-16">
-
               <div className="inline-flex items-center gap-2 rounded-full bg-violet-100 px-3 py-1.5 text-xs font-semibold text-violet-700">
                 <Heart size={13} />
                 For Therapists
@@ -192,22 +173,18 @@ function TherapistSignup() {
 
               <h1 className="mt-6 max-w-md text-4xl font-bold leading-[1.1] tracking-tight text-slate-950 xl:text-5xl">
                 Build your practice
-                <span className="block text-violet-600">
-                  with Unfazed.
-                </span>
+                <span className="block text-violet-600">with Unfazed.</span>
               </h1>
 
               <p className="mt-5 max-w-md text-sm leading-6 text-slate-600">
-                Create your therapist account to manage
-                sessions, clients, notes, scheduling, and
-                your professional profile.
+                Create your therapist account to manage sessions, clients,
+                notes, scheduling, and your professional profile.
               </p>
             </div>
 
             {/* Benefits */}
 
             <div className="mt-9 space-y-4">
-
               <SignupFeature
                 icon={<CheckCircle2 size={16} />}
                 title="Manage your therapy sessions"
@@ -227,23 +204,17 @@ function TherapistSignup() {
                 icon={<ShieldCheck size={16} />}
                 title="Private and secure experience"
               />
-
             </div>
 
             {/* Bottom card */}
 
             <div className="relative mt-auto pt-8">
               <div className="relative overflow-hidden rounded-3xl border border-white/70 bg-white/55 p-6 backdrop-blur">
-
                 <div className="absolute -right-5 -top-5 flex h-24 w-24 items-center justify-center rounded-full bg-violet-200/60">
-                  <HeartHandshake
-                    size={32}
-                    className="text-violet-500"
-                  />
+                  <HeartHandshake size={32} className="text-violet-500" />
                 </div>
 
                 <div className="relative z-10 max-w-sm">
-
                   <div className="flex items-center gap-2">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100 text-violet-600">
                       <Heart size={15} />
@@ -255,19 +226,16 @@ function TherapistSignup() {
                   </div>
 
                   <p className="mt-4 max-w-xs text-sm font-semibold leading-6 text-slate-800">
-                    Create your account, complete your
-                    professional profile, and start managing
-                    your practice.
+                    Create your account, complete your professional profile, and
+                    start managing your practice.
                   </p>
 
                   <p className="mt-1 text-xs text-slate-500">
                     Therapy. Together.
                   </p>
-
                 </div>
               </div>
             </div>
-
           </div>
         </section>
 
@@ -276,29 +244,20 @@ function TherapistSignup() {
         ====================================================== */}
 
         <section className="flex w-full flex-col bg-white lg:w-[55%]">
-
           {/* Top */}
 
           <div className="flex items-center justify-between px-6 py-5 sm:px-10">
-
             {/* Mobile logo */}
 
-            <Link
-              to="/"
-              className="flex items-center gap-2 lg:hidden"
-            >
+            <Link to="/" className="flex items-center gap-2 lg:hidden">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-100 text-violet-600">
                 <HeartHandshake size={19} />
               </div>
 
               <div>
-                <p className="text-base font-bold text-slate-900">
-                  Unfazed
-                </p>
+                <p className="text-base font-bold text-slate-900">Unfazed</p>
 
-                <p className="text-[9px] text-slate-500">
-                  Therapy. Together.
-                </p>
+                <p className="text-[9px] text-slate-500">Therapy. Together.</p>
               </div>
             </Link>
 
@@ -309,18 +268,15 @@ function TherapistSignup() {
               <ArrowLeft size={14} />
               Back
             </Link>
-
           </div>
 
           {/* Form area */}
 
           <div className="flex flex-1 items-center justify-center px-6 pb-8 sm:px-10">
             <div className="w-full max-w-[420px]">
-
               {/* Heading */}
 
               <div className="text-center">
-
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
                   <HeartHandshake size={23} />
                 </div>
@@ -332,7 +288,6 @@ function TherapistSignup() {
                 <p className="mt-2 text-sm text-slate-500">
                   Start building your therapy practice with Unfazed
                 </p>
-
               </div>
 
               {/* Therapist badge */}
@@ -356,11 +311,7 @@ function TherapistSignup() {
 
               {/* Form */}
 
-              <form
-                onSubmit={handleSubmit}
-                className="mt-6 space-y-4"
-              >
-
+              <form onSubmit={handleSubmit} className="mt-6 space-y-4">
                 {/* Full Name */}
 
                 <div>
@@ -372,7 +323,6 @@ function TherapistSignup() {
                   </label>
 
                   <div className="relative">
-
                     <User
                       size={17}
                       className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
@@ -391,7 +341,6 @@ function TherapistSignup() {
                           : "border-slate-200 focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
                       }`}
                     />
-
                   </div>
 
                   {errors.name && (
@@ -412,7 +361,6 @@ function TherapistSignup() {
                   </label>
 
                   <div className="relative">
-
                     <Mail
                       size={17}
                       className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
@@ -431,7 +379,6 @@ function TherapistSignup() {
                           : "border-slate-200 focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
                       }`}
                     />
-
                   </div>
 
                   {errors.email && (
@@ -452,7 +399,6 @@ function TherapistSignup() {
                   </label>
 
                   <div className="relative">
-
                     <LockKeyhole
                       size={17}
                       className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
@@ -461,11 +407,7 @@ function TherapistSignup() {
                     <input
                       id="password"
                       name="password"
-                      type={
-                        showPassword
-                          ? "text"
-                          : "password"
-                      }
+                      type={showPassword ? "text" : "password"}
                       value={formData.password}
                       onChange={handleChange}
                       placeholder="Create a password"
@@ -478,23 +420,14 @@ function TherapistSignup() {
 
                     <button
                       type="button"
-                      onClick={() =>
-                        setShowPassword(!showPassword)
-                      }
+                      onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
                       aria-label={
-                        showPassword
-                          ? "Hide password"
-                          : "Show password"
+                        showPassword ? "Hide password" : "Show password"
                       }
                     >
-                      {showPassword ? (
-                        <EyeOff size={17} />
-                      ) : (
-                        <Eye size={17} />
-                      )}
+                      {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                     </button>
-
                   </div>
 
                   {errors.password && (
@@ -515,7 +448,6 @@ function TherapistSignup() {
                   </label>
 
                   <div className="relative">
-
                     <LockKeyhole
                       size={17}
                       className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
@@ -524,11 +456,7 @@ function TherapistSignup() {
                     <input
                       id="confirmPassword"
                       name="confirmPassword"
-                      type={
-                        showConfirmPassword
-                          ? "text"
-                          : "password"
-                      }
+                      type={showConfirmPassword ? "text" : "password"}
                       value={formData.confirmPassword}
                       onChange={handleChange}
                       placeholder="Confirm your password"
@@ -542,15 +470,11 @@ function TherapistSignup() {
                     <button
                       type="button"
                       onClick={() =>
-                        setShowConfirmPassword(
-                          !showConfirmPassword
-                        )
+                        setShowConfirmPassword(!showConfirmPassword)
                       }
                       className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
                       aria-label={
-                        showConfirmPassword
-                          ? "Hide password"
-                          : "Show password"
+                        showConfirmPassword ? "Hide password" : "Show password"
                       }
                     >
                       {showConfirmPassword ? (
@@ -559,7 +483,6 @@ function TherapistSignup() {
                         <Eye size={17} />
                       )}
                     </button>
-
                   </div>
 
                   {errors.confirmPassword && (
@@ -588,7 +511,6 @@ function TherapistSignup() {
                     </>
                   )}
                 </button>
-
               </form>
 
               {/* Login link */}
@@ -619,7 +541,6 @@ function TherapistSignup() {
                 <ShieldCheck size={14} />
                 Your information is private and secure.
               </div>
-
             </div>
           </div>
         </section>
@@ -639,9 +560,7 @@ function SignupFeature({ icon, title }) {
         {icon}
       </div>
 
-      <p className="text-xs font-medium text-slate-600">
-        {title}
-      </p>
+      <p className="text-xs font-medium text-slate-600">{title}</p>
     </div>
   );
 }

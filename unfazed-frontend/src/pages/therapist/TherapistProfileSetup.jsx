@@ -11,6 +11,7 @@ import {
   Sparkles,
   User,
 } from "lucide-react";
+import { createTherapist } from "../../api/therapistApi";
 
 const specializationOptions = [
   "Anxiety & Stress",
@@ -97,68 +98,47 @@ function TherapistProfileSetup() {
      SUBMIT
   ========================================================== */
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (formData.specializations.length === 0) {
-      alert("Please select at least one specialization.");
-      return;
-    }
+  if (formData.specializations.length === 0) {
+    alert("Please select at least one specialization.");
+    return;
+  }
 
-    if (formData.languages.length === 0) {
-      alert("Please select at least one language.");
-      return;
-    }
+  if (formData.languages.length === 0) {
+    alert("Please select at least one language.");
+    return;
+  }
 
-    try {
-      setSaving(true);
+  try {
+    setSaving(true);
 
-      /*
-       * Backend API later:
-       *
-       * PATCH /therapists/me
-       *
-       * Payload:
-       * {
-       *   name,
-       *   slug,
-       *   bio,
-       *   specializations,
-       *   languages
-       * }
-       */
+    const response = await createTherapist({
+      name: formData.name,
+      slug: formData.slug,
+      bio: formData.bio,
+      specializations: formData.specializations,
+      languages: formData.languages,
+    });
 
-      console.log("Therapist profile:", formData);
+    console.log("Therapist profile created:", response);
 
-      /*
-       * Temporary demo delay.
-       * Backend API connect hone ke baad
-       * actual API call yahan hogi.
-       */
+    navigate("/therapist/dashboard");
+  } catch (error) {
+    console.error(
+      "Therapist profile setup failed:",
+      error
+    );
 
-      await new Promise((resolve) => setTimeout(resolve, 700));
-
-      /*
-       * IMPORTANT FLOW:
-       *
-       * Therapist Signup
-       *        ↓
-       * Therapist Profile Setup
-       *        ↓
-       * Login
-       *        ↓
-       * Therapist Dashboard
-       *
-       * Yahan dashboard par direct navigate NAHI karna.
-       */
-
-      navigate("/therapist/dashboard");
-    } catch (error) {
-      console.error("Therapist profile setup failed:", error);
-    } finally {
-      setSaving(false);
-    }
-  };
+    alert(
+      error.response?.data?.message ||
+        "Unable to save therapist profile. Please try again."
+    );
+  } finally {
+    setSaving(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-slate-100">
