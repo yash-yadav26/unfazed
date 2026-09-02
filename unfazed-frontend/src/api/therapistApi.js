@@ -1,8 +1,8 @@
 import api from "./axios";
 
-// ===============================
-// Create Therapist Profile
-// ===============================
+/* -------------------------------------------------------------------------- */
+/*                        Create Therapist Profile                            */
+/* -------------------------------------------------------------------------- */
 
 export const createTherapist = async (data) => {
   const response = await api.post("/therapists", data);
@@ -10,9 +10,9 @@ export const createTherapist = async (data) => {
   return response.data;
 };
 
-// ===============================
-// Get My Therapist Profile
-// ===============================
+/* -------------------------------------------------------------------------- */
+/*                      Get My Therapist Profile                             */
+/* -------------------------------------------------------------------------- */
 
 export const getMyTherapistProfile = async () => {
   const response = await api.get("/therapists/me");
@@ -20,9 +20,9 @@ export const getMyTherapistProfile = async () => {
   return response.data;
 };
 
-// ===============================
-// Get All Therapists
-// ===============================
+/* -------------------------------------------------------------------------- */
+/*                         Get All Therapists                                */
+/* -------------------------------------------------------------------------- */
 
 export const getAllTherapists = async () => {
   const response = await api.get("/therapists");
@@ -30,9 +30,19 @@ export const getAllTherapists = async () => {
   return response.data;
 };
 
-// ===============================
-// Update My Therapist Profile
-// ===============================
+/* -------------------------------------------------------------------------- */
+/*                    Get Therapist Profile By Slug                           */
+/* -------------------------------------------------------------------------- */
+
+export const getTherapistBySlug = async (slug) => {
+  const response = await api.get(`/therapists/${slug}`);
+
+  return response.data;
+};
+
+/* -------------------------------------------------------------------------- */
+/*                      Update My Therapist Profile                           */
+/* -------------------------------------------------------------------------- */
 
 export const updateMyTherapistProfile = async (data) => {
   const response = await api.patch("/therapists/me", data);
@@ -40,9 +50,9 @@ export const updateMyTherapistProfile = async (data) => {
   return response.data;
 };
 
-// ===============================
-// Delete My Therapist Profile
-// ===============================
+/* -------------------------------------------------------------------------- */
+/*                      Delete My Therapist Profile                           */
+/* -------------------------------------------------------------------------- */
 
 export const deleteMyTherapistProfile = async () => {
   const response = await api.delete("/therapists/me");

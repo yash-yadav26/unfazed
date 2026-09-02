@@ -1,10 +1,9 @@
 const { z } = require("zod");
-
 const ApiError = require("../../../utils/apiError");
 
-// ===============================
-// Therapist Profile Schema
-// ===============================
+/* -------------------------------------------------------------------------- */
+/*                          Therapist Profile Schema                           */
+/* -------------------------------------------------------------------------- */
 
 const therapistProfileSchema = z
   .object({
@@ -40,21 +39,43 @@ const therapistProfileSchema = z
   })
   .strict();
 
-// ===============================
-// Create Profile Schema
-// ===============================
+/* -------------------------------------------------------------------------- */
+/*                           Create Profile Schema                             */
+/* -------------------------------------------------------------------------- */
 
 const createTherapistSchema = therapistProfileSchema;
 
-// ===============================
-// Update Profile Schema
-// ===============================
+/* -------------------------------------------------------------------------- */
+/*                           Update Profile Schema                             */
+/* -------------------------------------------------------------------------- */
 
 const updateTherapistSchema = therapistProfileSchema.partial();
 
-// ===============================
-// Validation Middleware
-// ===============================
+/* -------------------------------------------------------------------------- */
+/*                       Get Therapist By Slug Schema                         */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * GET /api/therapists/:slug
+ */
+
+const getTherapistBySlugParamsSchema = z
+  .object({
+    slug: z
+      .string()
+      .trim()
+      .min(2, "Profile slug must be at least 2 characters.")
+      .max(100, "Profile slug cannot exceed 100 characters.")
+      .regex(
+        /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+        "Profile slug can only contain lowercase letters, numbers, and hyphens.",
+      ),
+  })
+  .strict();
+
+/* -------------------------------------------------------------------------- */
+/*                         Validation Middleware                              */
+/* -------------------------------------------------------------------------- */
 
 const parseRequestPart = (schema, key) => {
   return (req, res, next) => {
@@ -77,15 +98,28 @@ const parseRequestPart = (schema, key) => {
   };
 };
 
-// ===============================
-// Export Validators
-// ===============================
+/* -------------------------------------------------------------------------- */
+/*                              Validators                                    */
+/* -------------------------------------------------------------------------- */
 
+// POST /api/therapists
 const validateCreateTherapist = parseRequestPart(createTherapistSchema, "body");
 
+// PATCH /api/therapists/me
 const validateUpdateTherapist = parseRequestPart(updateTherapistSchema, "body");
+
+// GET /api/therapists/:slug
+const validateGetTherapistBySlug = parseRequestPart(
+  getTherapistBySlugParamsSchema,
+  "params",
+);
+
+/* -------------------------------------------------------------------------- */
+/*                                  Export                                    */
+/* -------------------------------------------------------------------------- */
 
 module.exports = {
   validateCreateTherapist,
   validateUpdateTherapist,
+  validateGetTherapistBySlug,
 };

@@ -4,9 +4,9 @@ const ApiResponse = require("../../../utils/apiResponse");
 
 const asyncHandler = require("../../../utils/asyncHandler");
 
-// ===============================
-// Create Therapist Profile
-// ===============================
+/* -------------------------------------------------------------------------- */
+/*                         Create Therapist Profile                           */
+/* -------------------------------------------------------------------------- */
 
 const createTherapistController = asyncHandler(async (req, res) => {
   const result = await therapistService.createTherapistProfile(
@@ -21,9 +21,9 @@ const createTherapistController = asyncHandler(async (req, res) => {
     );
 });
 
-// ===============================
-// Get My Therapist Profile
-// ===============================
+/* -------------------------------------------------------------------------- */
+/*                         Get My Therapist Profile                           */
+/* -------------------------------------------------------------------------- */
 
 const getMyTherapistController = asyncHandler(async (req, res) => {
   const result = await therapistService.getMyTherapistProfile(req.user.id);
@@ -35,9 +35,9 @@ const getMyTherapistController = asyncHandler(async (req, res) => {
     );
 });
 
-// ===============================
-// Get All Therapists
-// ===============================
+/* -------------------------------------------------------------------------- */
+/*                           Get All Therapists                               */
+/* -------------------------------------------------------------------------- */
 
 const getAllTherapistsController = asyncHandler(async (req, res) => {
   const result = await therapistService.getAllTherapists();
@@ -47,9 +47,30 @@ const getAllTherapistsController = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, result, "Therapists fetched successfully."));
 });
 
-// ===============================
-// Update My Therapist Profile
-// ===============================
+/* -------------------------------------------------------------------------- */
+/*                       Get Therapist Profile By Slug                        */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Public therapist profile.
+ *
+ * GET /api/therapists/:slug
+ */
+const getTherapistBySlugController = asyncHandler(async (req, res) => {
+  const { slug } = req.validatedParams;
+
+  const result = await therapistService.getTherapistBySlug(slug);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, result, "Therapist profile fetched successfully."),
+    );
+});
+
+/* -------------------------------------------------------------------------- */
+/*                       Update My Therapist Profile                          */
+/* -------------------------------------------------------------------------- */
 
 const updateMyTherapistController = asyncHandler(async (req, res) => {
   const result = await therapistService.updateMyTherapistProfile(
@@ -64,9 +85,9 @@ const updateMyTherapistController = asyncHandler(async (req, res) => {
     );
 });
 
-// ===============================
-// Delete My Therapist Profile
-// ===============================
+/* -------------------------------------------------------------------------- */
+/*                       Delete My Therapist Profile                          */
+/* -------------------------------------------------------------------------- */
 
 const deleteMyTherapistController = asyncHandler(async (req, res) => {
   const result = await therapistService.deleteMyTherapistProfile(req.user.id);
@@ -78,10 +99,15 @@ const deleteMyTherapistController = asyncHandler(async (req, res) => {
     );
 });
 
+/* -------------------------------------------------------------------------- */
+/*                                  Export                                    */
+/* -------------------------------------------------------------------------- */
+
 module.exports = {
   createTherapistController,
   getMyTherapistController,
   getAllTherapistsController,
+  getTherapistBySlugController,
   updateMyTherapistController,
   deleteMyTherapistController,
 };

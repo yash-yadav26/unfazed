@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+
 import {
   ArrowLeft,
   ArrowRight,
@@ -7,9 +8,13 @@ import {
   CheckCircle2,
   Clock3,
   HeartHandshake,
+  IndianRupee,
   MapPin,
   UserRound,
 } from "lucide-react";
+
+import { getTherapistBySlug } from "../../api/therapistApi";
+import { getAvailableSessionSlots } from "../../api/sessionApi";
 
 function BookingPage() {
   const navigate = useNavigate();
@@ -20,46 +25,12 @@ function BookingPage() {
      THERAPIST
   ========================================================== */
 
-  const therapist = useMemo(() => {
-    const slugMap = {
-      "dr-sharma": {
-        id: "therapist-1",
-        name: "Dr. Sharma",
-        title: "Clinical Psychologist",
-        specialization: "Anxiety & Stress",
-        location: "India",
-      },
-
-      "dr-neha-gupta": {
-        id: "therapist-2",
-        name: "Dr. Neha Gupta",
-        title: "Counselling Psychologist",
-        specialization: "Relationships",
-        location: "India",
-      },
-
-      "dr-rahul-mehta": {
-        id: "therapist-3",
-        name: "Dr. Rahul Mehta",
-        title: "Therapist",
-        specialization: "Depression",
-        location: "India",
-      },
-    };
-
-    return (
-      slugMap[slug] || {
-        id: "",
-        name: "Therapist",
-        title: "Therapist",
-        specialization: "Therapy",
-        location: "India",
-      }
-    );
-  }, [slug]);
+  const [therapist, setTherapist] = useState(null);
+  const [therapistLoading, setTherapistLoading] = useState(true);
+  const [therapistError, setTherapistError] = useState("");
 
   /* =========================================================
-     STATE
+     BOOKING STATE
   ========================================================== */
 
   const [selectedDate, setSelectedDate] = useState(
@@ -70,133 +41,193 @@ function BookingPage() {
     () => location.state?.selectedSlot || "",
   );
 
+  /* =========================================================
+     AVAILABLE SLOTS / AVAILABILITY DETAILS
+  ========================================================== */
+
+  const [availableSlots, setAvailableSlots] = useState([]);
+
+  const [sessionDuration, setSessionDuration] = useState(null);
+
+  const [bufferTime, setBufferTime] = useState(null);
+
+  const [price, setPrice] = useState(null);
+
+  const [slotLoading, setSlotLoading] = useState(false);
+  const [slotError, setSlotError] = useState("");
+
+  /* =========================================================
+     BOOKING
+  ========================================================== */
+
   const [booking, setBooking] = useState(false);
 
   const [bookingSuccess] = useState(Boolean(location.state?.paymentSuccess));
 
   /* =========================================================
-     PAYMENT SUCCESS DATA
-     
-     Payment.jsx payment successful hone ke baad
-     isi page par state ke through wapas bhejega.
+     LOAD THERAPIST BY SLUG
   ========================================================== */
 
   useEffect(() => {
-    const paymentState = location.state?.paymentSuccess;
+    let mounted = true;
 
-    if (!paymentState) {
-      return;
-    }
+    const fetchTherapist = async () => {
+      try {
+        setTherapistLoading(true);
+        setTherapistError("");
 
-    const paymentDate = location.state?.selectedDate || "";
+        const response = await getTherapistBySlug(slug);
 
-    const paymentSlot = location.state?.selectedSlot || "";
+        if (!mounted) return;
 
-    const duration = location.state?.duration || 60;
+        setTherapist(response?.data || null);
+      } catch (error) {
+        if (!mounted) return;
 
-    const paymentId = location.state?.paymentId || `payment-${Date.now()}`;
-    const processedKey = `payment-processed-${paymentId}`;
+        console.error("Failed to fetch therapist:", error);
 
-    const hasProcessedPayment = sessionStorage.getItem(processedKey) === "true";
-
-    if (!hasProcessedPayment) {
-      /*
-       * =======================================================
-       * MY SESSIONS DEMO STORAGE
-       *
-       * Backend connect hone par:
-       * POST /scheduling/sessions
-       * payment verification ke baad actual DB session create
-       * karega.
-       * =======================================================
-       */
-
-      const existingSessions = JSON.parse(
-        localStorage.getItem("clientSessions") || "[]",
-      );
-
-      const alreadyExists = existingSessions.some(
-        (session) =>
-          session.therapistId === therapist.id &&
-          session.date === formatDate(paymentDate) &&
-          session.time === paymentSlot,
-      );
-
-      if (!alreadyExists) {
-        const newSession = {
-          id: Date.now(),
-          paymentId,
-          therapistId: therapist.id,
-          therapistName: therapist.name,
-          sessionType: "Individual Therapy",
-          date: formatDate(paymentDate),
-          time: paymentSlot,
-          duration: `${duration} minutes`,
-          status: "Confirmed",
-        };
-
-        localStorage.setItem(
-          "clientSessions",
-          JSON.stringify([newSession, ...existingSessions]),
+        setTherapistError(
+          error?.response?.data?.message || "Failed to load therapist details.",
         );
+      } finally {
+        if (mounted) {
+          setTherapistLoading(false);
+        }
       }
+    };
 
-      sessionStorage.setItem(processedKey, "true");
+    if (slug) {
+      fetchTherapist();
     }
 
-    /*
-     * State ko replace karke URL history clean rakhenge.
-     * Refresh par same payment state baar-baar process nahi hogi.
-     */
-    navigate(`/client/booking/${slug}`, {
-      replace: true,
-      state: {
-        paymentSuccess: true,
-        selectedDate: paymentDate,
-        selectedSlot: paymentSlot,
-        duration,
-        paymentId,
-      },
-    });
-  }, [location.state, navigate, slug, therapist.id, therapist.name]);
+    return () => {
+      mounted = false;
+    };
+  }, [slug]);
 
   /* =========================================================
-     AVAILABLE SLOTS
-     
-     Backend later:
-     GET /scheduling/slots
+     LOAD AVAILABLE SLOTS
   ========================================================== */
 
-  const slotData = {
-    "2026-08-17": ["09:00 AM", "10:00 AM", "11:30 AM", "02:00 PM", "04:00 PM"],
+  useEffect(() => {
+    let mounted = true;
 
-    "2026-08-18": ["10:00 AM", "11:30 AM", "02:00 PM", "03:30 PM"],
+    const fetchSlots = async () => {
+      if (!selectedDate || !therapist?._id) {
+        setAvailableSlots([]);
+        setSessionDuration(null);
+        setBufferTime(null);
+        setPrice(null);
+        return;
+      }
 
-    "2026-08-19": ["09:30 AM", "12:00 PM", "02:30 PM", "05:00 PM"],
+      try {
+        setSlotLoading(true);
+        setSlotError("");
 
-    "2026-08-20": ["10:00 AM", "01:00 PM", "04:00 PM"],
+        const response = await getAvailableSessionSlots({
+          therapistId: therapist._id,
+          date: selectedDate,
+        });
 
-    "2026-08-21": ["09:00 AM", "11:00 AM", "01:30 PM", "04:30 PM"],
+        if (!mounted) return;
 
-    "2026-08-22": ["10:00 AM", "12:30 PM", "03:00 PM"],
-  };
+        /*
+         * Backend response:
+         *
+         * {
+         *   date,
+         *   dayOfWeek,
+         *   sessionDuration,
+         *   bufferTime,
+         *   price,
+         *   slots
+         * }
+         */
 
-  const availableSlots = slotData[selectedDate] || [];
+        const data = response?.data || {};
+
+        const slots = Array.isArray(data.slots) ? data.slots : [];
+
+        const duration = data.sessionDuration ?? null;
+
+        const buffer = data.bufferTime ?? null;
+
+        const sessionPrice = data.price ?? null;
+
+        setAvailableSlots(slots);
+        setSessionDuration(duration);
+        setBufferTime(buffer);
+        setPrice(sessionPrice);
+
+        /*
+         * If previously selected slot is not available
+         * for this date, clear it.
+         */
+        setSelectedSlot((currentSlot) =>
+          slots.includes(currentSlot) ? currentSlot : "",
+        );
+      } catch (error) {
+        if (!mounted) return;
+
+        console.error("Failed to fetch available slots:", error);
+
+        setAvailableSlots([]);
+        setSessionDuration(null);
+        setBufferTime(null);
+        setPrice(null);
+        setSelectedSlot("");
+
+        setSlotError(
+          error?.response?.data?.message ||
+            "Failed to load available time slots.",
+        );
+      } finally {
+        if (mounted) {
+          setSlotLoading(false);
+        }
+      }
+    };
+
+    fetchSlots();
+
+    return () => {
+      mounted = false;
+    };
+  }, [selectedDate, therapist?._id]);
+
+  /* =========================================================
+     DATE CONFIG
+  ========================================================== */
+
+  const today = useMemo(() => {
+    const date = new Date();
+
+    const year = date.getFullYear();
+
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  }, []);
 
   /* =========================================================
      DATE CHANGE
   ========================================================== */
 
-  const handleDateChange = (e) => {
-    const date = e.target.value;
+  const handleDateChange = (event) => {
+    const date = event.target.value;
 
     setSelectedDate(date);
     setSelectedSlot("");
 
-    console.log("GET /scheduling/slots", {
-      therapistId: therapist.id,
-      date,
-    });
+    setAvailableSlots([]);
+    setSessionDuration(null);
+    setBufferTime(null);
+    setPrice(null);
+
+    setSlotError("");
   };
 
   /* =========================================================
@@ -209,45 +240,51 @@ function BookingPage() {
 
   /* =========================================================
      CONFIRM BOOKING
-     
-     IMPORTANT:
-     Abhi direct booking success nahi hoga.
-     Pehle Payment.jsx par jayega.
   ========================================================== */
 
   const handleBooking = async () => {
-    if (!selectedDate || !selectedSlot) {
+    if (
+      !therapist ||
+      !selectedDate ||
+      !selectedSlot ||
+      !sessionDuration ||
+      price === null ||
+      price === undefined
+    ) {
       return;
     }
 
     try {
       setBooking(true);
 
-      /*
-       * Final backend flow later:
-       *
-       * POST /scheduling/sessions
-       *
-       * Session ko payment ke liye pending rakha ja sakta hai.
-       *
-       * Abhi frontend demo mein booking details Payment.jsx
-       * ko state ke through bhej rahe hain.
-       */
-
       const bookingData = {
-        therapist: therapist,
+        therapist,
+
+        therapistId: therapist._id,
+
         selectedDate,
+
         selectedSlot,
-        duration: 60,
-        amount: 1000,
+
+        duration: sessionDuration,
+
+        bufferTime,
+
+        amount: price,
       };
 
-      console.log("Booking selected:", bookingData);
-
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
       /*
-       * PAYMENT PAGE
+       * Current flow:
+       *
+       * Booking Page
+       *      ↓
+       * Payment Page
+       *      ↓
+       * Successful payment
+       *      ↓
+       * Session creation
+       *
+       * Price comes from backend availability.
        */
 
       navigate("/client/payment", {
@@ -261,12 +298,68 @@ function BookingPage() {
   };
 
   /* =========================================================
+     THERAPIST LOADING
+  ========================================================== */
+
+  if (therapistLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <Header />
+
+        <main className="px-5 py-10 sm:px-8">
+          <div className="mx-auto max-w-6xl">
+            <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center">
+              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-violet-600 border-t-transparent" />
+
+              <p className="mt-4 text-sm font-semibold text-slate-600">
+                Loading therapist...
+              </p>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  /* =========================================================
+     THERAPIST ERROR
+  ========================================================== */
+
+  if (therapistError || !therapist) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <Header />
+
+        <main className="px-5 py-10 sm:px-8">
+          <div className="mx-auto max-w-2xl">
+            <section className="rounded-2xl border border-slate-200 bg-white p-8 text-center">
+              <p className="text-sm font-semibold text-red-600">
+                {therapistError || "Therapist not found."}
+              </p>
+
+              <Link
+                to="/client/therapists"
+                className="mt-5 inline-flex h-10 items-center gap-2 rounded-xl bg-violet-600 px-4 text-xs font-bold text-white transition hover:bg-violet-700"
+              >
+                <ArrowLeft size={14} />
+                Back to Therapists
+              </Link>
+            </section>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  /* =========================================================
      BOOKING CONFIRMED SCREEN
-     
-     Ye payment successful hone ke BAAD hi aayega.
   ========================================================== */
 
   if (bookingSuccess) {
+    const confirmedDuration = location.state?.duration ?? sessionDuration;
+
+    const confirmedPrice = location.state?.amount ?? price;
+
     return (
       <div className="min-h-screen bg-slate-50 text-slate-900">
         <Header />
@@ -316,14 +409,26 @@ function BookingPage() {
                 <BookingDetail
                   icon={<Clock3 size={16} />}
                   label="Time"
-                  value={selectedSlot}
+                  value={formatTime(selectedSlot)}
                 />
 
                 <BookingDetail
                   icon={<Clock3 size={16} />}
                   label="Duration"
-                  value="60 minutes"
+                  value={
+                    confirmedDuration
+                      ? `${confirmedDuration} minutes`
+                      : "Session"
+                  }
                 />
+
+                {confirmedPrice !== null && confirmedPrice !== undefined && (
+                  <BookingDetail
+                    icon={<IndianRupee size={16} />}
+                    label="Amount Paid"
+                    value={`₹${confirmedPrice}`}
+                  />
+                )}
 
                 <div className="flex items-center gap-3 rounded-xl bg-emerald-50 px-4 py-3">
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-emerald-600 shadow-sm">
@@ -405,10 +510,12 @@ function BookingPage() {
             </p>
           </div>
 
-          {/* Therapist Card */}
+          {/* =====================================================
+              THERAPIST CARD
+          ====================================================== */}
 
           <section className="mt-7 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4">
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">
                   <UserRound size={23} />
@@ -420,17 +527,20 @@ function BookingPage() {
                   </p>
 
                   <p className="mt-1 text-xs text-slate-500">
-                    {therapist.title}
+                    {therapist.title || "Therapist"}
                   </p>
 
                   <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-violet-50 px-2.5 py-1 text-[10px] font-semibold text-violet-600">
-                      {therapist.specialization}
-                    </span>
+                    {Array.isArray(therapist.specializations) &&
+                      therapist.specializations.length > 0 && (
+                        <span className="rounded-full bg-violet-50 px-2.5 py-1 text-[10px] font-semibold text-violet-600">
+                          {therapist.specializations[0]}
+                        </span>
+                      )}
 
                     <span className="flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-medium text-slate-500">
                       <MapPin size={10} />
-                      {therapist.location}
+                      India
                     </span>
                   </div>
                 </div>
@@ -448,10 +558,84 @@ function BookingPage() {
             </div>
           </section>
 
-          {/* Booking Area */}
+          {/* =====================================================
+              SELECTED SESSION INFO
+          ====================================================== */}
+
+          {selectedDate && (sessionDuration !== null || price !== null) && (
+            <section className="mt-6 rounded-2xl border border-violet-100 bg-violet-50 p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-violet-600">
+                    Session Details
+                  </p>
+
+                  <p className="mt-1 text-sm font-semibold text-slate-800">
+                    Based on the selected date
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  {sessionDuration !== null && (
+                    <div className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 shadow-sm">
+                      <Clock3 size={15} className="text-violet-600" />
+
+                      <div>
+                        <p className="text-[9px] uppercase tracking-wide text-slate-400">
+                          Duration
+                        </p>
+
+                        <p className="text-xs font-bold text-slate-700">
+                          {sessionDuration} min
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {price !== null && price !== undefined && (
+                    <div className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 shadow-sm">
+                      <IndianRupee size={15} className="text-violet-600" />
+
+                      <div>
+                        <p className="text-[9px] uppercase tracking-wide text-slate-400">
+                          Session Price
+                        </p>
+
+                        <p className="text-xs font-bold text-slate-700">
+                          ₹{price}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {bufferTime !== null && (
+                    <div className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 shadow-sm">
+                      <Clock3 size={15} className="text-slate-500" />
+
+                      <div>
+                        <p className="text-[9px] uppercase tracking-wide text-slate-400">
+                          Buffer
+                        </p>
+
+                        <p className="text-xs font-bold text-slate-700">
+                          {bufferTime} min
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* =====================================================
+              BOOKING AREA
+          ====================================================== */}
 
           <div className="mt-6 grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-            {/* DATE */}
+            {/* ===================================================
+                DATE
+            ==================================================== */}
 
             <section className="rounded-2xl border border-slate-200 bg-white">
               <div className="border-b border-slate-100 px-5 py-4">
@@ -483,7 +667,7 @@ function BookingPage() {
                     type="date"
                     value={selectedDate}
                     onChange={handleDateChange}
-                    min="2026-08-17"
+                    min={today}
                     className="h-12 w-full cursor-pointer rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm font-medium text-slate-700 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
                   />
                 </div>
@@ -520,14 +704,16 @@ function BookingPage() {
                   />
 
                   <p className="text-[10px] leading-4 text-slate-500">
-                    Available times will be shown according to the therapist's
-                    schedule and your local timezone.
+                    Available times will be shown according to the
+                    therapist&apos;s schedule and your local timezone.
                   </p>
                 </div>
               </div>
             </section>
 
-            {/* SLOTS */}
+            {/* ===================================================
+                SLOTS
+            ==================================================== */}
 
             <section className="rounded-2xl border border-slate-200 bg-white">
               <div className="border-b border-slate-100 px-5 py-4">
@@ -555,6 +741,26 @@ function BookingPage() {
                       Available session slots will appear here.
                     </p>
                   </div>
+                ) : slotLoading ? (
+                  <div className="rounded-2xl bg-slate-50 p-10 text-center">
+                    <div className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-violet-600 border-t-transparent" />
+
+                    <p className="mt-3 text-sm font-semibold text-slate-700">
+                      Loading available slots...
+                    </p>
+                  </div>
+                ) : slotError ? (
+                  <div className="rounded-2xl bg-red-50 p-10 text-center">
+                    <Clock3 size={26} className="mx-auto text-red-300" />
+
+                    <p className="mt-3 text-sm font-semibold text-red-700">
+                      {slotError}
+                    </p>
+
+                    <p className="mt-1 text-xs text-red-500">
+                      Please try selecting the date again.
+                    </p>
+                  </div>
                 ) : availableSlots.length === 0 ? (
                   <div className="rounded-2xl bg-slate-50 p-10 text-center">
                     <Clock3 size={26} className="mx-auto text-slate-300" />
@@ -569,6 +775,48 @@ function BookingPage() {
                   </div>
                 ) : (
                   <>
+                    {/* =========================================
+                        SESSION INFO
+                    ========================================== */}
+
+                    <div className="mb-5 grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Clock3 size={15} className="text-violet-600" />
+
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                            Session Duration
+                          </p>
+                        </div>
+
+                        <p className="mt-1 text-sm font-bold text-slate-800">
+                          {sessionDuration !== null
+                            ? `${sessionDuration} minutes`
+                            : "—"}
+                        </p>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <IndianRupee size={15} className="text-violet-600" />
+
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                            Session Price
+                          </p>
+                        </div>
+
+                        <p className="mt-1 text-sm font-bold text-slate-800">
+                          {price !== null && price !== undefined
+                            ? `₹${price}`
+                            : "—"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* =========================================
+                        SLOT BUTTONS
+                    ========================================== */}
+
                     <div className="grid gap-3 sm:grid-cols-2">
                       {availableSlots.map((slot) => {
                         const selected = selectedSlot === slot;
@@ -595,7 +843,7 @@ function BookingPage() {
                               />
 
                               <span className="text-sm font-semibold">
-                                {slot}
+                                {formatTime(slot)}
                               </span>
                             </div>
 
@@ -605,21 +853,36 @@ function BookingPage() {
                       })}
                     </div>
 
+                    {/* =========================================
+                        SELECTED SLOT
+                    ========================================== */}
+
                     {selectedSlot && (
                       <div className="mt-6 rounded-xl bg-violet-50 p-4">
                         <p className="text-[10px] font-semibold uppercase tracking-wide text-violet-600">
                           Selected Slot
                         </p>
 
-                        <div className="mt-2 flex items-center justify-between">
+                        <div className="mt-2 flex items-center justify-between gap-4">
                           <div>
                             <p className="text-sm font-bold text-slate-900">
                               {formatDate(selectedDate)}
                             </p>
 
                             <p className="mt-1 text-xs text-slate-500">
-                              {selectedSlot} • 60 minutes
+                              {formatTime(selectedSlot)}
+                              {" • "}
+                              {sessionDuration
+                                ? `${sessionDuration} minutes`
+                                : "Session"}
                             </p>
+
+                            {price !== null && price !== undefined && (
+                              <p className="mt-2 flex items-center gap-1 text-sm font-bold text-violet-700">
+                                <IndianRupee size={14} />
+                                {price}
+                              </p>
+                            )}
                           </div>
 
                           <CheckCircle2 size={19} className="text-violet-600" />
@@ -627,10 +890,20 @@ function BookingPage() {
                       </div>
                     )}
 
+                    {/* =========================================
+                        PAYMENT BUTTON
+                    ========================================== */}
+
                     <button
                       type="button"
                       onClick={handleBooking}
-                      disabled={!selectedSlot || booking}
+                      disabled={
+                        !selectedSlot ||
+                        !sessionDuration ||
+                        price === null ||
+                        price === undefined ||
+                        booking
+                      }
                       className="mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 text-xs font-bold text-white shadow-lg shadow-violet-200 transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {booking ? (
@@ -651,7 +924,9 @@ function BookingPage() {
             </section>
           </div>
 
-          {/* INFO */}
+          {/* =====================================================
+              INFO
+          ====================================================== */}
 
           <div className="mt-6 rounded-2xl border border-violet-100 bg-violet-50 px-5 py-4">
             <div className="flex items-start gap-3">
@@ -748,6 +1023,26 @@ function formatDate(dateString) {
     day: "numeric",
     month: "long",
     year: "numeric",
+  });
+}
+
+/* =========================================================
+   TIME FORMAT
+========================================================= */
+
+function formatTime(timeString) {
+  if (!timeString) return "";
+
+  const [hours, minutes] = timeString.split(":").map(Number);
+
+  const date = new Date();
+
+  date.setHours(hours, minutes, 0, 0);
+
+  return date.toLocaleTimeString("en-IN", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
   });
 }
 

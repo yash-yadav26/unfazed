@@ -5,6 +5,7 @@ const {
   getMyClientController,
   updateMyClientController,
   deleteMyClientController,
+  getMyClientsController,
 } = require("../controllers/client.controller");
 
 const {
@@ -16,9 +17,9 @@ const authMiddleware = require("../../../middleware/authMiddleware");
 
 const router = express.Router();
 
-// ===============================
-// Create Client Profile
-// ===============================
+/* =========================================================
+   Create Client Profile
+========================================================= */
 
 /**
  * @swagger
@@ -85,11 +86,12 @@ const router = express.Router();
  *       409:
  *         description: Client profile already exists
  */
+
 router.post("/", authMiddleware, validateCreateClient, createClientController);
 
-// ===============================
-// Get My Client Profile
-// ===============================
+/* =========================================================
+   Get My Client Profile
+========================================================= */
 
 /**
  * @swagger
@@ -108,11 +110,38 @@ router.post("/", authMiddleware, validateCreateClient, createClientController);
  *       404:
  *         description: Client profile not found
  */
+
 router.get("/me", authMiddleware, getMyClientController);
 
-// ===============================
-// Update My Client Profile
-// ===============================
+/* =========================================================
+   Get My Clients
+========================================================= */
+
+/**
+ * @swagger
+ * /api/clients/my-clients:
+ *   get:
+ *     summary: Get clients who have booked the logged-in therapist
+ *     tags:
+ *       - Client
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Clients fetched successfully
+ *       401:
+ *         description: Authentication required
+ *       403:
+ *         description: Only therapists can access their clients
+ *       404:
+ *         description: Therapist profile not found
+ */
+
+router.get("/my-clients", authMiddleware, getMyClientsController);
+
+/* =========================================================
+   Update My Client Profile
+========================================================= */
 
 /**
  * @swagger
@@ -168,6 +197,7 @@ router.get("/me", authMiddleware, getMyClientController);
  *       404:
  *         description: Client profile not found
  */
+
 router.patch(
   "/me",
   authMiddleware,
@@ -175,9 +205,9 @@ router.patch(
   updateMyClientController,
 );
 
-// ===============================
-// Delete My Client Profile
-// ===============================
+/* =========================================================
+   Delete My Client Profile
+========================================================= */
 
 /**
  * @swagger
@@ -196,6 +226,11 @@ router.patch(
  *       404:
  *         description: Client profile not found
  */
+
 router.delete("/me", authMiddleware, deleteMyClientController);
+
+/* =========================================================
+   Export Router
+========================================================= */
 
 module.exports = router;

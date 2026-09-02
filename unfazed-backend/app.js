@@ -6,7 +6,6 @@ const helmet = require("helmet");
 const compression = require("compression");
 const cookieParser = require("cookie-parser");
 
-
 const errorHandler = require("./src/middleware/errorHandler");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./src/config/swagger");
@@ -14,9 +13,9 @@ const swaggerSpec = require("./src/config/swagger");
 const authRoutes = require("./src/modules/auth");
 const therapistRoutes = require("./src/modules/therapist");
 const clientRoutes = require("./src/modules/client");
-
-
-
+const schedulingRoutes = require("./src/modules/scheduling");
+const sessionRoutes = require("./src/modules/session");
+const paymentRoutes = require("./src/modules/payment");
 
 const app = express();
 
@@ -25,10 +24,7 @@ app.use(helmet());
 
 // CORS
 
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:5174",
-];
+const allowedOrigins = ["http://localhost:5173", "http://localhost:5174"];
 
 app.use(
   cors({
@@ -40,7 +36,7 @@ app.use(
       }
     },
     credentials: true,
-  })
+  }),
 );
 
 // Body parser
@@ -74,6 +70,11 @@ app.use("/api/therapists", therapistRoutes);
 
 app.use("/api/clients", clientRoutes);
 
+app.use("/api/scheduling", schedulingRoutes);
+
+app.use("/api/session", sessionRoutes);
+
+app.use("/api/payment", paymentRoutes);
 
 // Error handler
 app.use(errorHandler);
