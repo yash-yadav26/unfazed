@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -17,194 +17,111 @@ import {
 
 import NoteEditor from "../../components/notes/NoteEditor";
 
-/* =========================================================
-   MOCK SESSIONS
-   Backend se later GET /sessions?clientId=... se aayenge
-========================================================= */
+import {
+  createNote,
+  getSessionNotes,
+  updateNote,
+  deleteNote,
+} from "../../api/notesApi";
 
-const initialSessions = [
-  {
-    id: "session-1",
-    clientId: "client-1",
-    clientName: "Ananya Sharma",
-    clientEmail: "ananya@example.com",
-    date: "16 Aug 2026",
-    time: "10:00 AM",
-    type: "Individual Therapy",
-  },
-  {
-    id: "session-2",
-    clientId: "client-2",
-    clientName: "Rahul Mehta",
-    clientEmail: "rahul@example.com",
-    date: "15 Aug 2026",
-    time: "11:30 AM",
-    type: "Anxiety Support",
-  },
-  {
-    id: "session-3",
-    clientId: "client-3",
-    clientName: "Priya Singh",
-    clientEmail: "priya@example.com",
-    date: "14 Aug 2026",
-    time: "02:00 PM",
-    type: "Relationship Counseling",
-  },
-  {
-    id: "session-4",
-    clientId: "client-4",
-    clientName: "Arjun Verma",
-    clientEmail: "arjun@example.com",
-    date: "12 Aug 2026",
-    time: "04:30 PM",
-    type: "Individual Therapy",
-  },
-  {
-    id: "session-5",
-    clientId: "client-1",
-    clientName: "Ananya Sharma",
-    clientEmail: "ananya@example.com",
-    date: "10 Aug 2026",
-    time: "10:00 AM",
-    type: "Individual Therapy",
-  },
-  {
-    id: "session-6",
-    clientId: "client-1",
-    clientName: "Ananya Sharma",
-    clientEmail: "ananya@example.com",
-    date: "05 Aug 2026",
-    time: "10:00 AM",
-    type: "Anxiety Support",
-  },
-  {
-    id: "session-7",
-    clientId: "client-2",
-    clientName: "Rahul Mehta",
-    clientEmail: "rahul@example.com",
-    date: "08 Aug 2026",
-    time: "11:30 AM",
-    type: "Anxiety Support",
-  },
-];
-
-/* =========================================================
-   MOCK NOTES
-========================================================= */
-
-const initialNotes = [
-  {
-    id: "note-1",
-    sessionId: "session-1",
-    clientId: "client-1",
-    clientName: "Ananya Sharma",
-    date: "16 Aug 2026",
-    time: "10:00 AM",
-    type: "PRIVATE",
-    content:
-      "Discussed current stressors and coping strategies. Therapist observation recorded for future sessions.",
-  },
-  {
-    id: "note-2",
-    sessionId: "session-1",
-    clientId: "client-1",
-    clientName: "Ananya Sharma",
-    date: "16 Aug 2026",
-    time: "10:00 AM",
-    type: "SHARED",
-    content:
-      "Session summary: discussed stress management techniques and practical coping strategies.",
-  },
-  {
-    id: "note-3",
-    sessionId: "session-5",
-    clientId: "client-1",
-    clientName: "Ananya Sharma",
-    date: "10 Aug 2026",
-    time: "10:00 AM",
-    type: "SHARED",
-    content:
-      "Discussed anxiety triggers and practiced a simple breathing exercise.",
-  },
-  {
-    id: "note-4",
-    sessionId: "session-2",
-    clientId: "client-2",
-    clientName: "Rahul Mehta",
-    date: "15 Aug 2026",
-    time: "11:30 AM",
-    type: "SHARED",
-    content:
-      "Worked on identifying anxious thoughts and introduced a breathing exercise.",
-  },
-];
+import { getMyClients } from "../../api/clientApi";
 
 /* =========================================================
    NOTES PAGE
 ========================================================= */
 
 function Notes() {
-  const [sessions] = useState(initialSessions);
-  const [notes, setNotes] = useState(initialNotes);
+  /* =========================================================
+     CLIENTS FROM BACKEND
+  ========================================================= */
 
-  /* ---------------------------------------------------------
+  const [clients, setClients] = useState([]);
+
+  const [clientsLoading, setClientsLoading] = useState(true);
+  const [clientsError, setClientsError] = useState("");
+
+  /* =========================================================
+     NOTES FROM BACKEND
+  ========================================================= */
+
+  const [notes, setNotes] = useState([]);
+
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [notesError, setNotesError] = useState("");
+
+  /* =========================================================
      CLIENT SEARCH
-  --------------------------------------------------------- */
+  ========================================================= */
 
   const [clientSearch, setClientSearch] = useState("");
 
-  /* ---------------------------------------------------------
+  /* =========================================================
      SELECTED CLIENT
-  --------------------------------------------------------- */
+  ========================================================= */
 
   const [selectedClientId, setSelectedClientId] = useState("");
 
-  /* ---------------------------------------------------------
+  /* =========================================================
      SESSION SEARCH
-  --------------------------------------------------------- */
+  ========================================================= */
 
   const [sessionSearch, setSessionSearch] = useState("");
 
-  /* ---------------------------------------------------------
+  /* =========================================================
      SELECTED SESSION
-  --------------------------------------------------------- */
+  ========================================================= */
 
   const [selectedSessionId, setSelectedSessionId] = useState("");
 
-  /* ---------------------------------------------------------
+  /* =========================================================
      NOTE FILTER
-  --------------------------------------------------------- */
+  ========================================================= */
 
   const [typeFilter, setTypeFilter] = useState("ALL");
 
-  /* ---------------------------------------------------------
+  /* =========================================================
      NOTE EDITOR
-  --------------------------------------------------------- */
+  ========================================================= */
 
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingNote, setEditingNote] = useState(null);
 
   /* =========================================================
-     UNIQUE CLIENTS
+     NOTE ACTION LOADING
   ========================================================= */
 
-  const clients = useMemo(() => {
-    const map = new Map();
+  const [savingNote, setSavingNote] = useState(false);
+  const [deletingNoteId, setDeletingNoteId] = useState(null);
 
-    sessions.forEach((session) => {
-      if (!map.has(session.clientId)) {
-        map.set(session.clientId, {
-          id: session.clientId,
-          name: session.clientName,
-          email: session.clientEmail,
-        });
+  /* =========================================================
+     FETCH MY CLIENTS
+  ========================================================= */
+
+  useEffect(() => {
+    const fetchMyClients = async () => {
+      try {
+        setClientsLoading(true);
+        setClientsError("");
+
+        const response = await getMyClients();
+
+        const clientData = Array.isArray(response?.data) ? response.data : [];
+
+        setClients(clientData);
+      } catch (error) {
+        console.error("Failed to fetch therapist clients:", error);
+
+        setClientsError(
+          error?.response?.data?.message ||
+            "Failed to load clients. Please try again.",
+        );
+      } finally {
+        setClientsLoading(false);
       }
-    });
+    };
 
-    return Array.from(map.values()).sort((a, b) =>
-      a.name.localeCompare(b.name),
-    );
-  }, [sessions]);
+    fetchMyClients();
+  }, []);
 
   /* =========================================================
      SEARCHED CLIENTS
@@ -217,11 +134,17 @@ function Notes() {
       return clients;
     }
 
-    return clients.filter(
-      (client) =>
-        client.name.toLowerCase().includes(value) ||
-        client.email.toLowerCase().includes(value),
-    );
+    return clients.filter((client) => {
+      const name = String(client?.name || "").toLowerCase();
+
+      const email = String(client?.email || "").toLowerCase();
+
+      const phone = String(client?.phone || "").toLowerCase();
+
+      return (
+        name.includes(value) || email.includes(value) || phone.includes(value)
+      );
+    });
   }, [clients, clientSearch]);
 
   /* =========================================================
@@ -229,42 +152,176 @@ function Notes() {
   ========================================================= */
 
   const selectedClient = clients.find(
-    (client) => client.id === selectedClientId,
+    (client) => String(client?._id) === String(selectedClientId),
   );
 
   /* =========================================================
      CLIENT SESSIONS
+     ---------------------------------------------------------
+     Sessions already backend se getMyClients()
+     response ke andar aa rahi hain.
   ========================================================= */
 
   const clientSessions = useMemo(() => {
-    if (!selectedClientId) {
+    if (!selectedClient) {
       return [];
     }
 
-    return sessions
-      .filter((session) => session.clientId === selectedClientId)
-      .filter((session) => {
-        const value = sessionSearch.trim().toLowerCase();
+    const sessions = Array.isArray(selectedClient.sessions)
+      ? selectedClient.sessions
+      : [];
 
-        if (!value) {
-          return true;
-        }
+    const searchValue = sessionSearch.trim().toLowerCase();
 
-        return (
-          session.date.toLowerCase().includes(value) ||
-          session.time.toLowerCase().includes(value) ||
-          session.type.toLowerCase().includes(value)
-        );
-      });
-  }, [sessions, selectedClientId, sessionSearch]);
+    const normalizedSessions = sessions.map((session) => ({
+      ...session,
+
+      id: String(session?._id),
+
+      clientId: selectedClient._id,
+      clientName: selectedClient.name,
+      clientEmail: selectedClient.email,
+
+      displayDate: formatSessionDate(session?.date),
+
+      displayTime: formatSessionTime(session?.startTime, session?.endTime),
+    }));
+
+    if (!searchValue) {
+      return normalizedSessions;
+    }
+
+    return normalizedSessions.filter((session) => {
+      const date = String(session?.displayDate || "").toLowerCase();
+
+      const time = String(session?.displayTime || "").toLowerCase();
+
+      const status = String(session?.status || "").toLowerCase();
+
+      const paymentStatus = String(session?.paymentStatus || "").toLowerCase();
+
+      return (
+        date.includes(searchValue) ||
+        time.includes(searchValue) ||
+        status.includes(searchValue) ||
+        paymentStatus.includes(searchValue)
+      );
+    });
+  }, [selectedClient, sessionSearch]);
 
   /* =========================================================
      SELECTED SESSION
   ========================================================= */
 
-  const selectedSession = sessions.find(
-    (session) => session.id === selectedSessionId,
+  const selectedSession = clientSessions.find(
+    (session) => String(session?.id) === String(selectedSessionId),
   );
+
+  /* =========================================================
+     FETCH NOTES FOR SELECTED SESSION
+     ---------------------------------------------------------
+     GET /api/notes/session/:sessionId
+  ========================================================= */
+
+  useEffect(() => {
+    if (!selectedSessionId || !selectedSession) {
+      return;
+    }
+
+    const fetchSessionNotes = async () => {
+      try {
+        setNotesLoading(true);
+        setNotesError("");
+
+        const response = await getSessionNotes(selectedSessionId);
+
+        const noteData = Array.isArray(response?.data) ? response.data : [];
+
+        /*
+         * Backend note mein session ki date/time
+         * directly nahi hai.
+         *
+         * Isliye selected session ki date/time
+         * UI ke liye attach kar rahe hain.
+         */
+
+        const normalizedNotes = noteData.map((note) => ({
+          ...note,
+
+          id: String(note?._id),
+
+          sessionId: String(note?.sessionId),
+
+          clientId: String(selectedClient?._id),
+
+          clientName: selectedClient?.name || "",
+
+          date: selectedSession?.displayDate || "",
+
+          time: selectedSession?.displayTime || "",
+        }));
+
+        setNotes(normalizedNotes);
+      } catch (error) {
+        console.error("Failed to fetch session notes:", error);
+
+        setNotesError(
+          error?.response?.data?.message || "Failed to load session notes.",
+        );
+
+        setNotes([]);
+      } finally {
+        setNotesLoading(false);
+      }
+    };
+
+    fetchSessionNotes();
+  }, [selectedSessionId, selectedSession, selectedClient]);
+
+  /* =========================================================
+     REFRESH SESSION NOTES
+  ========================================================= */
+
+  const refreshSessionNotes = async () => {
+    if (!selectedSessionId || !selectedSession) {
+      return;
+    }
+
+    try {
+      setNotesLoading(true);
+      setNotesError("");
+
+      const response = await getSessionNotes(selectedSessionId);
+
+      const noteData = Array.isArray(response?.data) ? response.data : [];
+
+      const normalizedNotes = noteData.map((note) => ({
+        ...note,
+
+        id: String(note?._id),
+
+        sessionId: String(note?.sessionId),
+
+        clientId: String(selectedClient?._id),
+
+        clientName: selectedClient?.name || "",
+
+        date: selectedSession?.displayDate || "",
+
+        time: selectedSession?.displayTime || "",
+      }));
+
+      setNotes(normalizedNotes);
+    } catch (error) {
+      console.error("Failed to refresh notes:", error);
+
+      setNotesError(
+        error?.response?.data?.message || "Failed to refresh notes.",
+      );
+    } finally {
+      setNotesLoading(false);
+    }
+  };
 
   /* =========================================================
      SELECT CLIENT
@@ -273,13 +330,14 @@ function Notes() {
   const handleSelectClient = (clientId) => {
     setSelectedClientId(clientId);
 
-    // New client select hone par previous session clear.
     setSelectedSessionId("");
 
-    // Session search bhi reset.
     setSessionSearch("");
 
-    // Existing editor close kar do.
+    setNotes([]);
+
+    setNotesError("");
+
     setEditingNote(null);
     setIsEditorOpen(false);
   };
@@ -315,113 +373,107 @@ function Notes() {
 
   const handleEdit = (note) => {
     setEditingNote(note);
-
-    // Safety: note ka client/session automatically select
-    // ho jayega.
-    setSelectedClientId(note.clientId);
-    setSelectedSessionId(note.sessionId);
-
     setIsEditorOpen(true);
   };
 
   /* =========================================================
      SAVE NOTE
+     ---------------------------------------------------------
+     CREATE -> POST /api/notes
+     UPDATE -> PATCH /api/notes/:id
   ========================================================= */
 
-  const handleSaveNote = ({ type, content }) => {
+  const handleSaveNote = async ({ type, content }) => {
     if (!selectedSession) {
       return;
     }
 
-    if (!content.trim()) {
+    if (!content?.trim()) {
       alert("Please write something in the note.");
       return;
     }
 
-    /* -------------------------------------------------------
-       EDIT EXISTING NOTE
-    ------------------------------------------------------- */
+    try {
+      setSavingNote(true);
+      setNotesError("");
 
-    if (editingNote) {
-      const updatedNote = {
-        ...editingNote,
-        type,
-        content,
-      };
+      /* -----------------------------------------------------
+         UPDATE EXISTING NOTE
+      ----------------------------------------------------- */
 
-      setNotes((prev) =>
-        prev.map((note) =>
-          note.id === editingNote.id ? updatedNote : note,
-        ),
-      );
-
-      // Backend later:
-      // PATCH /notes/:id
-
-      console.log("PATCH /notes/:id", {
-        noteId: editingNote.id,
-        payload: {
+      if (editingNote) {
+        await updateNote(editingNote.id, {
           type,
           content,
-        },
-      });
+        });
+      } else {
+
+      /* -----------------------------------------------------
+         CREATE NEW NOTE
+      ----------------------------------------------------- */
+        await createNote({
+          sessionId: selectedSession.id,
+          type,
+          content,
+        });
+      }
+
+      /*
+       * Save successfully hone ke baad
+       * backend se latest notes dobara fetch.
+       */
+
+      await refreshSessionNotes();
+
+      setEditingNote(null);
+      setIsEditorOpen(false);
+    } catch (error) {
+      console.error("Failed to save note:", error);
+
+      setNotesError(
+        error?.response?.data?.message ||
+          "Failed to save note. Please try again.",
+      );
+    } finally {
+      setSavingNote(false);
     }
-
-    /* -------------------------------------------------------
-       CREATE NEW NOTE
-    ------------------------------------------------------- */
-
-    else {
-      const newNote = {
-        id: `note-${Date.now()}`,
-        sessionId: selectedSession.id,
-        clientId: selectedSession.clientId,
-        clientName: selectedSession.clientName,
-        date: selectedSession.date,
-        time: selectedSession.time,
-        type,
-        content,
-      };
-
-      setNotes((prev) => [newNote, ...prev]);
-
-      // Backend later:
-      // POST /notes
-
-      console.log("POST /notes", {
-        sessionId: selectedSession.id,
-        type,
-        content,
-      });
-    }
-
-    setEditingNote(null);
-    setIsEditorOpen(false);
   };
 
   /* =========================================================
      DELETE NOTE
+     ---------------------------------------------------------
+     DELETE /api/notes/:id
   ========================================================= */
 
-  const handleDelete = (note) => {
+  const handleDelete = async (note) => {
     const confirmed = window.confirm(
-      `Delete this ${note.type.toLowerCase()} note?`,
+      `Delete this ${String(note?.type || "").toLowerCase()} note?`,
     );
 
     if (!confirmed) {
       return;
     }
 
-    setNotes((prev) =>
-      prev.filter((item) => item.id !== note.id),
-    );
+    try {
+      setDeletingNoteId(note.id);
+      setNotesError("");
 
-    // Backend later:
-    // DELETE /notes/:id
+      await deleteNote(note.id);
 
-    console.log("DELETE /notes/:id", {
-      noteId: note.id,
-    });
+      /*
+       * Delete ke baad latest notes fetch.
+       */
+      await refreshSessionNotes();
+    } catch (error) {
+      console.error("Failed to delete note:", error);
+
+      setNotesError(
+        error?.response?.data?.message ||
+          "Failed to delete note. Please try again.",
+      );
+    } finally {
+      setDeletingNoteId(null);
+    }
   };
 
   /* =========================================================
@@ -435,11 +487,9 @@ function Notes() {
 
     return notes.filter((note) => {
       const matchesSession =
-        note.sessionId === selectedSessionId;
+        String(note?.sessionId) === String(selectedSessionId);
 
-      const matchesType =
-        typeFilter === "ALL" ||
-        note.type === typeFilter;
+      const matchesType = typeFilter === "ALL" || note?.type === typeFilter;
 
       return matchesSession && matchesType;
     });
@@ -447,37 +497,25 @@ function Notes() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-
       {/* =====================================================
           HEADER
       ====================================================== */}
 
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
-
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
-
-          <Link
-            to="/therapist/dashboard"
-            className="flex items-center gap-3"
-          >
+          <Link to="/therapist/dashboard" className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-600 text-white">
               <HeartHandshake size={19} />
             </div>
 
             <div>
-
               <p className="text-base font-bold tracking-tight text-slate-900">
                 Unfazed
               </p>
 
-              <p className="text-[9px] text-slate-500">
-                Therapist Dashboard
-              </p>
-
+              <p className="text-[9px] text-slate-500">Therapist Dashboard</p>
             </div>
-
           </Link>
-
 
           <Link
             to="/therapist/dashboard"
@@ -486,27 +524,21 @@ function Notes() {
             <ArrowLeft size={14} />
             Back to Dashboard
           </Link>
-
         </div>
       </header>
-
 
       {/* =====================================================
           MAIN
       ====================================================== */}
 
       <main className="px-5 py-7 sm:px-8 lg:px-10">
-
         <div className="mx-auto max-w-7xl">
-
           {/* =================================================
               PAGE HEADER
           ================================================== */}
 
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-
             <div>
-
               <p className="text-xs font-bold uppercase tracking-wide text-violet-600">
                 Clinical Documentation
               </p>
@@ -516,31 +548,27 @@ function Notes() {
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                Find a client, select their session, and manage the notes
-                for that specific session.
+                Find a client, select their session, and manage the notes for
+                that specific session.
               </p>
-
             </div>
-
 
             <button
               type="button"
               onClick={handleOpenCreate}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 text-xs font-semibold text-white shadow-lg shadow-violet-200 transition hover:bg-violet-700"
+              disabled={!selectedSession || savingNote}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 text-xs font-semibold text-white shadow-lg shadow-violet-200 transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Plus size={16} />
               New Note
             </button>
-
           </div>
-
 
           {/* =================================================
               PRIVACY INFO
           ================================================== */}
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
-
             <PrivacyCard
               type="Private"
               description="Only you can access these notes."
@@ -554,42 +582,34 @@ function Notes() {
               icon={<UserRound size={18} />}
               variant="shared"
             />
-
           </div>
-
 
           {/* =================================================
               CLIENT SEARCH + CLIENT LIST
           ================================================== */}
 
           <section className="mt-6 rounded-2xl border border-slate-200 bg-white">
-
             <div className="border-b border-slate-100 p-5">
-
               <div className="flex items-center gap-2">
-
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
                   <UserRound size={16} />
                 </div>
 
                 <div>
-
                   <h2 className="text-sm font-bold text-slate-900">
                     Select Client
                   </h2>
 
                   <p className="mt-0.5 text-[11px] text-slate-400">
-                    Search the client whose session notes you want to manage.
+                    Only clients who have booked a session with you are shown
+                    here.
                   </p>
-
                 </div>
-
               </div>
 
-
               {/* Search */}
-              <div className="relative mt-4 max-w-xl">
 
+              <div className="relative mt-4 max-w-xl">
                 <Search
                   size={17}
                   className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
@@ -601,52 +621,76 @@ function Notes() {
                   onChange={(e) => {
                     setClientSearch(e.target.value);
 
-                    // Search karte waqt selected client reset.
-                    if (selectedClientId) {
-                      setSelectedClientId("");
-                      setSelectedSessionId("");
-                    }
+                    setSelectedClientId("");
+                    setSelectedSessionId("");
+                    setSessionSearch("");
+                    setNotes([]);
                   }}
-                  placeholder="Search client by name or email..."
+                  placeholder="Search client by name, email or phone..."
                   className="h-11 w-full rounded-xl border border-slate-200 pl-11 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
                 />
-
               </div>
-
             </div>
 
+            {/* =================================================
+                CLIENT RESULTS
+            ================================================== */}
 
-            {/* Client Results */}
             <div className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Loading */}
 
-              {filteredClients.length > 0 ? (
+              {clientsLoading && (
+                <div className="col-span-full py-10 text-center">
+                  <div className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-slate-200 border-t-violet-600" />
 
+                  <p className="mt-3 text-sm font-medium text-slate-500">
+                    Loading clients...
+                  </p>
+                </div>
+              )}
+
+              {/* Error */}
+
+              {!clientsLoading && clientsError && (
+                <div className="col-span-full py-10 text-center">
+                  <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 text-red-500">
+                    <UserRound size={19} />
+                  </div>
+
+                  <p className="mt-3 text-sm font-semibold text-slate-700">
+                    Unable to load clients
+                  </p>
+
+                  <p className="mt-1 text-xs text-red-500">{clientsError}</p>
+                </div>
+              )}
+
+              {/* Client List */}
+
+              {!clientsLoading &&
+                !clientsError &&
+                filteredClients.length > 0 &&
                 filteredClients.map((client) => {
-
                   const isSelected =
-                    selectedClientId === client.id;
+                    String(selectedClientId) === String(client?._id);
 
-                  const clientSessionCount =
-                    sessions.filter(
-                      (session) =>
-                        session.clientId === client.id,
-                    ).length;
+                  const clientSessionCount = Array.isArray(client?.sessions)
+                    ? client.sessions.length
+                    : Number(client?.sessionsCount || 0);
 
                   return (
                     <button
-                      key={client.id}
+                      key={client?._id}
                       type="button"
-                      onClick={() =>
-                        handleSelectClient(client.id)
-                      }
+                      onClick={() => handleSelectClient(client?._id)}
                       className={`rounded-xl border p-4 text-left transition ${
                         isSelected
                           ? "border-violet-300 bg-violet-50"
                           : "border-slate-200 bg-white hover:border-violet-200 hover:bg-violet-50/40"
                       }`}
                     >
-
                       <div className="flex items-center gap-3">
+                        {/* Avatar */}
 
                         <div
                           className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
@@ -655,22 +699,26 @@ function Notes() {
                               : "bg-violet-100 text-violet-700"
                           }`}
                         >
-                          {getInitials(client.name)}
+                          {getInitials(client?.name || "Client")}
                         </div>
 
+                        {/* Client Info */}
 
                         <div className="min-w-0 flex-1">
-
                           <p className="truncate text-sm font-semibold text-slate-800">
-                            {client.name}
+                            {client?.name || "Unknown Client"}
                           </p>
 
                           <p className="mt-0.5 truncate text-[11px] text-slate-400">
-                            {client.email}
+                            {client?.email || "Email not available"}
                           </p>
 
+                          {client?.phone && (
+                            <p className="mt-0.5 truncate text-[10px] text-slate-400">
+                              {client.phone}
+                            </p>
+                          )}
                         </div>
-
 
                         {isSelected && (
                           <CheckCircle2
@@ -678,58 +726,48 @@ function Notes() {
                             className="shrink-0 text-violet-600"
                           />
                         )}
-
                       </div>
 
-
                       <div className="mt-3 flex items-center justify-between">
-
                         <span className="text-[10px] font-medium text-slate-400">
                           {clientSessionCount}{" "}
-                          {clientSessionCount === 1
-                            ? "session"
-                            : "sessions"}
+                          {clientSessionCount === 1 ? "session" : "sessions"}
                         </span>
 
                         <ChevronDown
                           size={14}
                           className={`text-slate-300 transition ${
-                            isSelected
-                              ? "rotate-180 text-violet-500"
-                              : ""
+                            isSelected ? "rotate-180 text-violet-500" : ""
                           }`}
                         />
-
                       </div>
-
                     </button>
                   );
-                })
+                })}
 
-              ) : (
+              {/* No Client */}
 
-                <div className="col-span-full py-10 text-center">
+              {!clientsLoading &&
+                !clientsError &&
+                filteredClients.length === 0 && (
+                  <div className="col-span-full py-10 text-center">
+                    <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
+                      <Search size={19} />
+                    </div>
 
-                  <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
-                    <Search size={19} />
+                    <p className="mt-3 text-sm font-semibold text-slate-700">
+                      No client found
+                    </p>
+
+                    <p className="mt-1 text-xs text-slate-400">
+                      {clientSearch
+                        ? "Try another client name, email or phone."
+                        : "No client has booked a session with you yet."}
+                    </p>
                   </div>
-
-                  <p className="mt-3 text-sm font-semibold text-slate-700">
-                    No client found
-                  </p>
-
-                  <p className="mt-1 text-xs text-slate-400">
-                    Try another client name or email.
-                  </p>
-
-                </div>
-
-              )}
-
+                )}
             </div>
-
           </section>
-
 
           {/* =================================================
               SESSION SECTION
@@ -737,19 +775,14 @@ function Notes() {
 
           {selectedClient && (
             <section className="mt-6 rounded-2xl border border-slate-200 bg-white">
-
               <div className="border-b border-slate-100 p-5">
-
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-
                   <div className="flex items-center gap-3">
-
                     <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
                       <FileText size={19} />
                     </div>
 
                     <div>
-
                       <h2 className="text-sm font-bold text-slate-900">
                         {selectedClient.name}'s Sessions
                       </h2>
@@ -757,15 +790,12 @@ function Notes() {
                       <p className="mt-1 text-[11px] text-slate-400">
                         Select a session to view or create notes.
                       </p>
-
                     </div>
-
                   </div>
 
-
                   {/* Session Search */}
-                  <div className="relative w-full lg:max-w-sm">
 
+                  <div className="relative w-full lg:max-w-sm">
                     <Search
                       size={15}
                       className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
@@ -774,97 +804,86 @@ function Notes() {
                     <input
                       type="text"
                       value={sessionSearch}
-                      onChange={(e) =>
-                        setSessionSearch(e.target.value)
-                      }
+                      onChange={(e) => setSessionSearch(e.target.value)}
                       placeholder="Search session..."
                       className="h-10 w-full rounded-xl border border-slate-200 pl-10 pr-4 text-xs outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
                     />
-
                   </div>
-
                 </div>
-
               </div>
 
-
               {/* Session List */}
+
               <div className="grid gap-3 p-5 sm:grid-cols-2">
-
                 {clientSessions.length > 0 ? (
-
                   clientSessions.map((session) => {
-
                     const isSelected =
-                      selectedSessionId === session.id;
+                      String(selectedSessionId) === String(session.id);
 
                     return (
                       <button
                         key={session.id}
                         type="button"
-                        onClick={() =>
-                          handleSelectSession(session.id)
-                        }
+                        onClick={() => handleSelectSession(session.id)}
                         className={`rounded-xl border p-4 text-left transition ${
                           isSelected
                             ? "border-violet-300 bg-violet-50"
                             : "border-slate-200 bg-white hover:border-violet-200 hover:bg-violet-50/40"
                         }`}
                       >
-
                         <div className="flex items-start justify-between gap-3">
-
-                          <div>
-
+                          <div className="min-w-0">
                             <p className="text-sm font-semibold text-slate-800">
-                              {session.date}
+                              {session.displayDate}
                             </p>
 
                             <p className="mt-1 text-xs text-slate-500">
-                              {session.time}
+                              {session.displayTime}
                             </p>
 
                             <p className="mt-2 text-[11px] font-medium text-slate-400">
-                              {session.type}
+                              {session.duration
+                                ? `${session.duration} minutes`
+                                : "Therapy Session"}
                             </p>
 
-                          </div>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <SessionStatus status={session.status} />
 
+                              {session.paymentStatus && (
+                                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[9px] font-bold text-slate-500">
+                                  Payment: {formatStatus(session.paymentStatus)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
 
                           {isSelected && (
                             <CheckCircle2
                               size={17}
-                              className="text-violet-600"
+                              className="shrink-0 text-violet-600"
                             />
                           )}
-
                         </div>
-
                       </button>
                     );
                   })
-
                 ) : (
-
                   <div className="col-span-full py-10 text-center">
-
                     <p className="text-sm font-semibold text-slate-700">
                       No sessions found
                     </p>
 
                     <p className="mt-1 text-xs text-slate-400">
-                      Try another session search.
+                      {sessionSearch
+                        ? "Try another session search."
+                        : "This client has no sessions yet."}
                     </p>
-
                   </div>
-
                 )}
-
               </div>
-
             </section>
           )}
-
 
           {/* =================================================
               SELECTED SESSION NOTES
@@ -872,134 +891,132 @@ function Notes() {
 
           {selectedSession && (
             <section className="mt-6 rounded-2xl border border-slate-200 bg-white">
-
               {/* Session Header */}
+
               <div className="flex flex-col gap-4 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between">
-
                 <div className="flex items-center gap-3">
-
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
                     <FileText size={19} />
                   </div>
 
                   <div>
-
                     <h2 className="text-base font-bold text-slate-900">
                       {selectedSession.clientName}
                     </h2>
 
                     <p className="mt-1 text-xs text-slate-400">
-                      {selectedSession.date} •{" "}
-                      {selectedSession.time} •{" "}
-                      {selectedSession.type}
+                      {selectedSession.displayDate} •{" "}
+                      {selectedSession.displayTime}
                     </p>
-
                   </div>
-
                 </div>
 
-
                 <div className="flex flex-wrap items-center gap-2">
+                  {/* Note Filter */}
 
-                  {/* Note filter */}
                   <select
                     value={typeFilter}
-                    onChange={(e) =>
-                      setTypeFilter(e.target.value)
-                    }
+                    onChange={(e) => setTypeFilter(e.target.value)}
                     className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-600 outline-none focus:border-violet-500"
                   >
-                    <option value="ALL">
-                      All Notes
-                    </option>
+                    <option value="ALL">All Notes</option>
 
-                    <option value="PRIVATE">
-                      Private
-                    </option>
+                    <option value="PRIVATE">Private</option>
 
-                    <option value="SHARED">
-                      Shared
-                    </option>
+                    <option value="SHARED">Shared</option>
                   </select>
-
 
                   <button
                     type="button"
                     onClick={handleOpenCreate}
-                    className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 text-xs font-semibold text-violet-700 transition hover:bg-violet-100"
+                    disabled={savingNote}
+                    className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 text-xs font-semibold text-violet-700 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Plus size={14} />
                     Add Note
                   </button>
-
                 </div>
-
               </div>
 
+              {/* =================================================
+                  NOTES LOADING
+              ================================================== */}
 
-              {/* Notes */}
-              <div className="divide-y divide-slate-100">
+              {notesLoading && (
+                <div className="px-5 py-10 text-center">
+                  <div className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-slate-200 border-t-violet-600" />
 
-                {sessionNotes.length > 0 ? (
+                  <p className="mt-3 text-xs font-medium text-slate-500">
+                    Loading notes...
+                  </p>
+                </div>
+              )}
 
-                  sessionNotes.map((note) => (
-                    <NoteCard
-                      key={note.id}
-                      note={note}
-                      onEdit={() => handleEdit(note)}
-                      onDelete={() => handleDelete(note)}
-                    />
-                  ))
+              {/* =================================================
+                  NOTES ERROR
+              ================================================== */}
 
-                ) : (
+              {!notesLoading && notesError && (
+                <div className="border-b border-red-100 bg-red-50 px-5 py-3">
+                  <p className="text-xs text-red-600">{notesError}</p>
+                </div>
+              )}
 
-                  <div className="px-5 py-14 text-center">
+              {/* =================================================
+                  NOTES
+              ================================================== */}
 
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
-                      <FileText size={21} />
+              {!notesLoading && (
+                <div className="divide-y divide-slate-100">
+                  {sessionNotes.length > 0 ? (
+                    sessionNotes.map((note) => (
+                      <NoteCard
+                        key={note.id}
+                        note={note}
+                        deleting={deletingNoteId === note.id}
+                        onEdit={() => handleEdit(note)}
+                        onDelete={() => handleDelete(note)}
+                      />
+                    ))
+                  ) : (
+                    <div className="px-5 py-14 text-center">
+                      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
+                        <FileText size={21} />
+                      </div>
+
+                      <p className="mt-4 text-sm font-semibold text-slate-700">
+                        No notes for this session
+                      </p>
+
+                      <p className="mt-1 text-xs text-slate-400">
+                        Create a note to document this session.
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={handleOpenCreate}
+                        disabled={savingNote}
+                        className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2.5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <Plus size={14} />
+                        Create Note
+                      </button>
                     </div>
-
-                    <p className="mt-4 text-sm font-semibold text-slate-700">
-                      No notes for this session
-                    </p>
-
-                    <p className="mt-1 text-xs text-slate-400">
-                      Create a note to document this session.
-                    </p>
-
-                    <button
-                      type="button"
-                      onClick={handleOpenCreate}
-                      className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2.5 text-xs font-semibold text-white"
-                    >
-                      <Plus size={14} />
-                      Create Note
-                    </button>
-
-                  </div>
-
-                )}
-
-              </div>
-
+                  )}
+                </div>
+              )}
             </section>
           )}
 
-
           {/* Bottom privacy note */}
-          <div className="mt-5 flex items-center justify-center gap-2 text-[11px] text-slate-400">
 
+          <div className="mt-5 flex items-center justify-center gap-2 text-[11px] text-slate-400">
             <ShieldCheck size={14} />
 
-            <span>
-              Private notes are restricted to authorized therapists.
-            </span>
-
+            <span>Private notes are restricted to authorized therapists.</span>
           </div>
-
         </div>
       </main>
-
 
       {/* =====================================================
           NOTE EDITOR MODAL
@@ -1007,14 +1024,11 @@ function Notes() {
 
       {isEditorOpen && selectedSession && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-5 py-6 backdrop-blur-sm">
-
           <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
-
             {/* Modal Header */}
+
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-6">
-
               <div>
-
                 <p className="text-xs font-bold uppercase tracking-wide text-violet-600">
                   {editingNote ? "Edit Note" : "New Note"}
                 </p>
@@ -1024,16 +1038,17 @@ function Notes() {
                 </h2>
 
                 <p className="mt-1 text-xs text-slate-400">
-                  {selectedSession.date} •{" "}
-                  {selectedSession.time}
+                  {selectedSession.displayDate} • {selectedSession.displayTime}
                 </p>
-
               </div>
-
 
               <button
                 type="button"
                 onClick={() => {
+                  if (savingNote) {
+                    return;
+                  }
+
                   setEditingNote(null);
                   setIsEditorOpen(false);
                 }}
@@ -1041,44 +1056,42 @@ function Notes() {
               >
                 <X size={18} />
               </button>
-
             </div>
 
-
             {/* Editor */}
-            <div className="p-5 sm:p-6">
 
+            <div className="p-5 sm:p-6">
               <NoteEditor
                 initialNote={editingNote}
                 onSave={handleSaveNote}
                 onCancel={() => {
+                  if (savingNote) {
+                    return;
+                  }
+
                   setEditingNote(null);
                   setIsEditorOpen(false);
                 }}
               />
 
+              {savingNote && (
+                <p className="mt-3 text-center text-xs font-medium text-violet-600">
+                  Saving note...
+                </p>
+              )}
             </div>
-
           </div>
-
         </div>
       )}
-
     </div>
   );
 }
-
 
 /* =========================================================
    PRIVACY CARD
 ========================================================= */
 
-function PrivacyCard({
-  type,
-  description,
-  icon,
-  variant,
-}) {
+function PrivacyCard({ type, description, icon, variant }) {
   const isPrivate = variant === "private";
 
   return (
@@ -1089,9 +1102,7 @@ function PrivacyCard({
           : "border-emerald-100 bg-emerald-50/70"
       }`}
     >
-
       <div className="flex items-start gap-3">
-
         <div
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
             isPrivate
@@ -1103,45 +1114,29 @@ function PrivacyCard({
         </div>
 
         <div>
+          <p className="text-sm font-bold text-slate-800">{type} Note</p>
 
-          <p className="text-sm font-bold text-slate-800">
-            {type} Note
-          </p>
-
-          <p className="mt-1 text-xs leading-5 text-slate-500">
-            {description}
-          </p>
-
+          <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
         </div>
-
       </div>
-
     </div>
   );
 }
-
 
 /* =========================================================
    NOTE CARD
 ========================================================= */
 
-function NoteCard({
-  note,
-  onEdit,
-  onDelete,
-}) {
-  const isPrivate = note.type === "PRIVATE";
+function NoteCard({ note, onEdit, onDelete, deleting }) {
+  const isPrivate = note?.type === "PRIVATE";
 
   return (
     <div className="p-5">
-
       <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
-
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-
           {/* Left */}
-          <div className="flex items-center gap-3">
 
+          <div className="flex items-center gap-3">
             <div
               className={`flex h-9 w-9 items-center justify-center rounded-lg ${
                 isPrivate
@@ -1149,16 +1144,10 @@ function NoteCard({
                   : "bg-emerald-50 text-emerald-600"
               }`}
             >
-              {isPrivate ? (
-                <ShieldCheck size={16} />
-              ) : (
-                <UserRound size={16} />
-              )}
+              {isPrivate ? <ShieldCheck size={16} /> : <UserRound size={16} />}
             </div>
 
-
             <div>
-
               <span
                 className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${
                   isPrivate
@@ -1170,21 +1159,20 @@ function NoteCard({
               </span>
 
               <p className="mt-1 text-[10px] text-slate-400">
-                {note.date} • {note.time}
+                {note?.date || "Date unavailable"} •{" "}
+                {note?.time || "Time unavailable"}
               </p>
-
             </div>
-
           </div>
 
-
           {/* Actions */}
-          <div className="flex items-center gap-1">
 
+          <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={onEdit}
-              className="rounded-lg p-2 text-slate-400 transition hover:bg-violet-50 hover:text-violet-600"
+              disabled={deleting}
+              className="rounded-lg p-2 text-slate-400 transition hover:bg-violet-50 hover:text-violet-600 disabled:cursor-not-allowed disabled:opacity-50"
               aria-label="Edit note"
             >
               <Edit3 size={15} />
@@ -1193,36 +1181,118 @@ function NoteCard({
             <button
               type="button"
               onClick={onDelete}
-              className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+              disabled={deleting}
+              className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
               aria-label="Delete note"
             >
-              <Trash2 size={15} />
+              {deleting ? (
+                <div className="h-[15px] w-[15px] animate-spin rounded-full border-2 border-slate-300 border-t-red-500" />
+              ) : (
+                <Trash2 size={15} />
+              )}
             </button>
-
           </div>
-
         </div>
 
-
         {/* Note content */}
-        <p className="mt-4 text-sm leading-6 text-slate-600">
-          {note.content}
+
+        <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-600">
+          {note?.content}
         </p>
-
       </div>
-
     </div>
   );
 }
 
+/* =========================================================
+   SESSION STATUS
+========================================================= */
+
+function SessionStatus({ status }) {
+  const normalizedStatus = String(status || "").toUpperCase();
+
+  let className = "bg-slate-100 text-slate-500";
+
+  if (normalizedStatus === "CONFIRMED") {
+    className = "bg-emerald-50 text-emerald-600";
+  } else if (normalizedStatus === "PENDING") {
+    className = "bg-amber-50 text-amber-600";
+  } else if (normalizedStatus === "COMPLETED") {
+    className = "bg-violet-50 text-violet-600";
+  } else if (normalizedStatus === "CANCELLED") {
+    className = "bg-red-50 text-red-600";
+  }
+
+  return (
+    <span
+      className={`rounded-full px-2.5 py-1 text-[9px] font-bold ${className}`}
+    >
+      {formatStatus(status)}
+    </span>
+  );
+}
 
 /* =========================================================
-   HELPERS
+   FORMAT SESSION DATE
+========================================================= */
+
+function formatSessionDate(date) {
+  if (!date) {
+    return "Date unavailable";
+  }
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "Date unavailable";
+  }
+
+  return parsedDate.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+/* =========================================================
+   FORMAT SESSION TIME
+========================================================= */
+
+function formatSessionTime(startTime, endTime) {
+  if (!startTime && !endTime) {
+    return "Time unavailable";
+  }
+
+  if (!endTime) {
+    return startTime;
+  }
+
+  return `${startTime} - ${endTime}`;
+}
+
+/* =========================================================
+   FORMAT STATUS
+========================================================= */
+
+function formatStatus(value) {
+  if (!value) {
+    return "N/A";
+  }
+
+  return String(value)
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+/* =========================================================
+   GET INITIALS
 ========================================================= */
 
 function getInitials(name) {
-  return name
+  return String(name)
     .split(" ")
+    .filter(Boolean)
     .map((word) => word[0])
     .join("")
     .slice(0, 2)

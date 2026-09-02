@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Bell,
@@ -12,7 +13,39 @@ import {
   Wallet,
 } from "lucide-react";
 
+import { getMyNotifications } from "../../api/notificationApi";
+
 function TherapistDashboard() {
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchNotifications = async () => {
+    try {
+      const response = await getMyNotifications();
+
+      // Supports the current ApiResponse structure
+      // as well as direct response data.
+      const responseBody = response?.data ?? response;
+      const notificationData = responseBody?.data ?? responseBody ?? {};
+
+      setUnreadCount(notificationData?.unreadCount || 0);
+    } catch (error) {
+      console.error("Failed to fetch therapist notifications:", error);
+    }
+  };
+
+  useEffect(() => {
+    const initialFetchTimeout = setTimeout(fetchNotifications, 0);
+
+    const interval = setInterval(() => {
+      fetchNotifications();
+    }, 30000);
+
+    return () => {
+      clearTimeout(initialFetchTimeout);
+      clearInterval(interval);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       {/* =====================================================
@@ -38,17 +71,35 @@ function TherapistDashboard() {
 
           {/* Right side */}
           <div className="flex items-center gap-4">
-            <button
-              type="button"
+            {/* Notification Bell */}
+            <Link
+              to="/therapist/notifications"
               className="relative flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+              aria-label="Notifications"
             >
               <Bell size={18} />
 
-              <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-violet-600" />
-            </button>
+              {unreadCount > 0 && (
+                <>
+                  {/* Unread count only */}
+                  {unreadCount <= 99 && (
+                    <span className="absolute -right-2 -top-2 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-violet-600 px-1.5 text-[9px] font-bold text-white shadow-sm">
+                      {unreadCount}
+                    </span>
+                  )}
+
+                  {unreadCount > 99 && (
+                    <span className="absolute -right-2 -top-2 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-violet-600 px-1.5 text-[8px] font-bold text-white shadow-sm">
+                      99+
+                    </span>
+                  )}
+                </>
+              )}
+            </Link>
 
             <div className="hidden h-6 w-px bg-slate-200 sm:block" />
 
+            {/* Profile */}
             <Link
               to="/therapist/profile"
               className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition hover:bg-slate-50"
@@ -103,6 +154,14 @@ function TherapistDashboard() {
               to="/therapist/notes"
               icon={<FileText size={18} />}
               label="Notes"
+            />
+
+            {/* Notifications */}
+            <SidebarLink
+              to="/therapist/notifications"
+              icon={<Bell size={18} />}
+              label="Notifications"
+              badge={unreadCount}
             />
 
             <SidebarLink
@@ -411,18 +470,26 @@ function TherapistDashboard() {
    SIDEBAR LINK
 ========================================================= */
 
-function SidebarLink({ to, icon, label, active = false }) {
+function SidebarLink({ to, icon, label, active = false, badge = 0 }) {
   return (
     <Link
       to={to}
-      className={`mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+      className={`mb-1 flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition ${
         active
           ? "bg-violet-50 text-violet-700"
           : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
       }`}
     >
-      {icon}
-      {label}
+      <div className="flex items-center gap-3">
+        {icon}
+        {label}
+      </div>
+
+      {badge > 0 && (
+        <span className="flex min-h-5 min-w-5 items-center justify-center rounded-full bg-violet-600 px-1.5 text-[9px] font-bold text-white">
+          {badge > 99 ? "99+" : badge}
+        </span>
+      )}
     </Link>
   );
 }

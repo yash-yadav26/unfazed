@@ -2,6 +2,8 @@ const Availability = require("../../scheduling/models/availability.model");
 const Therapist = require("../../therapist/models/therapist.model");
 const Client = require("../../client/models/client.model");
 
+const notificationService = require("../../notification/services/notification.service");
+
 const sessionRepository = require("../repositories/session.repository");
 const ApiError = require("../../../utils/apiError");
 
@@ -14,6 +16,14 @@ const ApiError = require("../../../utils/apiError");
  */
 const ACTIVE_SESSION_STATUSES = ["PENDING", "CONFIRMED"];
 
+/**
+ * Application timezone.
+ *
+ * Availability/session times are entered as local clock times,
+ * so today's slot filtering should also use the same timezone.
+ */
+const APP_TIMEZONE = "Asia/Kolkata";
+
 /* -------------------------------------------------------------------------- */
 /*                               Date Helpers                                 */
 /* -------------------------------------------------------------------------- */
@@ -25,6 +35,79 @@ const parseDate = (dateString) => {
   const [year, month, day] = dateString.split("-").map(Number);
 
   return new Date(Date.UTC(year, month - 1, day));
+};
+
+/**
+ * Validate YYYY-MM-DD strictly.
+ */
+const isValidDateString = (dateString) => {
+  if (
+    typeof dateString !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(dateString)
+  ) {
+    return false;
+  }
+
+  const parsedDate = parseDate(dateString);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return false;
+  }
+
+  const [year, month, day] = dateString.split("-").map(Number);
+
+  return (
+    parsedDate.getUTCFullYear() === year &&
+    parsedDate.getUTCMonth() === month - 1 &&
+    parsedDate.getUTCDate() === day
+  );
+};
+
+/**
+ * Get today's date in the application timezone as YYYY-MM-DD.
+ *
+ * Example:
+ * Asia/Kolkata current date -> "2026-09-02"
+ */
+const getTodayDateString = () => {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: APP_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
+  return formatter.format(new Date());
+};
+
+/**
+ * Check whether selected date is today in application timezone.
+ */
+const isToday = (dateString) => {
+  return dateString === getTodayDateString();
+};
+
+/**
+ * Get current time in application timezone as total minutes.
+ *
+ * Example:
+ * 16:30 -> 990
+ */
+const getCurrentTimeMinutes = () => {
+  const formatter = new Intl.DateTimeFormat("en-GB", {
+    timeZone: APP_TIMEZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+
+  const parts = formatter.formatToParts(new Date());
+
+  const hours = Number(parts.find((part) => part.type === "hour")?.value);
+
+  const minutes = Number(parts.find((part) => part.type === "minute")?.value);
+
+  return hours * 60 + minutes;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -71,12 +154,13 @@ const timeToMinutes = (time) => {
  */
 const minutesToTime = (totalMinutes) => {
   const hours = Math.floor(totalMinutes / 60);
+
   const minutes = totalMinutes % 60;
 
-  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
+  return `${String(hours).padStart(
     2,
     "0",
-  )}`;
+  )}:${String(minutes).padStart(2, "0")}`;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -120,15 +204,12 @@ const getTherapist = async (therapistId) => {
 /* -------------------------------------------------------------------------- */
 
 const validateSessionDate = (dateString) => {
-  const selectedDate = parseDate(dateString);
-
-  if (Number.isNaN(selectedDate.getTime())) {
+  if (!isValidDateString(dateString)) {
     throw new ApiError(400, "Invalid session date.", "INVALID_SESSION_DATE");
   }
 
-  const today = new Date();
-
-  today.setUTCHours(0, 0, 0, 0);
+  const selectedDate = parseDate(dateString);
+  const today = parseDate(getTodayDateString());
 
   if (selectedDate < today) {
     throw new ApiError(
@@ -161,6 +242,7 @@ const validateSessionDate = (dateString) => {
  */
 const generateSlots = ({ startTime, endTime, sessionDuration, bufferTime }) => {
   const startMinutes = timeToMinutes(startTime);
+
   const endMinutes = timeToMinutes(endTime);
 
   const slots = [];
@@ -174,6 +256,36 @@ const generateSlots = ({ startTime, endTime, sessionDuration, bufferTime }) => {
   }
 
   return slots;
+};
+
+/* -------------------------------------------------------------------------- */
+/*                        Filter Past Slots For Today                         */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * For today's date, remove slots that have already started.
+ *
+ * Example:
+ *
+ * Current time = 16:00
+ *
+ * 15:00 -> removed
+ * 15:30 -> removed
+ * 16:00 -> removed
+ * 16:30 -> kept
+ */
+const filterPastSlotsForToday = (slots, dateString) => {
+  if (!isToday(dateString)) {
+    return slots;
+  }
+
+  const currentTimeMinutes = getCurrentTimeMinutes();
+
+  return slots.filter((slot) => {
+    const slotStartMinutes = timeToMinutes(slot);
+
+    return slotStartMinutes > currentTimeMinutes;
+  });
 };
 
 /* -------------------------------------------------------------------------- */
@@ -250,6 +362,7 @@ const getAvailableSlots = async (therapistId, date) => {
    * If an override exists, it always wins for that date.
    *
    * Example:
+   *
    * Weekly Wednesday = 10:00 - 18:00
    * Override date     = 10:00 - 16:00
    *
@@ -257,6 +370,7 @@ const getAvailableSlots = async (therapistId, date) => {
    *
    * If override isAvailable is false, that date has no slots.
    */
+
   if (dateOverride) {
     if (dateOverride.isAvailable) {
       effectiveAvailability = dateOverride;
@@ -280,11 +394,15 @@ const getAvailableSlots = async (therapistId, date) => {
     };
   }
 
-  /* -------------------------- Generate Raw Slots -------------------------- */
+  /* -------------------------- Availability Data --------------------------- */
 
   const sessionDuration = effectiveAvailability.sessionDuration;
+
   const bufferTime = effectiveAvailability.bufferTime;
+
   const price = effectiveAvailability.price;
+
+  /* -------------------------- Generate Raw Slots -------------------------- */
 
   const rawSlots = generateSlots({
     startTime: effectiveAvailability.startTime,
@@ -292,6 +410,12 @@ const getAvailableSlots = async (therapistId, date) => {
     sessionDuration,
     bufferTime,
   });
+
+  /* ------------------------------------------------------------------------ */
+  /*                         Today's Past Slot Filter                         */
+  /* ------------------------------------------------------------------------ */
+
+  const futureSlots = filterPastSlotsForToday(rawSlots, date);
 
   /* ---------------------- Get Already Booked Sessions --------------------- */
 
@@ -307,9 +431,9 @@ const getAvailableSlots = async (therapistId, date) => {
       .map((session) => session.startTime),
   );
 
-  /* ------------------------- Remove Booked Slots --------------------------- */
+  /* ------------------------- Remove Booked Slots -------------------------- */
 
-  const availableSlots = rawSlots.filter((slot) => !bookedSlots.has(slot));
+  const availableSlots = futureSlots.filter((slot) => !bookedSlots.has(slot));
 
   return {
     date,
@@ -411,6 +535,7 @@ const createSession = async ({ userId, therapistId, date, startTime }) => {
      *
      * The MongoDB unique index is the final protection.
      */
+
     if (error?.code === 11000) {
       throw new ApiError(
         409,
@@ -523,6 +648,44 @@ const cancelSession = async ({ userId, sessionId }) => {
     sessionId,
     "CLIENT",
   );
+
+  /* ------------------------------------------------------------------------ */
+  /*                       Session Cancelled Notifications                   */
+  /* ------------------------------------------------------------------------ */
+
+  /*
+   * Cancellation is successful at this point.
+   *
+   * Client and therapist both receive a notification.
+   *
+   * Notification failure should not make the already successful
+   * cancellation fail.
+   */
+  try {
+    const therapist = await getTherapist(session.therapistId);
+
+    /* --------------------------- Client ---------------------------------- */
+
+    await notificationService.createNotification({
+      recipientId: client.userId,
+      type: "SESSION_CANCELLED",
+      title: "Session Cancelled",
+      message: "Your therapy session has been cancelled.",
+      sessionId: cancelledSession._id,
+    });
+
+    /* --------------------------- Therapist ------------------------------- */
+
+    await notificationService.createNotification({
+      recipientId: therapist.userId,
+      type: "SESSION_CANCELLED",
+      title: "Session Cancelled",
+      message: "A client has cancelled a therapy session with you.",
+      sessionId: cancelledSession._id,
+    });
+  } catch (error) {
+    console.error("Failed to create session cancelled notifications:", error);
+  }
 
   return cancelledSession;
 };

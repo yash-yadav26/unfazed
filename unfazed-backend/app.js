@@ -16,6 +16,9 @@ const clientRoutes = require("./src/modules/client");
 const schedulingRoutes = require("./src/modules/scheduling");
 const sessionRoutes = require("./src/modules/session");
 const paymentRoutes = require("./src/modules/payment");
+const notesRoutes = require("./src/modules/notes");
+const notificationRoutes = require("./src/modules/notification");
+
 
 const app = express();
 
@@ -75,6 +78,10 @@ app.use("/api/scheduling", schedulingRoutes);
 app.use("/api/session", sessionRoutes);
 
 app.use("/api/payment", paymentRoutes);
+
+app.use("/api/notes", notesRoutes);
+
+app.use("/api/notifications", notificationRoutes);
 
 // Error handler
 app.use(errorHandler);

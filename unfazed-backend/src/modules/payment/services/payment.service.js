@@ -8,6 +8,8 @@ const Therapist = require("../../therapist/models/therapist.model");
 const Client = require("../../client/models/client.model");
 const Session = require("../../session/models/session.model");
 
+const notificationService = require("../../notification/services/notification.service");
+
 const ApiError = require("../../../utils/apiError.js");
 
 const ACTIVE_SESSION_STATUSES = ["PENDING", "CONFIRMED"];
@@ -693,6 +695,52 @@ const completePaymentAndCreateSession = async (userId, data) => {
   payment = await paymentRepository.updatePaymentByOrderId(razorpayOrderId, {
     sessionId: session._id,
   });
+
+  /* ---------------------------------------------------------
+     GET THERAPIST FOR NOTIFICATION
+  --------------------------------------------------------- */
+
+  const therapist = await Therapist.findById(therapistId)
+    .select("_id userId")
+    .lean();
+
+  if (!therapist) {
+    throw new ApiError(404, "Therapist not found.");
+  }
+
+  /* ---------------------------------------------------------
+     SESSION BOOKED NOTIFICATIONS
+  --------------------------------------------------------- */
+
+  /*
+   * Client notification
+   */
+  try {
+    await notificationService.createNotification({
+      recipientId: client.userId,
+      type: "SESSION_BOOKED",
+      title: "Session Booked",
+      message: "Your session has been booked successfully.",
+      sessionId: session._id,
+    });
+
+    /*
+     * Therapist notification
+     */
+    await notificationService.createNotification({
+      recipientId: therapist.userId,
+      type: "SESSION_BOOKED",
+      title: "New Session Booking",
+      message: "A client has booked a therapy session with you.",
+      sessionId: session._id,
+    });
+  } catch (error) {
+    /*
+     * Notification failure should not make an already
+     * successful payment/session booking fail.
+     */
+    console.error("Failed to create session booked notifications:", error);
+  }
 
   /* ---------------------------------------------------------
      RESPONSE

@@ -9,6 +9,7 @@ import Clients from "../pages/therapist/Clients";
 import TherapistProfile from "../pages/therapist/TherapistProfile";
 import Notes from "../pages/therapist/Notes";
 import Analytics from "../pages/therapist/Analytics";
+import TherapistNotifications from "../pages/therapist/Notifications";
 
 function TherapistRoutes() {
   return (
@@ -27,6 +28,8 @@ function TherapistRoutes() {
         <Route path="notes" element={<Notes />} />
 
         <Route path="analytics" element={<Analytics />} />
+
+        <Route path="notifications" element={<TherapistNotifications />}/>
       </Route>
     </Routes>
   );
