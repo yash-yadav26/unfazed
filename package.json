@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
+    "node-cron": "^4.6.0",
     "tailwindcss": "^4.3.3"
   },
   "name": "unfazed",
@@ -10,7 +11,7 @@
   "devDependencies": {
     "concurrently": "^10.0.5"
   },
-   "scripts": {
+  "scripts": {
     "dev": "concurrently \"npm run dev --prefix unfazed-backend\" \"npm run dev --prefix unfazed-frontend\"",
     "backend": "npm run dev --prefix unfazed-backend",
     "frontend": "npm run dev --prefix unfazed-frontend"

@@ -1,3 +1,4 @@
+const startReminderJob = require("./src/jobs/reminder.job");
 const http = require("http");
 
 const app = require("./app");
@@ -13,6 +14,7 @@ const startServer = async () => {
 
     server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
+      startReminderJob();
     });
   } catch (error) {
     console.error("Server startup failed:", error.message);

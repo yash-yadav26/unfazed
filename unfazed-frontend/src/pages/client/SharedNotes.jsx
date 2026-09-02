@@ -8,89 +8,98 @@ import {
   UserRound,
 } from "lucide-react";
 
+import { getMySharedNotes } from "../../api/notesApi";
+
 function SharedNotes() {
   const [notes, setNotes] = useState([]);
+
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   /* =========================================================
      LOAD SHARED NOTES
-
-     Backend later:
-     GET /notes/shared
-
-     IMPORTANT:
-     API se sirf type === "shared" notes hi aane chahiye.
-  ========================================================== */
+     ---------------------------------------------------------
+     GET /api/notes/shared
+     ---------------------------------------------------------
+     Backend automatically returns only SHARED notes.
+  ========================================================= */
 
   useEffect(() => {
-    let isActive = true;
+    const fetchSharedNotes = async () => {
+      try {
+        setLoading(true);
+        setError("");
 
-    const timer = setTimeout(() => {
-      if (!isActive) {
-        return;
+        const response = await getMySharedNotes();
+
+        /*
+         * Expected backend response:
+         *
+         * {
+         *   success: true,
+         *   statusCode: 200,
+         *   message: "Shared notes fetched successfully.",
+         *   data: [...]
+         * }
+         */
+
+        const sharedNotes = Array.isArray(response?.data) ? response.data : [];
+
+        /*
+         * Backend se jo actual data aa raha hai
+         * usko UI-friendly shape mein normalize kar rahe hain.
+         */
+        const normalizedNotes = sharedNotes.map((note) => ({
+          ...note,
+
+          id: note?._id,
+
+          type: note?.type,
+
+          therapistName: note?.therapistId?.name || "Your Therapist",
+
+          sessionDate: note?.sessionId?.date || null,
+
+          sessionStartTime: note?.sessionId?.startTime || null,
+
+          sessionEndTime: note?.sessionId?.endTime || null,
+
+          date: note?.createdAt || note?.sessionId?.date || null,
+
+          /*
+           * Current backend model mein title field nahi hai,
+           * isliye fixed display title use kar rahe hain.
+           */
+          title: "Session Note",
+        }));
+
+        /*
+         * Safety layer:
+         * Frontend par bhi PRIVATE notes display nahi karenge.
+         *
+         * Actual security backend/API level par already
+         * type: "SHARED" query se enforce hoti hai.
+         */
+        const sharedOnly = normalizedNotes.filter(
+          (note) => String(note?.type || "").toUpperCase() === "SHARED",
+        );
+
+        setNotes(sharedOnly);
+      } catch (error) {
+        console.error("Failed to fetch shared notes:", error);
+
+        setError(
+          error?.response?.data?.message ||
+            "Failed to load shared notes. Please try again.",
+        );
+
+        setNotes([]);
+      } finally {
+        setLoading(false);
       }
-
-      /*
-       * Backend later:
-       *
-       * const response = await axiosInstance.get(
-       *   "/notes/shared"
-       * );
-       *
-       * const sharedNotes = response.data.data;
-       *
-       * setNotes(sharedNotes);
-       */
-
-      const mockNotes = [
-        {
-          id: "1",
-          type: "shared",
-          therapistName: "Dr. Sharma",
-          title: "Session Follow-up",
-          content:
-            "We discussed the recent stressors and identified a few coping strategies to practice before the next session.",
-          date: "16 August 2026",
-          sessionDate: "16 August 2026",
-        },
-        {
-          id: "2",
-          type: "shared",
-          therapistName: "Dr. Sharma",
-          title: "Breathing Exercise",
-          content:
-            "Continue practicing the breathing exercise for a few minutes when you notice anxiety or feeling overwhelmed.",
-          date: "12 August 2026",
-          sessionDate: "12 August 2026",
-        },
-        {
-          id: "3",
-          type: "private",
-          therapistName: "Dr. Sharma",
-          title: "Private Clinical Note",
-          content:
-            "This note should never be visible to the client.",
-          date: "12 August 2026",
-          sessionDate: "12 August 2026",
-        },
-      ];
-
-      /*
-       * Safety layer:
-       * Even demo data mein private note ko remove kar rahe hain.
-       */
-      const sharedOnly = mockNotes.filter(
-        (note) => note.type === "shared",
-      );
-
-      setNotes(sharedOnly);
-      setLoading(false);
-    }, 500);
-
-    return () => {
-      isActive = false;
-      clearTimeout(timer);
     };
+
+    fetchSharedNotes();
   }, []);
 
   return (
@@ -101,10 +110,7 @@ function SharedNotes() {
 
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-8">
-          <Link
-            to="/client"
-            className="flex items-center gap-3"
-          >
+          <Link to="/client" className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-600 text-white">
               <HeartHandshake size={19} />
             </div>
@@ -114,9 +120,7 @@ function SharedNotes() {
                 Unfazed
               </p>
 
-              <p className="text-[9px] text-slate-500">
-                Client Portal
-              </p>
+              <p className="text-[9px] text-slate-500">Client Portal</p>
             </div>
           </Link>
 
@@ -170,8 +174,8 @@ function SharedNotes() {
                 </h2>
 
                 <p className="mt-1 text-xs leading-5 text-slate-500">
-                  Your therapist may share selected notes or
-                  follow-up information with you after a session.
+                  Your therapist may share selected notes or follow-up
+                  information with you after a session.
                 </p>
               </div>
             </div>
@@ -195,28 +199,40 @@ function SharedNotes() {
                   </p>
                 </div>
 
-                <FileText
-                  size={19}
-                  className="text-violet-600"
-                />
+                <FileText size={19} className="text-violet-600" />
               </div>
             </div>
 
             <div className="p-5 sm:p-6">
-              {loading ? (
-                <LoadingState />
-              ) : notes.length > 0 ? (
+              {/* =================================================
+                  LOADING
+              ================================================== */}
+
+              {loading && <LoadingState />}
+
+              {/* =================================================
+                  ERROR
+              ================================================== */}
+
+              {!loading && error && <ErrorState message={error} />}
+
+              {/* =================================================
+                  NOTES
+              ================================================== */}
+
+              {!loading && !error && notes.length > 0 && (
                 <div className="space-y-4">
                   {notes.map((note) => (
-                    <SharedNoteCard
-                      key={note.id}
-                      note={note}
-                    />
+                    <SharedNoteCard key={note.id} note={note} />
                   ))}
                 </div>
-              ) : (
-                <EmptyState />
               )}
+
+              {/* =================================================
+                  EMPTY
+              ================================================== */}
+
+              {!loading && !error && notes.length === 0 && <EmptyState />}
             </div>
           </section>
 
@@ -225,8 +241,7 @@ function SharedNotes() {
           ================================================== */}
 
           <div className="mt-5 text-center text-[10px] text-slate-400">
-            Only notes specifically shared by your therapist are
-            visible here.
+            Only notes specifically shared by your therapist are visible here.
           </div>
         </div>
       </main>
@@ -251,20 +266,36 @@ function SharedNoteCard({ note }) {
 
           <div>
             <h3 className="text-sm font-bold text-slate-900">
-              {note.title}
+              {note?.title || "Session Note"}
             </h3>
 
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] text-slate-400">
+              {/* Therapist */}
+
               <span className="flex items-center gap-1.5">
                 <UserRound size={12} />
-                {note.therapistName}
+
+                {note?.therapistName || "Your Therapist"}
               </span>
+
+              {/* Session Date */}
 
               <span className="flex items-center gap-1.5">
                 <CalendarDays size={12} />
-                {note.sessionDate}
+
+                {formatDate(note?.sessionDate)}
               </span>
             </div>
+
+            {/* Session Time */}
+
+            {(note?.sessionStartTime || note?.sessionEndTime) && (
+              <p className="mt-2 text-[10px] text-slate-400">
+                Session time: {note?.sessionStartTime || "--:--"}
+                {" - "}
+                {note?.sessionEndTime || "--:--"}
+              </p>
+            )}
           </div>
         </div>
 
@@ -276,15 +307,15 @@ function SharedNoteCard({ note }) {
       {/* Content */}
 
       <div className="mt-5 rounded-xl bg-slate-50 p-4">
-        <p className="text-sm leading-6 text-slate-600">
-          {note.content}
+        <p className="whitespace-pre-wrap text-sm leading-6 text-slate-600">
+          {note?.content || "No note content available."}
         </p>
       </div>
 
       {/* Footer */}
 
       <div className="mt-4 text-[10px] text-slate-400">
-        Shared on {note.date}
+        Shared on {formatDate(note?.date)}
       </div>
     </article>
   );
@@ -320,6 +351,28 @@ function LoadingState() {
 }
 
 /* =========================================================
+   ERROR
+========================================================= */
+
+function ErrorState({ message }) {
+  return (
+    <div className="rounded-2xl bg-red-50 px-5 py-12 text-center">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-white text-red-500 shadow-sm">
+        <FileText size={22} />
+      </div>
+
+      <h3 className="mt-4 text-sm font-bold text-slate-800">
+        Unable to load shared notes
+      </h3>
+
+      <p className="mx-auto mt-1 max-w-md text-xs leading-5 text-red-500">
+        {message}
+      </p>
+    </div>
+  );
+}
+
+/* =========================================================
    EMPTY
 ========================================================= */
 
@@ -335,11 +388,33 @@ function EmptyState() {
       </h3>
 
       <p className="mx-auto mt-1 max-w-sm text-xs leading-5 text-slate-400">
-        Notes shared by your therapist will appear here after
-        they choose to share them with you.
+        Notes shared by your therapist will appear here after they choose to
+        share them with you.
       </p>
     </div>
   );
+}
+
+/* =========================================================
+   FORMAT DATE
+========================================================= */
+
+function formatDate(date) {
+  if (!date) {
+    return "Date unavailable";
+  }
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "Date unavailable";
+  }
+
+  return parsedDate.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 export default SharedNotes;

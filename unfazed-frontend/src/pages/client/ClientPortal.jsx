@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Bell,
@@ -16,41 +16,75 @@ import {
   X,
 } from "lucide-react";
 
+import { getMyNotifications } from "../../api/notificationApi";
+
 function ClientPortal() {
   const location = useLocation();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   /* =========================================================
-     MOCK DATA
+     NOTIFICATIONS
   ========================================================== */
 
-  const notifications = [
-    {
-      id: 1,
-      title: "Session confirmed",
-      description:
-        "Your session with Dr. Sharma has been confirmed.",
-      time: "10 min ago",
-      unread: true,
-    },
-    {
-      id: 2,
-      title: "Session reminder",
-      description:
-        "You have a therapy session tomorrow at 10:00 AM.",
-      time: "2 hours ago",
-      unread: true,
-    },
-    {
-      id: 3,
-      title: "Payment received",
-      description:
-        "Your payment of ₹1,000 was successfully recorded.",
-      time: "Yesterday",
-      unread: false,
-    },
-  ];
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationLoading, setNotificationLoading] = useState(true);
+  const [notificationError, setNotificationError] = useState("");
+
+  /* =========================================================
+     FETCH NOTIFICATIONS
+  ========================================================== */
+
+  const fetchNotifications = async () => {
+    try {
+      setNotificationError("");
+
+      const response = await getMyNotifications();
+
+      const notificationData = response?.data;
+
+      setNotifications(notificationData?.notifications || []);
+      setUnreadCount(notificationData?.unreadCount || 0);
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error);
+
+      setNotificationError(
+        error?.response?.data?.message || "Failed to load notifications.",
+      );
+    } finally {
+      setNotificationLoading(false);
+    }
+  };
+
+  /* =========================================================
+     LOAD NOTIFICATIONS
+  ========================================================== */
+
+  useEffect(() => {
+    const initialFetch = setTimeout(() => {
+      fetchNotifications();
+    }, 0);
+
+    /*
+     * Refresh notifications every 30 seconds.
+     *
+     * This lets the dashboard pick up new notifications
+     * without needing a page refresh.
+     */
+    const interval = setInterval(() => {
+      fetchNotifications();
+    }, 30000);
+
+    return () => {
+      clearTimeout(initialFetch);
+      clearInterval(interval);
+    };
+  }, []);
+
+  /* =========================================================
+     OTHER MOCK DATA
+     ========================================================== */
 
   const upcomingSession = {
     therapistName: "Dr. Sharma",
@@ -109,10 +143,6 @@ function ClientPortal() {
     },
   ];
 
-  const unreadCount = notifications.filter(
-    (notification) => notification.unread,
-  ).length;
-
   /* =========================================================
      SIDEBAR ITEMS
   ========================================================== */
@@ -164,6 +194,62 @@ function ClientPortal() {
     return location.pathname.startsWith(path);
   };
 
+  /* =========================================================
+     DATE FORMATTER
+  ========================================================== */
+
+  const formatNotificationTime = (createdAt) => {
+    if (!createdAt) {
+      return "";
+    }
+
+    const createdDate = new Date(createdAt);
+
+    if (Number.isNaN(createdDate.getTime())) {
+      return "";
+    }
+
+    const now = new Date();
+
+    const differenceInSeconds = Math.floor(
+      (now.getTime() - createdDate.getTime()) / 1000,
+    );
+
+    if (differenceInSeconds < 60) {
+      return "Just now";
+    }
+
+    const differenceInMinutes = Math.floor(differenceInSeconds / 60);
+
+    if (differenceInMinutes < 60) {
+      return `${differenceInMinutes} min ago`;
+    }
+
+    const differenceInHours = Math.floor(differenceInMinutes / 60);
+
+    if (differenceInHours < 24) {
+      return `${differenceInHours} hour${differenceInHours > 1 ? "s" : ""} ago`;
+    }
+
+    const differenceInDays = Math.floor(differenceInHours / 24);
+
+    if (differenceInDays < 7) {
+      return `${differenceInDays} day${differenceInDays > 1 ? "s" : ""} ago`;
+    }
+
+    return createdDate.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  /* =========================================================
+     DISPLAY NOTIFICATIONS
+  ========================================================== */
+
+  const latestNotifications = notifications.slice(0, 3);
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       {/* =====================================================
@@ -183,12 +269,11 @@ function ClientPortal() {
 
       <aside
         className={`fixed left-0 top-0 z-50 flex h-screen w-[270px] flex-col border-r border-slate-200 bg-white transition-transform duration-300 lg:translate-x-0 ${
-          sidebarOpen
-            ? "translate-x-0"
-            : "-translate-x-full"
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         {/* Logo */}
+
         <div className="flex h-[78px] items-center border-b border-slate-100 px-5">
           <Link
             to="/client"
@@ -204,13 +289,12 @@ function ClientPortal() {
                 Unfazed
               </p>
 
-              <p className="text-[10px] text-slate-500">
-                Client Portal
-              </p>
+              <p className="text-[10px] text-slate-500">Client Portal</p>
             </div>
           </Link>
 
           {/* Mobile close */}
+
           <button
             type="button"
             onClick={() => setSidebarOpen(false)}
@@ -221,6 +305,7 @@ function ClientPortal() {
         </div>
 
         {/* Navigation */}
+
         <nav className="flex-1 px-3 py-5">
           <p className="px-3 pb-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">
             My Portal
@@ -242,18 +327,12 @@ function ClientPortal() {
                   }`}
                 >
                   <span
-                    className={
-                      active
-                        ? "text-violet-600"
-                        : "text-slate-400"
-                    }
+                    className={active ? "text-violet-600" : "text-slate-400"}
                   >
                     {item.icon}
                   </span>
 
-                  <span className="flex-1">
-                    {item.label}
-                  </span>
+                  <span className="flex-1">{item.label}</span>
 
                   {item.badge > 0 && (
                     <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-violet-600 px-1.5 text-[9px] font-bold text-white">
@@ -267,9 +346,9 @@ function ClientPortal() {
         </nav>
 
         {/* Bottom */}
+
         <div className="border-t border-slate-100 p-3">
           <button
-            to="/login"
             type="button"
             className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-500 transition hover:bg-red-50 hover:text-red-600"
           >
@@ -291,6 +370,7 @@ function ClientPortal() {
         <header className="sticky top-0 z-30 border-b border-slate-200 bg-white">
           <div className="flex h-[78px] items-center justify-between px-5 sm:px-8 lg:px-10">
             {/* Mobile menu */}
+
             <button
               type="button"
               onClick={() => setSidebarOpen(true)}
@@ -300,6 +380,7 @@ function ClientPortal() {
             </button>
 
             {/* Desktop title */}
+
             <div className="hidden lg:block">
               <p className="text-xs font-medium text-slate-400">
                 Client Portal
@@ -311,8 +392,10 @@ function ClientPortal() {
             </div>
 
             {/* Right */}
+
             <div className="ml-auto flex items-center gap-4">
               {/* Notification */}
+
               <Link
                 to="/client/notifications"
                 className="relative rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-violet-600"
@@ -329,22 +412,16 @@ function ClientPortal() {
               <div className="h-7 w-px bg-slate-200" />
 
               {/* Profile */}
-              <Link
-                to="/client/profile"
-                className="flex items-center gap-2"
-              >
+
+              <Link to="/client/profile" className="flex items-center gap-2">
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700">
                   Y
                 </div>
 
                 <div className="hidden sm:block">
-                  <p className="text-xs font-semibold text-slate-800">
-                    Yash
-                  </p>
+                  <p className="text-xs font-semibold text-slate-800">Yash</p>
 
-                  <p className="text-[10px] text-slate-400">
-                    My Profile
-                  </p>
+                  <p className="text-[10px] text-slate-400">My Profile</p>
                 </div>
               </Link>
             </div>
@@ -406,9 +483,7 @@ function ClientPortal() {
 
               <SummaryCard
                 title="Last Payment"
-                value={`₹${recentPayment.amount.toLocaleString(
-                  "en-IN",
-                )}`}
+                value={`₹${recentPayment.amount.toLocaleString("en-IN")}`}
                 subtitle={recentPayment.status}
                 icon={<WalletCards size={19} />}
               />
@@ -427,8 +502,10 @@ function ClientPortal() {
 
             <div className="mt-6 grid gap-6 xl:grid-cols-[1.35fr_0.85fr]">
               {/* LEFT */}
+
               <div className="space-y-6">
                 {/* Upcoming Session */}
+
                 <section className="rounded-2xl border border-slate-200 bg-white">
                   <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
                     <div>
@@ -467,8 +544,7 @@ function ClientPortal() {
                             </h3>
 
                             <p className="mt-1 text-xs text-slate-500">
-                              with{" "}
-                              {upcomingSession.therapistName}
+                              with {upcomingSession.therapistName}
                             </p>
                           </div>
                         </div>
@@ -488,6 +564,7 @@ function ClientPortal() {
                 </section>
 
                 {/* Sessions */}
+
                 <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
                   <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
                     <div>
@@ -526,8 +603,7 @@ function ClientPortal() {
                             </p>
 
                             <p className="mt-1 text-xs text-slate-400">
-                              {session.therapistName} •{" "}
-                              {session.date} •{" "}
+                              {session.therapistName} • {session.date} •{" "}
                               {session.time}
                             </p>
                           </div>
@@ -535,8 +611,7 @@ function ClientPortal() {
 
                         <span
                           className={`self-start rounded-full px-2.5 py-1 text-[10px] font-bold sm:self-auto ${
-                            session.status ===
-                            "Upcoming"
+                            session.status === "Upcoming"
                               ? "bg-violet-50 text-violet-600"
                               : "bg-emerald-50 text-emerald-600"
                           }`}
@@ -550,8 +625,10 @@ function ClientPortal() {
               </div>
 
               {/* RIGHT */}
+
               <div className="space-y-6">
                 {/* Package */}
+
                 <section className="rounded-2xl border border-slate-200 bg-white">
                   <div className="border-b border-slate-100 px-5 py-4">
                     <h2 className="text-base font-bold text-slate-900">
@@ -578,9 +655,7 @@ function ClientPortal() {
 
                         <div className="text-right">
                           <p className="text-2xl font-bold text-violet-700">
-                            {
-                              packageInfo.remainingSessions
-                            }
+                            {packageInfo.remainingSessions}
                           </p>
 
                           <p className="text-[10px] text-slate-400">
@@ -610,9 +685,7 @@ function ClientPortal() {
                           used
                         </span>
 
-                        <span>
-                          {packageInfo.totalSessions} total
-                        </span>
+                        <span>{packageInfo.totalSessions} total</span>
                       </div>
                     </div>
 
@@ -626,6 +699,7 @@ function ClientPortal() {
                 </section>
 
                 {/* Recent Payment */}
+
                 <section className="rounded-2xl border border-slate-200 bg-white">
                   <div className="border-b border-slate-100 px-5 py-4">
                     <h2 className="text-base font-bold text-slate-900">
@@ -653,10 +727,7 @@ function ClientPortal() {
 
                       <div className="text-right">
                         <p className="text-sm font-bold text-slate-800">
-                          ₹
-                          {recentPayment.amount.toLocaleString(
-                            "en-IN",
-                          )}
+                          ₹{recentPayment.amount.toLocaleString("en-IN")}
                         </p>
 
                         <p className="mt-1 text-[10px] font-semibold text-emerald-600">
@@ -683,6 +754,7 @@ function ClientPortal() {
 
             <div className="mt-6 grid gap-6 lg:grid-cols-2">
               {/* Notifications */}
+
               <section className="rounded-2xl border border-slate-200 bg-white">
                 <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
                   <div>
@@ -705,42 +777,78 @@ function ClientPortal() {
                 </div>
 
                 <div className="divide-y divide-slate-100">
-                  {notifications.map(
-                    (notification) => (
-                      <div
-                        key={notification.id}
-                        className="flex gap-3 px-5 py-4"
+                  {notificationLoading ? (
+                    <div className="px-5 py-8 text-center">
+                      <p className="text-xs text-slate-400">
+                        Loading notifications...
+                      </p>
+                    </div>
+                  ) : notificationError ? (
+                    <div className="px-5 py-8 text-center">
+                      <p className="text-xs text-red-500">
+                        {notificationError}
+                      </p>
+                    </div>
+                  ) : latestNotifications.length === 0 ? (
+                    <div className="px-5 py-8 text-center">
+                      <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+                        <Bell size={17} />
+                      </div>
+
+                      <p className="mt-3 text-sm font-semibold text-slate-700">
+                        No notifications
+                      </p>
+
+                      <p className="mt-1 text-xs text-slate-400">
+                        You’re all caught up.
+                      </p>
+                    </div>
+                  ) : (
+                    latestNotifications.map((notification) => (
+                      <Link
+                        key={notification._id}
+                        to="/client/notifications"
+                        className={`flex gap-3 px-5 py-4 transition hover:bg-slate-50 ${
+                          !notification.isRead ? "bg-violet-50/30" : ""
+                        }`}
                       >
                         <div
                           className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
-                            notification.unread
+                            !notification.isRead
                               ? "bg-violet-600"
                               : "bg-slate-300"
                           }`}
                         />
 
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold text-slate-800">
-                            {notification.title}
-                          </p>
+                          <div className="flex items-start justify-between gap-3">
+                            <p
+                              className={`text-sm ${
+                                !notification.isRead
+                                  ? "font-bold text-slate-900"
+                                  : "font-semibold text-slate-800"
+                              }`}
+                            >
+                              {notification.title}
+                            </p>
+                          </div>
 
                           <p className="mt-1 text-xs leading-5 text-slate-500">
-                            {
-                              notification.description
-                            }
+                            {notification.message}
                           </p>
 
                           <p className="mt-1.5 text-[10px] text-slate-400">
-                            {notification.time}
+                            {formatNotificationTime(notification.createdAt)}
                           </p>
                         </div>
-                      </div>
-                    ),
+                      </Link>
+                    ))
                   )}
                 </div>
               </section>
 
               {/* Messages */}
+
               <section className="rounded-2xl border border-slate-200 bg-white">
                 <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
                   <div>
@@ -762,40 +870,32 @@ function ClientPortal() {
                 </div>
 
                 <div className="p-5">
-                  {conversations.map(
-                    (conversation) => (
-                      <div
-                        key={conversation.id}
-                        className="flex items-start gap-3 rounded-xl bg-slate-50 p-4"
-                      >
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700">
-                          <MessageCircle
-                            size={17}
-                          />
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-3">
-                            <p className="text-sm font-semibold text-slate-800">
-                              {
-                                conversation.therapistName
-                              }
-                            </p>
-
-                            <span className="text-[10px] text-slate-400">
-                              {
-                                conversation.time
-                              }
-                            </span>
-                          </div>
-
-                          <p className="mt-1 truncate text-xs text-slate-500">
-                            {conversation.message}
-                          </p>
-                        </div>
+                  {conversations.map((conversation) => (
+                    <div
+                      key={conversation.id}
+                      className="flex items-start gap-3 rounded-xl bg-slate-50 p-4"
+                    >
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700">
+                        <MessageCircle size={17} />
                       </div>
-                    ),
-                  )}
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm font-semibold text-slate-800">
+                            {conversation.therapistName}
+                          </p>
+
+                          <span className="text-[10px] text-slate-400">
+                            {conversation.time}
+                          </span>
+                        </div>
+
+                        <p className="mt-1 truncate text-xs text-slate-500">
+                          {conversation.message}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
 
                   <Link
                     to="/client/chat"
@@ -841,6 +941,7 @@ function ClientPortal() {
             </section>
 
             {/* Footer */}
+
             <div className="mt-5 text-center text-[11px] text-slate-400">
               Your therapy information is kept private and protected.
             </div>
@@ -855,27 +956,16 @@ function ClientPortal() {
    SUMMARY CARD
 ========================================================= */
 
-function SummaryCard({
-  title,
-  value,
-  subtitle,
-  icon,
-}) {
+function SummaryCard({ title, value, subtitle, icon }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-[11px] font-medium text-slate-500">
-            {title}
-          </p>
+          <p className="text-[11px] font-medium text-slate-500">{title}</p>
 
-          <p className="mt-1 text-2xl font-bold text-slate-950">
-            {value}
-          </p>
+          <p className="mt-1 text-2xl font-bold text-slate-950">{value}</p>
 
-          <p className="mt-1 text-[10px] text-slate-400">
-            {subtitle}
-          </p>
+          <p className="mt-1 text-[10px] text-slate-400">{subtitle}</p>
         </div>
 
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
