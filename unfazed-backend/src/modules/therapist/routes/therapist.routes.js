@@ -4,6 +4,7 @@ const {
   createTherapistController,
   getMyTherapistController,
   getAllTherapistsController,
+  getTherapistBySlugController,
   updateMyTherapistController,
   deleteMyTherapistController,
 } = require("../controllers/therapist.controller");
@@ -11,15 +12,16 @@ const {
 const {
   validateCreateTherapist,
   validateUpdateTherapist,
+  validateGetTherapistBySlug,
 } = require("../validations/therapist.validation");
 
 const authMiddleware = require("../../../middleware/authMiddleware");
 
 const router = express.Router();
 
-// ===============================
-// Create Therapist Profile
-// ===============================
+/* -------------------------------------------------------------------------- */
+/*                       Create Therapist Profile                             */
+/* -------------------------------------------------------------------------- */
 
 /**
  * @swagger
@@ -78,7 +80,6 @@ const router = express.Router();
  *       409:
  *         description: Therapist profile already exists
  */
-
 router.post(
   "/",
   authMiddleware,
@@ -86,9 +87,9 @@ router.post(
   createTherapistController,
 );
 
-// ===============================
-// Get My Therapist Profile
-// ===============================
+/* -------------------------------------------------------------------------- */
+/*                         Get My Therapist Profile                           */
+/* -------------------------------------------------------------------------- */
 
 /**
  * @swagger
@@ -107,12 +108,11 @@ router.post(
  *       404:
  *         description: Therapist profile not found
  */
-
 router.get("/me", authMiddleware, getMyTherapistController);
 
-// ===============================
-// Get All Therapists
-// ===============================
+/* -------------------------------------------------------------------------- */
+/*                           Get All Therapists                               */
+/* -------------------------------------------------------------------------- */
 
 /**
  * @swagger
@@ -125,12 +125,41 @@ router.get("/me", authMiddleware, getMyTherapistController);
  *       200:
  *         description: Therapists fetched successfully
  */
-
 router.get("/", getAllTherapistsController);
 
-// ===============================
-// Update My Therapist Profile
-// ===============================
+/* -------------------------------------------------------------------------- */
+/*                    Get Therapist Profile By Slug                           */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * @swagger
+ * /api/therapists/{slug}:
+ *   get:
+ *     summary: Get therapist profile by slug
+ *     description: Returns a public therapist profile using the therapist's unique profile slug.
+ *     tags:
+ *       - Therapist
+ *     parameters:
+ *       - in: path
+ *         name: slug
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Unique therapist profile slug
+ *         example: dr-yash-yadav
+ *     responses:
+ *       200:
+ *         description: Therapist profile fetched successfully
+ *       400:
+ *         description: Invalid therapist slug
+ *       404:
+ *         description: Therapist profile not found
+ */
+router.get("/:slug", validateGetTherapistBySlug, getTherapistBySlugController);
+
+/* -------------------------------------------------------------------------- */
+/*                       Update My Therapist Profile                          */
+/* -------------------------------------------------------------------------- */
 
 /**
  * @swagger
@@ -181,7 +210,6 @@ router.get("/", getAllTherapistsController);
  *       404:
  *         description: Therapist profile not found
  */
-
 router.patch(
   "/me",
   authMiddleware,
@@ -189,9 +217,9 @@ router.patch(
   updateMyTherapistController,
 );
 
-// ===============================
-// Delete My Therapist Profile
-// ===============================
+/* -------------------------------------------------------------------------- */
+/*                       Delete My Therapist Profile                          */
+/* -------------------------------------------------------------------------- */
 
 /**
  * @swagger
@@ -210,7 +238,10 @@ router.patch(
  *       404:
  *         description: Therapist profile not found
  */
-
 router.delete("/me", authMiddleware, deleteMyTherapistController);
+
+/* -------------------------------------------------------------------------- */
+/*                                  Export                                    */
+/* -------------------------------------------------------------------------- */
 
 module.exports = router;

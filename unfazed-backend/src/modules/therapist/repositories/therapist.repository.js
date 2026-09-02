@@ -1,35 +1,79 @@
 const Therapist = require("../models/therapist.model");
 
-// Find therapist profile by user ID
+/* -------------------------------------------------------------------------- */
+/*                    Find Therapist Profile by User ID                       */
+/* -------------------------------------------------------------------------- */
+
 const findTherapistByUserId = async (userId) => {
-  return await Therapist.findOne({ userId }).lean();
+  return await Therapist.findOne({
+    userId,
+  }).lean();
 };
 
-// Get all therapist profiles
+/* -------------------------------------------------------------------------- */
+/*                     Find Therapist Profile by Slug                         */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Used for:
+ * GET /api/therapists/:slug
+ */
+const findTherapistBySlug = async (slug) => {
+  return await Therapist.findOne({
+    slug,
+  }).lean();
+};
+
+/* -------------------------------------------------------------------------- */
+/*                           Get All Therapists                               */
+/* -------------------------------------------------------------------------- */
+
 const findAllTherapists = async () => {
   return await Therapist.find().lean();
 };
 
-// Create therapist profile
+/* -------------------------------------------------------------------------- */
+/*                         Create Therapist Profile                            */
+/* -------------------------------------------------------------------------- */
+
 const createTherapist = async (therapistData) => {
   return await Therapist.create(therapistData);
 };
 
-// Update therapist profile by user ID
+/* -------------------------------------------------------------------------- */
+/*                    Update Therapist Profile by User ID                     */
+/* -------------------------------------------------------------------------- */
+
 const updateTherapistByUserId = async (userId, data) => {
-  return await Therapist.findOneAndUpdate({ userId }, data, {
-    returnDocument: "after",
-    runValidators: true,
-  }).lean();
+  return await Therapist.findOneAndUpdate(
+    {
+      userId,
+    },
+    data,
+    {
+      returnDocument: "after",
+      runValidators: true,
+    },
+  ).lean();
 };
 
-// Delete therapist profile by user ID
+/* -------------------------------------------------------------------------- */
+/*                    Delete Therapist Profile by User ID                     */
+/* -------------------------------------------------------------------------- */
+
 const deleteTherapistByUserId = async (userId) => {
-  return await Therapist.findOneAndDelete({ userId });
+  return await Therapist.findOneAndDelete({
+    userId,
+  });
 };
+
+/* -------------------------------------------------------------------------- */
+/*                                  Export                                    */
+/* -------------------------------------------------------------------------- */
 
 module.exports = {
   findTherapistByUserId,
+  findTherapistBySlug,
   findAllTherapists,
   createTherapist,
   updateTherapistByUserId,

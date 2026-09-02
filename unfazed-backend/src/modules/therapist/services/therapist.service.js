@@ -4,9 +4,9 @@ const User = require("../../auth/models/user.model");
 
 const ApiError = require("../../../utils/apiError");
 
-// ===============================
-// Check Therapist User
-// ===============================
+/* -------------------------------------------------------------------------- */
+/*                         Check Therapist User                               */
+/* -------------------------------------------------------------------------- */
 
 const checkTherapistUser = async (userId) => {
   const user = await User.findById(userId).select("role");
@@ -26,9 +26,9 @@ const checkTherapistUser = async (userId) => {
   return user;
 };
 
-// ===============================
-// Create Therapist Profile
-// ===============================
+/* -------------------------------------------------------------------------- */
+/*                         Create Therapist Profile                           */
+/* -------------------------------------------------------------------------- */
 
 const createTherapistProfile = async (userId, data) => {
   await checkTherapistUser(userId);
@@ -53,6 +53,7 @@ const createTherapistProfile = async (userId, data) => {
     languages: data.languages,
     profileCompleted: true,
   });
+
   await User.findByIdAndUpdate(userId, {
     profileCompleted: true,
   });
@@ -60,9 +61,9 @@ const createTherapistProfile = async (userId, data) => {
   return therapist;
 };
 
-// ===============================
-// Get My Therapist Profile
-// ===============================
+/* -------------------------------------------------------------------------- */
+/*                         Get My Therapist Profile                           */
+/* -------------------------------------------------------------------------- */
 
 const getMyTherapistProfile = async (userId) => {
   await checkTherapistUser(userId);
@@ -80,17 +81,40 @@ const getMyTherapistProfile = async (userId) => {
   return therapist;
 };
 
-// ===============================
-// Get All Therapists
-// ===============================
+/* -------------------------------------------------------------------------- */
+/*                           Get All Therapists                               */
+/* -------------------------------------------------------------------------- */
 
 const getAllTherapists = async () => {
   return await therapistRepository.findAllTherapists();
 };
 
-// ===============================
-// Update My Therapist Profile
-// ===============================
+/* -------------------------------------------------------------------------- */
+/*                     Get Therapist Profile By Slug                          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Public therapist profile.
+ *
+ * GET /api/therapists/:slug
+ */
+const getTherapistBySlug = async (slug) => {
+  const therapist = await therapistRepository.findTherapistBySlug(slug);
+
+  if (!therapist) {
+    throw new ApiError(
+      404,
+      "Therapist profile not found.",
+      "PROFILE_NOT_FOUND",
+    );
+  }
+
+  return therapist;
+};
+
+/* -------------------------------------------------------------------------- */
+/*                       Update My Therapist Profile                          */
+/* -------------------------------------------------------------------------- */
 
 const updateMyTherapistProfile = async (userId, data) => {
   await checkTherapistUser(userId);
@@ -113,9 +137,9 @@ const updateMyTherapistProfile = async (userId, data) => {
   return updatedTherapist;
 };
 
-// ===============================
-// Delete My Therapist Profile
-// ===============================
+/* -------------------------------------------------------------------------- */
+/*                       Delete My Therapist Profile                           */
+/* -------------------------------------------------------------------------- */
 
 const deleteMyTherapistProfile = async (userId) => {
   await checkTherapistUser(userId);
@@ -131,18 +155,25 @@ const deleteMyTherapistProfile = async (userId) => {
   }
 
   await therapistRepository.deleteTherapistByUserId(userId);
+
   await User.findByIdAndUpdate(userId, {
     profileCompleted: false,
   });
+
   return {
     id: therapist._id,
   };
 };
 
+/* -------------------------------------------------------------------------- */
+/*                                  Export                                    */
+/* -------------------------------------------------------------------------- */
+
 module.exports = {
   createTherapistProfile,
   getMyTherapistProfile,
   getAllTherapists,
+  getTherapistBySlug,
   updateMyTherapistProfile,
   deleteMyTherapistProfile,
 };

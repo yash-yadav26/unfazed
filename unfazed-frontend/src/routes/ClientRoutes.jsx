@@ -4,6 +4,7 @@ import ProtectedRoute from "../components/ProtectedRoute";
 
 import ClientPortal from "../pages/client/ClientPortal";
 import Payment from "../pages/client/Payment";
+import Payments from "../pages/client/Payments";
 import Notifications from "../pages/client/Notifications";
 import ClientProfileSetup from "../pages/client/ClientProfileSetup";
 import ClientProfile from "../pages/client/ClientProfile";
@@ -19,6 +20,8 @@ function ClientRoutes() {
         <Route path="" element={<ClientPortal />} />
 
         <Route path="payment" element={<Payment />} />
+
+        <Route path="payments" element={<Payments />}/>
 
         <Route path="notifications" element={<Notifications />} />
 

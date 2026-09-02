@@ -6,7 +6,6 @@ import TherapistProfileSetup from "../pages/therapist/TherapistProfileSetup";
 import TherapistDashboard from "../pages/therapist/TherapistDashboard";
 import Schedule from "../pages/therapist/Schedule";
 import Clients from "../pages/therapist/Clients";
-import ClientDetail from "../pages/therapist/ClientDetail";
 import TherapistProfile from "../pages/therapist/TherapistProfile";
 import Notes from "../pages/therapist/Notes";
 import Analytics from "../pages/therapist/Analytics";
@@ -22,8 +21,6 @@ function TherapistRoutes() {
         <Route path="schedule" element={<Schedule />} />
 
         <Route path="clients" element={<Clients />} />
-
-        <Route path="clients/:id" element={<ClientDetail />} />
 
         <Route path="profile" element={<TherapistProfile />} />
 

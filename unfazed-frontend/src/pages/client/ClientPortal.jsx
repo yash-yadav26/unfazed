@@ -135,7 +135,7 @@ function ClientPortal() {
     },
     {
       label: "Payments",
-      path: "/client/payment",
+      path: "/client/payments",
       icon: <WalletCards size={18} />,
     },
     {
@@ -269,6 +269,7 @@ function ClientPortal() {
         {/* Bottom */}
         <div className="border-t border-slate-100 p-3">
           <button
+            to="/login"
             type="button"
             className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-500 transition hover:bg-red-50 hover:text-red-600"
           >
@@ -665,7 +666,7 @@ function ClientPortal() {
                     </div>
 
                     <Link
-                      to="/client/payment"
+                      to="/client/payments"
                       className="mt-4 flex items-center justify-center gap-1 text-xs font-semibold text-violet-600"
                     >
                       View Payments
