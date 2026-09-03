@@ -1,6 +1,7 @@
 const Availability = require("../../scheduling/models/availability.model");
 const Therapist = require("../../therapist/models/therapist.model");
 const Client = require("../../client/models/client.model");
+const Session = require("../models/session.model");
 
 const notificationService = require("../../notification/services/notification.service");
 
@@ -161,6 +162,111 @@ const minutesToTime = (totalMinutes) => {
     2,
     "0",
   )}:${String(minutes).padStart(2, "0")}`;
+};
+
+/* -------------------------------------------------------------------------- */
+/*                    Session DateTime / Completion Helpers                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Convert session date + local time into an actual DateTime.
+ *
+ * Session date is stored as UTC midnight.
+ * Session times are stored as Asia/Kolkata local clock time.
+ */
+const getSessionDateTime = (session, timeField) => {
+  if (!session?.date || !session?.[timeField]) {
+    return null;
+  }
+
+  const date = new Date(session.date);
+
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth();
+  const day = date.getUTCDate();
+
+  const [hours, minutes] = String(session[timeField]).split(":").map(Number);
+
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+    return null;
+  }
+
+  /**
+   * Convert Asia/Kolkata local time to UTC.
+   * IST = UTC + 5:30
+   */
+  return new Date(
+    Date.UTC(year, month, day, hours, minutes, 0, 0) - 5.5 * 60 * 60 * 1000,
+  );
+};
+
+/**
+ * Get actual end DateTime of a session.
+ */
+const getSessionEndDateTime = (session) => {
+  return getSessionDateTime(session, "endTime");
+};
+
+/**
+ * Mark expired sessions as COMPLETED.
+ *
+ * Temporary rule:
+ *
+ * 1:00 PM - 1:30 PM
+ * -----------------
+ * At/after 1:30 PM => COMPLETED
+ *
+ * No join logic.
+ * No attendance logic.
+ * No no-show logic.
+ */
+const completeExpiredSessions = async () => {
+  const today = parseDate(getTodayDateString());
+
+  const candidateSessions = await Session.find({
+    status: {
+      $in: ACTIVE_SESSION_STATUSES,
+    },
+    date: {
+      $lte: today,
+    },
+  }).select("_id date endTime status");
+
+  if (!candidateSessions.length) {
+    return 0;
+  }
+
+  const now = new Date();
+
+  const expiredIds = candidateSessions
+    .filter((session) => {
+      const endDateTime = getSessionEndDateTime(session);
+
+      return endDateTime && endDateTime <= now;
+    })
+    .map((session) => session._id);
+
+  if (!expiredIds.length) {
+    return 0;
+  }
+
+  const result = await Session.updateMany(
+    {
+      _id: {
+        $in: expiredIds,
+      },
+      status: {
+        $in: ACTIVE_SESSION_STATUSES,
+      },
+    },
+    {
+      $set: {
+        status: "COMPLETED",
+      },
+    },
+  );
+
+  return result.modifiedCount || 0;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -553,11 +659,15 @@ const createSession = async ({ userId, therapistId, date, startTime }) => {
 /* -------------------------------------------------------------------------- */
 
 const getMySessions = async (userId) => {
+  /**
+   * First automatically complete any session
+   * whose end time has already passed.
+   */
+  await completeExpiredSessions();
+
   const client = await getClient(userId);
 
   const sessions = await sessionRepository.findSessionsByClientId(client._id);
-
-  const now = new Date();
 
   const upcoming = [];
   const completed = [];
@@ -571,17 +681,18 @@ const getMySessions = async (userId) => {
       continue;
     }
 
-    /* ------------------------- Session DateTime -------------------------- */
+    /* ------------------------- Completed --------------------------------- */
 
-    const sessionDate = new Date(session.date);
-
-    const [hours, minutes] = session.startTime.split(":").map(Number);
-
-    sessionDate.setUTCHours(hours, minutes, 0, 0);
-
-    /* --------------------- Upcoming / Completed -------------------------- */
-
-    if (session.status === "COMPLETED" || sessionDate < now) {
+    /**
+     * We do NOT decide completion simply because
+     * the current time is greater than start time.
+     *
+     * The database status must actually be COMPLETED.
+     *
+     * completeExpiredSessions() above handles the update
+     * based on endTime.
+     */
+    if (session.status === "COMPLETED") {
       completed.push(session);
     } else {
       upcoming.push(session);
@@ -661,6 +772,7 @@ const cancelSession = async ({ userId, sessionId }) => {
    * Notification failure should not make the already successful
    * cancellation fail.
    */
+
   try {
     const therapist = await getTherapist(session.therapistId);
 
@@ -730,4 +842,5 @@ module.exports = {
   getMySessions,
   cancelSession,
   getSessionById,
+  completeExpiredSessions,
 };

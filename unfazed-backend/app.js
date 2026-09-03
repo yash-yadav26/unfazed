@@ -18,6 +18,7 @@ const sessionRoutes = require("./src/modules/session");
 const paymentRoutes = require("./src/modules/payment");
 const notesRoutes = require("./src/modules/notes");
 const notificationRoutes = require("./src/modules/notification");
+const therapistAnalyticsRoutes = require("./src/modules/therapistanalytics");
 
 
 const app = express();
@@ -82,6 +83,8 @@ app.use("/api/payment", paymentRoutes);
 app.use("/api/notes", notesRoutes);
 
 app.use("/api/notifications", notificationRoutes);
+
+app.use("/api/analytics", therapistAnalyticsRoutes);
 
 // Error handler
 app.use(errorHandler);

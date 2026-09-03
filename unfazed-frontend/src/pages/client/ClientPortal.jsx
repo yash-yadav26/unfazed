@@ -1,36 +1,275 @@
-import { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Bell,
   CalendarDays,
   ChevronRight,
   Clock3,
-  FileText,
   HeartHandshake,
   LayoutDashboard,
   LogOut,
+  Menu,
   MessageCircle,
+  RefreshCw,
   UserRound,
   WalletCards,
-  Menu,
   X,
 } from "lucide-react";
 
 import { getMyNotifications } from "../../api/notificationApi";
+import { getMySessions } from "../../api/sessionApi";
+import { getMyPayments } from "../../api/paymentApi";
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+const getLoggedInUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem("user") || "null");
+  } catch {
+    return null;
+  }
+};
+
+const normalizeStatus = (status) => String(status || "").toUpperCase();
+
+const getStatusLabel = (status) => {
+  switch (normalizeStatus(status)) {
+    case "CONFIRMED":
+      return "Confirmed";
+    case "PENDING":
+      return "Pending";
+    case "COMPLETED":
+      return "Completed";
+    case "CANCELLED":
+      return "Cancelled";
+    default:
+      return status || "Unknown";
+  }
+};
+
+const getStatusClass = (status) => {
+  switch (normalizeStatus(status)) {
+    case "CONFIRMED":
+      return "bg-emerald-50 text-emerald-600";
+    case "COMPLETED":
+      return "bg-slate-100 text-slate-600";
+    case "CANCELLED":
+      return "bg-red-50 text-red-600";
+    default:
+      return "bg-amber-50 text-amber-600";
+  }
+};
+
+const normalizeDate = (date) => {
+  if (!date) return "";
+  return String(date).slice(0, 10);
+};
+
+const getSessionDateTime = (session) => {
+  if (!session?.date || !session?.startTime) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+
+  const date = normalizeDate(session.date);
+  const [hours = 0, minutes = 0] = String(session.startTime)
+    .split(":")
+    .map(Number);
+
+  const dateTime = new Date(`${date}T00:00:00`);
+  dateTime.setHours(hours, minutes, 0, 0);
+
+  return dateTime.getTime();
+};
+
+const formatTime = (time) => {
+  if (!time) return "—";
+
+  const [hours, minutes] = String(time).split(":").map(Number);
+
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+    return time;
+  }
+
+  const date = new Date();
+  date.setHours(hours, minutes, 0, 0);
+
+  return date.toLocaleTimeString("en-IN", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+};
+
+const formatDate = (date) => {
+  if (!date) return "—";
+
+  const normalized = normalizeDate(date);
+  const parsedDate = new Date(`${normalized}T00:00:00`);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "—";
+  }
+
+  return parsedDate.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const formatNotificationTime = (createdAt) => {
+  if (!createdAt) return "";
+
+  const createdDate = new Date(createdAt);
+
+  if (Number.isNaN(createdDate.getTime())) {
+    return "";
+  }
+
+  const now = new Date();
+  const differenceInSeconds = Math.floor(
+    (now.getTime() - createdDate.getTime()) / 1000,
+  );
+
+  if (differenceInSeconds < 60) {
+    return "Just now";
+  }
+
+  const differenceInMinutes = Math.floor(differenceInSeconds / 60);
+
+  if (differenceInMinutes < 60) {
+    return `${differenceInMinutes} min ago`;
+  }
+
+  const differenceInHours = Math.floor(differenceInMinutes / 60);
+
+  if (differenceInHours < 24) {
+    return `${differenceInHours} hour${differenceInHours > 1 ? "s" : ""} ago`;
+  }
+
+  const differenceInDays = Math.floor(differenceInHours / 24);
+
+  if (differenceInDays < 7) {
+    return `${differenceInDays} day${differenceInDays > 1 ? "s" : ""} ago`;
+  }
+
+  return createdDate.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const formatCurrency = (amount, currency = "INR") => {
+  const numericAmount = Number(amount || 0);
+
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(numericAmount);
+};
+
+const getInitials = (name) => {
+  const value = String(name || "Y").trim();
+
+  if (!value) return "Y";
+
+  return value
+    .split(/\s+/)
+    .map((word) => word[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+};
+
+const getSessionTherapistName = (session) => {
+  return session?.therapist?.name || session?.therapistName || "Therapist";
+};
+
+const getSessionType = (session) => {
+  return session?.type || session?.sessionType || "Therapy Session";
+};
+
+const getPaymentAmount = (payment) => {
+  return Number(
+    payment?.amount ?? payment?.amountPaid ?? payment?.netAmount ?? 0,
+  );
+};
+
+const getPaymentStatusLabel = (status) => {
+  switch (normalizeStatus(status)) {
+    case "PAID":
+      return "Paid";
+    case "FAILED":
+      return "Failed";
+    case "REFUNDED":
+      return "Refunded";
+    case "CREATED":
+      return "Created";
+    default:
+      return status || "Unknown";
+  }
+};
+
+const getPaymentStatusClass = (status) => {
+  switch (normalizeStatus(status)) {
+    case "PAID":
+      return "text-emerald-600";
+    case "FAILED":
+      return "text-red-600";
+    case "REFUNDED":
+      return "text-amber-600";
+    default:
+      return "text-slate-500";
+  }
+};
+
+/* =========================================================
+   PAGE
+========================================================= */
 
 function ClientPortal() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const user = getLoggedInUser();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   /* =========================================================
-     NOTIFICATIONS
+     DATA
   ========================================================== */
+
+  const [sessionData, setSessionData] = useState({
+    upcoming: [],
+    completed: [],
+    cancelled: [],
+  });
+
+  const [payments, setPayments] = useState([]);
 
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [notificationLoading, setNotificationLoading] = useState(true);
+
+  /* =========================================================
+     UI STATE
+  ========================================================== */
+
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState("");
   const [notificationError, setNotificationError] = useState("");
+
+  /* =========================================================
+     LOGOUT
+  ========================================================== */
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/login", { replace: true });
+  };
 
   /* =========================================================
      FETCH NOTIFICATIONS
@@ -41,110 +280,146 @@ function ClientPortal() {
       setNotificationError("");
 
       const response = await getMyNotifications();
+      const notificationData = response?.data || {};
 
-      const notificationData = response?.data;
+      setNotifications(
+        Array.isArray(notificationData?.notifications)
+          ? notificationData.notifications
+          : [],
+      );
 
-      setNotifications(notificationData?.notifications || []);
-      setUnreadCount(notificationData?.unreadCount || 0);
+      setUnreadCount(Number(notificationData?.unreadCount || 0));
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
 
       setNotificationError(
         error?.response?.data?.message || "Failed to load notifications.",
       );
-    } finally {
-      setNotificationLoading(false);
     }
   };
 
   /* =========================================================
-     LOAD NOTIFICATIONS
+     FETCH DASHBOARD DATA
+  ========================================================== */
+
+  const fetchDashboard = async (isRefresh = false) => {
+    try {
+      setError("");
+
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
+      const [sessionsResponse, paymentsResponse] = await Promise.all([
+        getMySessions(),
+        getMyPayments(),
+      ]);
+
+      const sessions = sessionsResponse?.data || {};
+
+      const normalizedSessions = {
+        upcoming: Array.isArray(sessions?.upcoming) ? sessions.upcoming : [],
+        completed: Array.isArray(sessions?.completed) ? sessions.completed : [],
+        cancelled: Array.isArray(sessions?.cancelled) ? sessions.cancelled : [],
+      };
+
+      const paymentList = Array.isArray(paymentsResponse?.data)
+        ? paymentsResponse.data
+        : [];
+
+      setSessionData(normalizedSessions);
+      setPayments(paymentList);
+    } catch (error) {
+      console.error("Failed to fetch client dashboard:", error);
+
+      setError(
+        error?.response?.data?.message ||
+          "Unable to load dashboard. Please try again.",
+      );
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  /* =========================================================
+     INITIAL LOAD
   ========================================================== */
 
   useEffect(() => {
-    const initialFetch = setTimeout(() => {
+    const timeoutId = setTimeout(() => {
+      fetchDashboard();
       fetchNotifications();
     }, 0);
 
-    /*
-     * Refresh notifications every 30 seconds.
-     *
-     * This lets the dashboard pick up new notifications
-     * without needing a page refresh.
-     */
+    return () => clearTimeout(timeoutId);
+  }, []);
+
+  /* =========================================================
+     REFRESH NOTIFICATIONS
+  ========================================================== */
+
+  useEffect(() => {
     const interval = setInterval(() => {
       fetchNotifications();
     }, 30000);
 
-    return () => {
-      clearTimeout(initialFetch);
-      clearInterval(interval);
-    };
+    return () => clearInterval(interval);
   }, []);
 
   /* =========================================================
-     OTHER MOCK DATA
-     ========================================================== */
+     DERIVED DATA
+  ========================================================== */
 
-  const upcomingSession = {
-    therapistName: "Dr. Sharma",
-    sessionType: "Individual Therapy",
-    date: "18 August 2026",
-    time: "10:00 AM",
-    status: "Confirmed",
-  };
+  const upcomingSessions = useMemo(() => {
+    return [...sessionData.upcoming].sort(
+      (a, b) => getSessionDateTime(a) - getSessionDateTime(b),
+    );
+  }, [sessionData.upcoming]);
 
-  const packageInfo = {
-    name: "6 Session Package",
-    totalSessions: 6,
-    remainingSessions: 3,
-    expiry: "30 September 2026",
-  };
+  const recentSessions = useMemo(() => {
+    const allSessions = [
+      ...sessionData.completed,
+      ...sessionData.cancelled,
+      ...sessionData.upcoming,
+    ];
 
-  const recentPayment = {
-    amount: 1000,
-    date: "16 August 2026",
-    status: "Paid",
-  };
+    const uniqueSessions = new Map();
 
-  const conversations = [
-    {
-      id: 1,
-      therapistName: "Dr. Sharma",
-      message: "Looking forward to our next session.",
-      time: "Yesterday",
-    },
-  ];
+    allSessions.forEach((session) => {
+      if (session?._id) {
+        uniqueSessions.set(session._id, session);
+      }
+    });
 
-  const sessions = [
-    {
-      id: 1,
-      therapistName: "Dr. Sharma",
-      type: "Individual Therapy",
-      date: "18 Aug 2026",
-      time: "10:00 AM",
-      status: "Upcoming",
-    },
-    {
-      id: 2,
-      therapistName: "Dr. Sharma",
-      type: "Individual Therapy",
-      date: "12 Aug 2026",
-      time: "10:00 AM",
-      status: "Completed",
-    },
-    {
-      id: 3,
-      therapistName: "Dr. Sharma",
-      type: "Anxiety Support",
-      date: "05 Aug 2026",
-      time: "10:00 AM",
-      status: "Completed",
-    },
-  ];
+    return [...uniqueSessions.values()]
+      .sort((a, b) => getSessionDateTime(b) - getSessionDateTime(a))
+      .slice(0, 3);
+  }, [sessionData]);
+
+  const nextSession = upcomingSessions[0] || null;
+
+  const recentPayment = useMemo(() => {
+    if (!payments.length) {
+      return null;
+    }
+
+    return [...payments].sort((a, b) => {
+      const first = new Date(a?.createdAt || a?.paidAt || 0).getTime();
+      const second = new Date(b?.createdAt || b?.paidAt || 0).getTime();
+
+      return second - first;
+    })[0];
+  }, [payments]);
+
+  const latestNotifications = notifications.slice(0, 3);
+
+  const userName = user?.name || user?.firstName || "Client";
 
   /* =========================================================
-     SIDEBAR ITEMS
+     SIDEBAR
   ========================================================== */
 
   const sidebarItems = [
@@ -177,7 +452,7 @@ function ClientPortal() {
     {
       label: "Shared Notes",
       path: "/client/notes",
-      icon: <FileText size={18} />,
+      icon: <FileTextIcon />,
     },
     {
       label: "Profile",
@@ -195,60 +470,54 @@ function ClientPortal() {
   };
 
   /* =========================================================
-     DATE FORMATTER
+     LOADING
   ========================================================== */
 
-  const formatNotificationTime = (createdAt) => {
-    if (!createdAt) {
-      return "";
-    }
-
-    const createdDate = new Date(createdAt);
-
-    if (Number.isNaN(createdDate.getTime())) {
-      return "";
-    }
-
-    const now = new Date();
-
-    const differenceInSeconds = Math.floor(
-      (now.getTime() - createdDate.getTime()) / 1000,
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-900">
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="flex items-center gap-3 text-sm text-slate-500">
+            <RefreshCw size={17} className="animate-spin" />
+            Loading dashboard...
+          </div>
+        </div>
+      </div>
     );
-
-    if (differenceInSeconds < 60) {
-      return "Just now";
-    }
-
-    const differenceInMinutes = Math.floor(differenceInSeconds / 60);
-
-    if (differenceInMinutes < 60) {
-      return `${differenceInMinutes} min ago`;
-    }
-
-    const differenceInHours = Math.floor(differenceInMinutes / 60);
-
-    if (differenceInHours < 24) {
-      return `${differenceInHours} hour${differenceInHours > 1 ? "s" : ""} ago`;
-    }
-
-    const differenceInDays = Math.floor(differenceInHours / 24);
-
-    if (differenceInDays < 7) {
-      return `${differenceInDays} day${differenceInDays > 1 ? "s" : ""} ago`;
-    }
-
-    return createdDate.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  };
+  }
 
   /* =========================================================
-     DISPLAY NOTIFICATIONS
+     ERROR
   ========================================================== */
 
-  const latestNotifications = notifications.slice(0, 3);
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-50 px-5 text-slate-900">
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 text-center">
+            <p className="text-sm font-semibold text-slate-800">
+              Unable to load dashboard
+            </p>
+
+            <p className="mt-2 text-xs leading-5 text-slate-500">{error}</p>
+
+            <button
+              type="button"
+              onClick={() => fetchDashboard(true)}
+              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-violet-700"
+            >
+              <RefreshCw size={14} />
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* =========================================================
+     RENDER
+  ========================================================== */
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -293,8 +562,6 @@ function ClientPortal() {
             </div>
           </Link>
 
-          {/* Mobile close */}
-
           <button
             type="button"
             onClick={() => setSidebarOpen(false)}
@@ -336,7 +603,7 @@ function ClientPortal() {
 
                   {item.badge > 0 && (
                     <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-violet-600 px-1.5 text-[9px] font-bold text-white">
-                      {item.badge}
+                      {item.badge > 99 ? "99+" : item.badge}
                     </span>
                   )}
                 </Link>
@@ -345,11 +612,12 @@ function ClientPortal() {
           </div>
         </nav>
 
-        {/* Bottom */}
+        {/* Logout */}
 
         <div className="border-t border-slate-100 p-3">
           <button
             type="button"
+            onClick={handleLogout}
             className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-500 transition hover:bg-red-50 hover:text-red-600"
           >
             <LogOut size={18} />
@@ -363,23 +631,18 @@ function ClientPortal() {
       ====================================================== */}
 
       <div className="lg:pl-[270px]">
-        {/* ===================================================
-            HEADER
-        ==================================================== */}
+        {/* Header */}
 
         <header className="sticky top-0 z-30 border-b border-slate-200 bg-white">
           <div className="flex h-[78px] items-center justify-between px-5 sm:px-8 lg:px-10">
-            {/* Mobile menu */}
-
             <button
               type="button"
               onClick={() => setSidebarOpen(true)}
               className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden"
+              aria-label="Open navigation"
             >
               <Menu size={21} />
             </button>
-
-            {/* Desktop title */}
 
             <div className="hidden lg:block">
               <p className="text-xs font-medium text-slate-400">
@@ -391,10 +654,19 @@ function ClientPortal() {
               </p>
             </div>
 
-            {/* Right */}
-
             <div className="ml-auto flex items-center gap-4">
-              {/* Notification */}
+              <button
+                type="button"
+                onClick={() => fetchDashboard(true)}
+                disabled={refreshing}
+                className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-violet-600 disabled:opacity-50"
+                aria-label="Refresh dashboard"
+              >
+                <RefreshCw
+                  size={18}
+                  className={refreshing ? "animate-spin" : ""}
+                />
+              </button>
 
               <Link
                 to="/client/notifications"
@@ -404,22 +676,22 @@ function ClientPortal() {
 
                 {unreadCount > 0 && (
                   <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-violet-600 px-1 text-[8px] font-bold text-white">
-                    {unreadCount}
+                    {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 )}
               </Link>
 
               <div className="h-7 w-px bg-slate-200" />
 
-              {/* Profile */}
-
               <Link to="/client/profile" className="flex items-center gap-2">
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700">
-                  Y
+                  {getInitials(userName)}
                 </div>
 
                 <div className="hidden sm:block">
-                  <p className="text-xs font-semibold text-slate-800">Yash</p>
+                  <p className="text-xs font-semibold text-slate-800">
+                    {userName}
+                  </p>
 
                   <p className="text-[10px] text-slate-400">My Profile</p>
                 </div>
@@ -434,9 +706,7 @@ function ClientPortal() {
 
         <main className="px-5 py-7 sm:px-8 lg:px-10">
           <div className="mx-auto max-w-7xl">
-            {/* =================================================
-                WELCOME
-            ================================================== */}
+            {/* Welcome */}
 
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
@@ -445,11 +715,11 @@ function ClientPortal() {
                 </p>
 
                 <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
-                  Welcome back, Yash
+                  Welcome back, {userName}
                 </h1>
 
                 <p className="mt-2 text-sm text-slate-500">
-                  Here’s everything you need for your therapy journey.
+                  Here’s your current therapy activity and appointments.
                 </p>
               </div>
 
@@ -468,23 +738,34 @@ function ClientPortal() {
 
             <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <SummaryCard
-                title="Upcoming Session"
-                value="1"
-                subtitle="Next appointment"
+                title="Upcoming Sessions"
+                value={upcomingSessions.length}
+                subtitle="Scheduled appointments"
                 icon={<CalendarDays size={19} />}
               />
 
               <SummaryCard
-                title="Sessions Left"
-                value={packageInfo.remainingSessions}
-                subtitle={packageInfo.name}
+                title="Completed Sessions"
+                value={sessionData.completed.length}
+                subtitle="From your session history"
                 icon={<Clock3 size={19} />}
               />
 
               <SummaryCard
                 title="Last Payment"
-                value={`₹${recentPayment.amount.toLocaleString("en-IN")}`}
-                subtitle={recentPayment.status}
+                value={
+                  recentPayment
+                    ? formatCurrency(
+                        getPaymentAmount(recentPayment),
+                        recentPayment?.currency || "INR",
+                      )
+                    : "₹0"
+                }
+                subtitle={
+                  recentPayment
+                    ? getPaymentStatusLabel(recentPayment.status)
+                    : "No payments yet"
+                }
                 icon={<WalletCards size={19} />}
               />
 
@@ -504,7 +785,7 @@ function ClientPortal() {
               {/* LEFT */}
 
               <div className="space-y-6">
-                {/* Upcoming Session */}
+                {/* Next Session */}
 
                 <section className="rounded-2xl border border-slate-200 bg-white">
                   <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
@@ -527,43 +808,59 @@ function ClientPortal() {
                   </div>
 
                   <div className="p-5">
-                    <div className="rounded-2xl bg-violet-50 p-5">
-                      <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-violet-600 shadow-sm">
-                            <CalendarDays size={21} />
+                    {nextSession ? (
+                      <div className="rounded-2xl bg-violet-50 p-5">
+                        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-violet-600 shadow-sm">
+                              <CalendarDays size={21} />
+                            </div>
+
+                            <div>
+                              <span
+                                className={`inline-flex rounded-full px-2 py-1 text-[10px] font-bold ${getStatusClass(
+                                  nextSession.status,
+                                )}`}
+                              >
+                                {getStatusLabel(nextSession.status)}
+                              </span>
+
+                              <h3 className="mt-2 text-lg font-bold text-slate-900">
+                                {getSessionType(nextSession)}
+                              </h3>
+
+                              <p className="mt-1 text-xs text-slate-500">
+                                with {getSessionTherapistName(nextSession)}
+                              </p>
+                            </div>
                           </div>
 
-                          <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-600">
-                              {upcomingSession.status}
+                          <div className="rounded-xl bg-white px-4 py-3 sm:text-right">
+                            <p className="text-sm font-bold text-slate-900">
+                              {formatDate(nextSession.date)}
                             </p>
 
-                            <h3 className="mt-1 text-lg font-bold text-slate-900">
-                              {upcomingSession.sessionType}
-                            </h3>
-
-                            <p className="mt-1 text-xs text-slate-500">
-                              with {upcomingSession.therapistName}
+                            <p className="mt-1 text-xs text-slate-400">
+                              {formatTime(nextSession.startTime)}
+                              {nextSession.endTime
+                                ? ` - ${formatTime(nextSession.endTime)}`
+                                : ""}
                             </p>
                           </div>
-                        </div>
-
-                        <div className="rounded-xl bg-white px-4 py-3 sm:text-right">
-                          <p className="text-sm font-bold text-slate-900">
-                            {upcomingSession.date}
-                          </p>
-
-                          <p className="mt-1 text-xs text-slate-400">
-                            {upcomingSession.time}
-                          </p>
                         </div>
                       </div>
-                    </div>
+                    ) : (
+                      <EmptyState
+                        title="No upcoming session"
+                        description="You currently do not have a scheduled appointment."
+                        actionLabel="Book a Session"
+                        actionTo="/client/therapists"
+                      />
+                    )}
                   </div>
                 </section>
 
-                {/* Sessions */}
+                {/* My Sessions */}
 
                 <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
                   <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
@@ -573,7 +870,7 @@ function ClientPortal() {
                       </h2>
 
                       <p className="mt-1 text-xs text-slate-400">
-                        Your recent and upcoming sessions
+                        Recent and upcoming appointments
                       </p>
                     </div>
 
@@ -586,118 +883,55 @@ function ClientPortal() {
                     </Link>
                   </div>
 
-                  <div className="divide-y divide-slate-100">
-                    {sessions.map((session) => (
-                      <div
-                        key={session.id}
-                        className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
-                            <CalendarDays size={17} />
-                          </div>
-
-                          <div>
-                            <p className="text-sm font-semibold text-slate-800">
-                              {session.type}
-                            </p>
-
-                            <p className="mt-1 text-xs text-slate-400">
-                              {session.therapistName} • {session.date} •{" "}
-                              {session.time}
-                            </p>
-                          </div>
-                        </div>
-
-                        <span
-                          className={`self-start rounded-full px-2.5 py-1 text-[10px] font-bold sm:self-auto ${
-                            session.status === "Upcoming"
-                              ? "bg-violet-50 text-violet-600"
-                              : "bg-emerald-50 text-emerald-600"
-                          }`}
+                  {recentSessions.length === 0 ? (
+                    <EmptyState
+                      title="No sessions yet"
+                      description="Your booked sessions will appear here."
+                      actionLabel="Book a Session"
+                      actionTo="/client/therapists"
+                    />
+                  ) : (
+                    <div className="divide-y divide-slate-100">
+                      {recentSessions.map((session) => (
+                        <div
+                          key={session?._id}
+                          className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
                         >
-                          {session.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+                              <CalendarDays size={17} />
+                            </div>
+
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-slate-800">
+                                {getSessionType(session)}
+                              </p>
+
+                              <p className="mt-1 truncate text-xs text-slate-400">
+                                {getSessionTherapistName(session)} •{" "}
+                                {formatDate(session.date)} •{" "}
+                                {formatTime(session.startTime)}
+                              </p>
+                            </div>
+                          </div>
+
+                          <span
+                            className={`self-start rounded-full px-2.5 py-1 text-[10px] font-bold sm:self-auto ${getStatusClass(
+                              session.status,
+                            )}`}
+                          >
+                            {getStatusLabel(session.status)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </section>
               </div>
 
               {/* RIGHT */}
 
               <div className="space-y-6">
-                {/* Package */}
-
-                <section className="rounded-2xl border border-slate-200 bg-white">
-                  <div className="border-b border-slate-100 px-5 py-4">
-                    <h2 className="text-base font-bold text-slate-900">
-                      My Package
-                    </h2>
-
-                    <p className="mt-1 text-xs text-slate-400">
-                      Your current session package
-                    </p>
-                  </div>
-
-                  <div className="p-5">
-                    <div className="rounded-xl bg-slate-50 p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-bold text-slate-900">
-                            {packageInfo.name}
-                          </p>
-
-                          <p className="mt-1 text-xs text-slate-400">
-                            Expires {packageInfo.expiry}
-                          </p>
-                        </div>
-
-                        <div className="text-right">
-                          <p className="text-2xl font-bold text-violet-700">
-                            {packageInfo.remainingSessions}
-                          </p>
-
-                          <p className="text-[10px] text-slate-400">
-                            sessions left
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200">
-                        <div
-                          className="h-full rounded-full bg-violet-600"
-                          style={{
-                            width: `${
-                              ((packageInfo.totalSessions -
-                                packageInfo.remainingSessions) /
-                                packageInfo.totalSessions) *
-                              100
-                            }%`,
-                          }}
-                        />
-                      </div>
-
-                      <div className="mt-2 flex justify-between text-[10px] text-slate-400">
-                        <span>
-                          {packageInfo.totalSessions -
-                            packageInfo.remainingSessions}{" "}
-                          used
-                        </span>
-
-                        <span>{packageInfo.totalSessions} total</span>
-                      </div>
-                    </div>
-
-                    <Link
-                      to="/client/payment"
-                      className="mt-4 flex h-10 items-center justify-center rounded-xl border border-violet-200 bg-violet-50 text-xs font-semibold text-violet-700 transition hover:bg-violet-100"
-                    >
-                      View Packages
-                    </Link>
-                  </div>
-                </section>
-
                 {/* Recent Payment */}
 
                 <section className="rounded-2xl border border-slate-200 bg-white">
@@ -705,208 +939,197 @@ function ClientPortal() {
                     <h2 className="text-base font-bold text-slate-900">
                       Recent Payment
                     </h2>
+
+                    <p className="mt-1 text-xs text-slate-400">
+                      Latest payment activity
+                    </p>
                   </div>
 
                   <div className="p-5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                          <WalletCards size={17} />
+                    {recentPayment ? (
+                      <>
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+                              <WalletCards size={17} />
+                            </div>
+
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-slate-800">
+                                Therapy Session
+                              </p>
+
+                              <p className="mt-1 text-xs text-slate-400">
+                                {formatDate(
+                                  recentPayment?.paidAt ||
+                                    recentPayment?.createdAt,
+                                )}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-slate-800">
+                              {formatCurrency(
+                                getPaymentAmount(recentPayment),
+                                recentPayment?.currency || "INR",
+                              )}
+                            </p>
+
+                            <p
+                              className={`mt-1 text-[10px] font-semibold ${getPaymentStatusClass(
+                                recentPayment.status,
+                              )}`}
+                            >
+                              {getPaymentStatusLabel(recentPayment.status)}
+                            </p>
+                          </div>
                         </div>
 
-                        <div>
-                          <p className="text-sm font-semibold text-slate-800">
-                            Therapy Session
-                          </p>
+                        <Link
+                          to="/client/payments"
+                          className="mt-4 flex items-center justify-center gap-1 text-xs font-semibold text-violet-600"
+                        >
+                          View Payments
+                          <ChevronRight size={14} />
+                        </Link>
+                      </>
+                    ) : (
+                      <EmptyState
+                        title="No payment history"
+                        description="Your payment activity will appear here after a successful payment."
+                        actionLabel="View Payments"
+                        actionTo="/client/payments"
+                      />
+                    )}
+                  </div>
+                </section>
 
-                          <p className="mt-1 text-xs text-slate-400">
-                            {recentPayment.date}
-                          </p>
-                        </div>
-                      </div>
+                {/* Quick Actions */}
 
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-slate-800">
-                          ₹{recentPayment.amount.toLocaleString("en-IN")}
-                        </p>
+                <section className="rounded-2xl border border-slate-200 bg-white">
+                  <div className="border-b border-slate-100 px-5 py-4">
+                    <h2 className="text-base font-bold text-slate-900">
+                      Quick Actions
+                    </h2>
 
-                        <p className="mt-1 text-[10px] font-semibold text-emerald-600">
-                          {recentPayment.status}
-                        </p>
-                      </div>
-                    </div>
+                    <p className="mt-1 text-xs text-slate-400">
+                      Manage your therapy journey
+                    </p>
+                  </div>
 
-                    <Link
-                      to="/client/payments"
-                      className="mt-4 flex items-center justify-center gap-1 text-xs font-semibold text-violet-600"
-                    >
-                      View Payments
-                      <ChevronRight size={14} />
-                    </Link>
+                  <div className="grid gap-3 p-5">
+                    <QuickAction
+                      to="/client/therapists"
+                      icon={<CalendarDays size={17} />}
+                      title="Book a Session"
+                      description="Choose a therapist and available slot"
+                    />
+
+                    <QuickAction
+                      to="/client/chat"
+                      icon={<MessageCircle size={17} />}
+                      title="Message Therapist"
+                      description="Continue your conversation"
+                    />
+
+                    <QuickAction
+                      to="/client/notes"
+                      icon={<Clock3 size={17} />}
+                      title="Shared Notes"
+                      description="View notes shared by your therapist"
+                    />
                   </div>
                 </section>
               </div>
             </div>
 
             {/* =================================================
-                BOTTOM GRID
+                NOTIFICATIONS
             ================================================== */}
 
-            <div className="mt-6 grid gap-6 lg:grid-cols-2">
-              {/* Notifications */}
+            <section className="mt-6 rounded-2xl border border-slate-200 bg-white">
+              <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">
+                    Notifications
+                  </h2>
 
-              <section className="rounded-2xl border border-slate-200 bg-white">
-                <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-                  <div>
-                    <h2 className="text-base font-bold text-slate-900">
-                      Notifications
-                    </h2>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Your latest updates
+                  </p>
+                </div>
+
+                <Link
+                  to="/client/notifications"
+                  className="flex items-center gap-1 text-xs font-semibold text-violet-600"
+                >
+                  View all
+                  <ChevronRight size={14} />
+                </Link>
+              </div>
+
+              <div className="divide-y divide-slate-100">
+                {notificationError ? (
+                  <div className="px-5 py-8 text-center">
+                    <p className="text-xs text-red-500">{notificationError}</p>
+                  </div>
+                ) : latestNotifications.length === 0 ? (
+                  <div className="px-5 py-8 text-center">
+                    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+                      <Bell size={17} />
+                    </div>
+
+                    <p className="mt-3 text-sm font-semibold text-slate-700">
+                      No notifications
+                    </p>
 
                     <p className="mt-1 text-xs text-slate-400">
-                      Your latest updates
+                      You’re all caught up.
                     </p>
                   </div>
-
-                  <Link
-                    to="/client/notifications"
-                    className="flex items-center gap-1 text-xs font-semibold text-violet-600"
-                  >
-                    View all
-                    <ChevronRight size={14} />
-                  </Link>
-                </div>
-
-                <div className="divide-y divide-slate-100">
-                  {notificationLoading ? (
-                    <div className="px-5 py-8 text-center">
-                      <p className="text-xs text-slate-400">
-                        Loading notifications...
-                      </p>
-                    </div>
-                  ) : notificationError ? (
-                    <div className="px-5 py-8 text-center">
-                      <p className="text-xs text-red-500">
-                        {notificationError}
-                      </p>
-                    </div>
-                  ) : latestNotifications.length === 0 ? (
-                    <div className="px-5 py-8 text-center">
-                      <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400">
-                        <Bell size={17} />
-                      </div>
-
-                      <p className="mt-3 text-sm font-semibold text-slate-700">
-                        No notifications
-                      </p>
-
-                      <p className="mt-1 text-xs text-slate-400">
-                        You’re all caught up.
-                      </p>
-                    </div>
-                  ) : (
-                    latestNotifications.map((notification) => (
-                      <Link
-                        key={notification._id}
-                        to="/client/notifications"
-                        className={`flex gap-3 px-5 py-4 transition hover:bg-slate-50 ${
-                          !notification.isRead ? "bg-violet-50/30" : ""
-                        }`}
-                      >
-                        <div
-                          className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
-                            !notification.isRead
-                              ? "bg-violet-600"
-                              : "bg-slate-300"
-                          }`}
-                        />
-
-                        <div className="min-w-0">
-                          <div className="flex items-start justify-between gap-3">
-                            <p
-                              className={`text-sm ${
-                                !notification.isRead
-                                  ? "font-bold text-slate-900"
-                                  : "font-semibold text-slate-800"
-                              }`}
-                            >
-                              {notification.title}
-                            </p>
-                          </div>
-
-                          <p className="mt-1 text-xs leading-5 text-slate-500">
-                            {notification.message}
-                          </p>
-
-                          <p className="mt-1.5 text-[10px] text-slate-400">
-                            {formatNotificationTime(notification.createdAt)}
-                          </p>
-                        </div>
-                      </Link>
-                    ))
-                  )}
-                </div>
-              </section>
-
-              {/* Messages */}
-
-              <section className="rounded-2xl border border-slate-200 bg-white">
-                <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-                  <div>
-                    <h2 className="text-base font-bold text-slate-900">
-                      Messages
-                    </h2>
-
-                    <p className="mt-1 text-xs text-slate-400">
-                      Talk to your therapist
-                    </p>
-                  </div>
-
-                  <Link
-                    to="/client/chat"
-                    className="text-xs font-semibold text-violet-600"
-                  >
-                    Open Chat
-                  </Link>
-                </div>
-
-                <div className="p-5">
-                  {conversations.map((conversation) => (
-                    <div
-                      key={conversation.id}
-                      className="flex items-start gap-3 rounded-xl bg-slate-50 p-4"
+                ) : (
+                  latestNotifications.map((notification) => (
+                    <Link
+                      key={notification?._id}
+                      to="/client/notifications"
+                      className={`flex gap-3 px-5 py-4 transition hover:bg-slate-50 ${
+                        !notification?.isRead ? "bg-violet-50/30" : ""
+                      }`}
                     >
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700">
-                        <MessageCircle size={17} />
-                      </div>
+                      <div
+                        className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
+                          !notification?.isRead
+                            ? "bg-violet-600"
+                            : "bg-slate-300"
+                        }`}
+                      />
 
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="text-sm font-semibold text-slate-800">
-                            {conversation.therapistName}
-                          </p>
+                      <div className="min-w-0">
+                        <p
+                          className={`text-sm ${
+                            !notification?.isRead
+                              ? "font-bold text-slate-900"
+                              : "font-semibold text-slate-800"
+                          }`}
+                        >
+                          {notification?.title || "Notification"}
+                        </p>
 
-                          <span className="text-[10px] text-slate-400">
-                            {conversation.time}
-                          </span>
-                        </div>
+                        <p className="mt-1 text-xs leading-5 text-slate-500">
+                          {notification?.message ||
+                            "You have a new notification."}
+                        </p>
 
-                        <p className="mt-1 truncate text-xs text-slate-500">
-                          {conversation.message}
+                        <p className="mt-1.5 text-[10px] text-slate-400">
+                          {formatNotificationTime(notification?.createdAt)}
                         </p>
                       </div>
-                    </div>
-                  ))}
-
-                  <Link
-                    to="/client/chat"
-                    className="mt-4 flex items-center justify-center gap-1 text-xs font-semibold text-violet-600"
-                  >
-                    Open Messages
-                    <ChevronRight size={14} />
-                  </Link>
-                </div>
-              </section>
-            </div>
+                    </Link>
+                  ))
+                )}
+              </div>
+            </section>
 
             {/* =================================================
                 SHARED NOTES
@@ -916,7 +1139,7 @@ function ClientPortal() {
               <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
-                    <FileText size={18} />
+                    <FileTextIcon />
                   </div>
 
                   <div>
@@ -939,8 +1162,6 @@ function ClientPortal() {
                 </Link>
               </div>
             </section>
-
-            {/* Footer */}
 
             <div className="mt-5 text-center text-[11px] text-slate-400">
               Your therapy information is kept private and protected.
@@ -973,6 +1194,84 @@ function SummaryCard({ title, value, subtitle, icon }) {
         </div>
       </div>
     </div>
+  );
+}
+
+/* =========================================================
+   QUICK ACTION
+========================================================= */
+
+function QuickAction({ to, icon, title, description }) {
+  return (
+    <Link
+      to={to}
+      className="flex items-center gap-3 rounded-xl border border-slate-100 p-3 transition hover:border-violet-100 hover:bg-violet-50/50"
+    >
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+        {icon}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-slate-800">{title}</p>
+
+        <p className="mt-0.5 text-[10px] leading-4 text-slate-400">
+          {description}
+        </p>
+      </div>
+
+      <ChevronRight size={15} className="shrink-0 text-slate-300" />
+    </Link>
+  );
+}
+
+/* =========================================================
+   EMPTY STATE
+========================================================= */
+
+function EmptyState({ title, description, actionLabel, actionTo }) {
+  return (
+    <div className="py-8 text-center">
+      <p className="text-sm font-semibold text-slate-700">{title}</p>
+
+      <p className="mx-auto mt-1 max-w-sm text-xs leading-5 text-slate-400">
+        {description}
+      </p>
+
+      {actionLabel && actionTo && (
+        <Link
+          to={actionTo}
+          className="mt-4 inline-flex items-center justify-center rounded-xl bg-violet-50 px-4 py-2.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-100"
+        >
+          {actionLabel}
+        </Link>
+      )}
+    </div>
+  );
+}
+
+/* =========================================================
+   FILE TEXT ICON
+========================================================= */
+
+function FileTextIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2Z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" x2="8" y1="13" y2="13" />
+      <line x1="16" x2="8" y1="17" y2="17" />
+      <line x1="10" x2="8" y1="9" y2="9" />
+    </svg>
   );
 }
 
