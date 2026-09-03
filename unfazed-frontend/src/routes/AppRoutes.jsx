@@ -8,7 +8,7 @@ import TherapistSignup from "../pages/auth/TherapistSignup";
 import ClientRoutes from "./ClientRoutes";
 import TherapistRoutes from "./TherapistRoutes";
 
-import TherapistPublicProfile from "../pages/public/TherapistPublicProfile";
+
 
 import ForgotPassword from "../pages/auth/ForgotPassword";
 
@@ -40,11 +40,6 @@ function AppRoutes() {
 
         <Route path="/therapist/*" element={<TherapistRoutes />} />
 
-        {/* ===============================
-            Public Therapist Profile
-        =============================== */}
-
-        <Route path="/:slug" element={<TherapistPublicProfile />} />
 
         <Route path="/forgot-password" element={<ForgotPassword />}/>
         
