@@ -1,15 +1,16 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+
 import {
   ArrowLeft,
   BarChart3,
-  CalendarX2,
   HeartHandshake,
   RefreshCw,
   TrendingUp,
   Users,
   Wallet,
 } from "lucide-react";
+
 import {
   CartesianGrid,
   Line,
@@ -20,127 +21,267 @@ import {
   YAxis,
 } from "recharts";
 
+import {
+  getAnalyticsOverview,
+  getRevenueTrend,
+  getClientAnalytics,
+} from "../../api/therapistAnalyticsApi";
+
 /* =========================================================
-   MOCK ANALYTICS DATA
-
-   Backend connect hone ke baad isi data ko APIs se replace
-   karenge:
-
-   GET /analytics/overview
-   GET /analytics/revenue
-   GET /analytics/clients
+   HELPERS
 ========================================================= */
 
-const overviewData = {
-  revenue: 48500,
-  activeClients: 24,
-  noShowRate: 8.2,
-
-  revenueChange: 12.5,
-  clientChange: 3,
-  noShowChange: -2.5,
+const formatCurrency = (value) => {
+  return `₹${Number(value || 0).toLocaleString("en-IN")}`;
 };
 
-const revenueData = [
-  {
-    month: "Mar",
-    revenue: 28000,
-  },
-  {
-    month: "Apr",
-    revenue: 33500,
-  },
-  {
-    month: "May",
-    revenue: 39000,
-  },
-  {
-    month: "Jun",
-    revenue: 42000,
-  },
-  {
-    month: "Jul",
-    revenue: 45500,
-  },
-  {
-    month: "Aug",
-    revenue: 48500,
-  },
-];
-
-const clientAnalyticsData = {
-  totalClients: 31,
-  activeClients: 24,
-  newClients: 6,
-  returningClients: 18,
-};
+/* =========================================================
+   PAGE
+========================================================= */
 
 function Analytics() {
-  const [refreshing, setRefreshing] = useState(false);
-
   const [data, setData] = useState({
-    overview: overviewData,
-    revenue: revenueData,
-    clients: clientAnalyticsData,
+    overview: {
+      revenue: 0,
+      activeClients: 0,
+    },
+
+    revenue: [],
+
+    clients: {
+      totalClients: 0,
+      activeClients: 0,
+      newClients: 0,
+    },
   });
 
-  /* =========================================================
-     REFRESH MOCK DATA
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState("");
 
-     Backend connect hone ke baad yahin APIs call karenge.
+  /* =========================================================
+     FETCH ANALYTICS
+  ========================================================== */
+
+  const fetchAnalytics = async (isRefresh = false) => {
+    try {
+      setError("");
+
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
+      /*
+       * Teeno analytics APIs parallel mein call hongi.
+       */
+
+      const [overviewResponse, revenueResponse, clientsResponse] =
+        await Promise.all([
+          getAnalyticsOverview(),
+          getRevenueTrend(),
+          getClientAnalytics(),
+        ]);
+
+      /*
+       * Backend response:
+       *
+       * {
+       *   success: true,
+       *   statusCode: 200,
+       *   message: "...",
+       *   data: ...
+       * }
+       */
+
+      setData({
+        overview: overviewResponse?.data || {
+          revenue: 0,
+          activeClients: 0,
+        },
+
+        revenue: Array.isArray(revenueResponse?.data)
+          ? revenueResponse.data
+          : [],
+
+        clients: clientsResponse?.data || {
+          totalClients: 0,
+          activeClients: 0,
+          newClients: 0,
+        },
+      });
+    } catch (err) {
+      console.error("Failed to fetch therapist analytics:", err);
+
+      setError(
+        err?.response?.data?.message ||
+          "Unable to load analytics. Please try again.",
+      );
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  /* =========================================================
+     INITIAL LOAD
+  ========================================================== */
+
+  useEffect(() => {
+    const initialLoad = setTimeout(() => {
+      fetchAnalytics();
+    }, 0);
+
+    return () => clearTimeout(initialLoad);
+  }, []);
+
+  /* =========================================================
+     REFRESH
   ========================================================== */
 
   const handleRefresh = () => {
-    setRefreshing(true);
-
-    setTimeout(() => {
-      setData({
-        overview: {
-          ...overviewData,
-        },
-
-        revenue: [...revenueData],
-
-        clients: {
-          ...clientAnalyticsData,
-        },
-      });
-
-      setRefreshing(false);
-    }, 600);
+    fetchAnalytics(true);
   };
 
   /* =========================================================
-     FORMATTERS
-  ========================================================== */
-
-  const formatCurrency = (value) => {
-    return `₹${Number(value || 0).toLocaleString("en-IN")}`;
-  };
-
-  const formatPercent = (value) => {
-    return `${Number(value || 0).toFixed(1)}%`;
-  };
-
-  /* =========================================================
-     DERIVED VALUES
+     REVENUE SUMMARY
   ========================================================== */
 
   const revenueSummary = useMemo(() => {
-    const values = data.revenue.map((item) => Number(item.revenue) || 0);
-
-    if (!values.length) {
+    if (!data.revenue.length) {
       return {
-        highest: 0,
-        lowest: 0,
+        highestMonth: null,
+        lowestMonth: null,
       };
     }
 
+    const highestMonth = data.revenue.reduce((highest, current) =>
+      Number(current.revenue || 0) > Number(highest.revenue || 0)
+        ? current
+        : highest,
+    );
+
+    const lowestMonth = data.revenue.reduce((lowest, current) =>
+      Number(current.revenue || 0) < Number(lowest.revenue || 0)
+        ? current
+        : lowest,
+    );
+
     return {
-      highest: Math.max(...values),
-      lowest: Math.min(...values),
+      highestMonth,
+      lowestMonth,
     };
   }, [data.revenue]);
+
+  /* =========================================================
+     LOADING STATE
+  ========================================================== */
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-900">
+        <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
+          <div className="mx-auto flex h-16 max-w-7xl items-center px-5 sm:px-8 lg:px-10">
+            <Link to="/therapist/dashboard" className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-600 text-white">
+                <HeartHandshake size={19} />
+              </div>
+
+              <div>
+                <p className="text-base font-bold tracking-tight text-slate-900">
+                  Unfazed
+                </p>
+
+                <p className="text-[9px] text-slate-500">Therapist Dashboard</p>
+              </div>
+            </Link>
+          </div>
+        </header>
+
+        <main className="px-5 py-10 sm:px-8 lg:px-10">
+          <div className="mx-auto max-w-7xl">
+            <div className="flex min-h-[60vh] items-center justify-center">
+              <div className="text-center">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+                  <RefreshCw size={20} className="animate-spin" />
+                </div>
+
+                <p className="mt-4 text-sm font-semibold text-slate-700">
+                  Loading analytics...
+                </p>
+
+                <p className="mt-1 text-xs text-slate-400">
+                  Fetching your practice data.
+                </p>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  /* =========================================================
+     ERROR STATE
+  ========================================================== */
+
+  if (error && !data.revenue.length) {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-900">
+        <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
+          <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
+            <Link to="/therapist/dashboard" className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-600 text-white">
+                <HeartHandshake size={19} />
+              </div>
+
+              <div>
+                <p className="text-base font-bold tracking-tight text-slate-900">
+                  Unfazed
+                </p>
+
+                <p className="text-[9px] text-slate-500">Therapist Dashboard</p>
+              </div>
+            </Link>
+
+            <Link
+              to="/therapist/dashboard"
+              className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition hover:text-violet-600"
+            >
+              <ArrowLeft size={14} />
+              Back to Dashboard
+            </Link>
+          </div>
+        </header>
+
+        <main className="px-5 py-10 sm:px-8 lg:px-10">
+          <div className="mx-auto flex min-h-[60vh] max-w-7xl items-center justify-center">
+            <div className="w-full max-w-lg rounded-2xl border border-red-100 bg-white p-7 text-center shadow-sm">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 text-red-500">
+                <BarChart3 size={21} />
+              </div>
+
+              <h1 className="mt-4 text-base font-bold text-slate-900">
+                Unable to load analytics
+              </h1>
+
+              <p className="mt-2 text-sm leading-6 text-slate-500">{error}</p>
+
+              <button
+                type="button"
+                onClick={() => fetchAnalytics()}
+                className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 text-xs font-semibold text-white transition hover:bg-violet-700"
+              >
+                <RefreshCw size={14} />
+                Try Again
+              </button>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -150,7 +291,6 @@ function Analytics() {
 
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
-          {/* Logo */}
           <Link to="/therapist/dashboard" className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-600 text-white">
               <HeartHandshake size={19} />
@@ -165,7 +305,6 @@ function Analytics() {
             </div>
           </Link>
 
-          {/* Back */}
           <Link
             to="/therapist/dashboard"
             className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition hover:text-violet-600"
@@ -201,8 +340,7 @@ function Analytics() {
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                Track your practice revenue, active clients and session no-show
-                rate.
+                Track your practice revenue and client activity.
               </p>
             </div>
 
@@ -222,38 +360,36 @@ function Analytics() {
           </div>
 
           {/* =================================================
+              ERROR BANNER
+          ================================================== */}
+
+          {error && (
+            <div className="mt-5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-xs font-medium text-red-600">
+              {error}
+            </div>
+          )}
+
+          {/* =================================================
               TOP STATS
           ================================================== */}
 
-          <div className="mt-7 grid gap-4 md:grid-cols-3">
+          <div className="mt-7 grid gap-4 md:grid-cols-2">
             {/* Revenue */}
+
             <StatCard
               title="Revenue"
               value={formatCurrency(data.overview.revenue)}
-              subtitle="Current period"
+              subtitle="Total paid revenue"
               icon={<Wallet size={20} />}
-              trend={`+${data.overview.revenueChange}% this month`}
-              trendPositive
             />
 
             {/* Active Clients */}
+
             <StatCard
               title="Active Clients"
               value={data.overview.activeClients}
-              subtitle="Currently active"
+              subtitle="Clients with valid sessions"
               icon={<Users size={20} />}
-              trend={`+${data.overview.clientChange} this month`}
-              trendPositive
-            />
-
-            {/* No-show */}
-            <StatCard
-              title="No-show Rate"
-              value={formatPercent(data.overview.noShowRate)}
-              subtitle="Scheduled sessions"
-              icon={<CalendarX2 size={20} />}
-              trend={`${data.overview.noShowChange}% vs previous`}
-              trendPositive={data.overview.noShowChange <= 0}
             />
           </div>
 
@@ -275,7 +411,7 @@ function Analytics() {
                 </div>
 
                 <p className="mt-2 text-xs text-slate-400">
-                  Monthly revenue performance.
+                  Monthly paid revenue performance.
                 </p>
               </div>
 
@@ -287,79 +423,115 @@ function Analytics() {
             </div>
 
             <div className="p-5">
-              <div className="h-[340px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
-                    data={data.revenue}
-                    margin={{
-                      top: 10,
-                      right: 10,
-                      left: 0,
-                      bottom: 0,
-                    }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              {data.revenue.length > 0 ? (
+                <>
+                  <div className="h-[340px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart
+                        data={data.revenue}
+                        margin={{
+                          top: 10,
+                          right: 10,
+                          left: 0,
+                          bottom: 0,
+                        }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
 
-                    <XAxis
-                      dataKey="month"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{
-                        fontSize: 11,
-                        fill: "#94a3b8",
-                      }}
-                    />
+                        <XAxis
+                          dataKey="month"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{
+                            fontSize: 11,
+                            fill: "#94a3b8",
+                          }}
+                        />
 
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{
-                        fontSize: 11,
-                        fill: "#94a3b8",
-                      }}
-                      tickFormatter={(value) =>
-                        `₹${Number(value).toLocaleString("en-IN")}`
+                        <YAxis
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{
+                            fontSize: 11,
+                            fill: "#94a3b8",
+                          }}
+                          tickFormatter={(value) =>
+                            `₹${Number(value).toLocaleString("en-IN")}`
+                          }
+                        />
+
+                        <Tooltip
+                          formatter={(value) => [
+                            formatCurrency(value),
+                            "Revenue",
+                          ]}
+                          contentStyle={{
+                            borderRadius: "12px",
+                            border: "1px solid #e2e8f0",
+                            fontSize: "12px",
+                          }}
+                        />
+
+                        <Line
+                          type="monotone"
+                          dataKey="revenue"
+                          stroke="#7c3aed"
+                          strokeWidth={3}
+                          dot={{
+                            r: 4,
+                            fill: "#7c3aed",
+                          }}
+                          activeDot={{
+                            r: 6,
+                          }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Revenue Summary */}
+
+                  <div className="mt-5 grid gap-3 border-t border-slate-100 pt-5 sm:grid-cols-2">
+                    <SmallSummary
+                      label="Highest Month"
+                      value={
+                        revenueSummary.highestMonth
+                          ? `${revenueSummary.highestMonth.month} • ${formatCurrency(
+                              revenueSummary.highestMonth.revenue,
+                            )}`
+                          : "—"
                       }
                     />
 
-                    <Tooltip
-                      formatter={(value) => [formatCurrency(value), "Revenue"]}
-                      contentStyle={{
-                        borderRadius: "12px",
-                        border: "1px solid #e2e8f0",
-                        fontSize: "12px",
-                      }}
+                    <SmallSummary
+                      label="Lowest Month"
+                      value={
+                        revenueSummary.lowestMonth
+                          ? `${revenueSummary.lowestMonth.month} • ${formatCurrency(
+                              revenueSummary.lowestMonth.revenue,
+                            )}`
+                          : "—"
+                      }
                     />
+                  </div>
+                </>
+              ) : (
+                <div className="flex h-[340px] items-center justify-center">
+                  <div className="text-center">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
+                      <TrendingUp size={20} />
+                    </div>
 
-                    <Line
-                      type="monotone"
-                      dataKey="revenue"
-                      stroke="#7c3aed"
-                      strokeWidth={3}
-                      dot={{
-                        r: 4,
-                        fill: "#7c3aed",
-                      }}
-                      activeDot={{
-                        r: 6,
-                      }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
+                    <p className="mt-4 text-sm font-semibold text-slate-700">
+                      No revenue data yet
+                    </p>
 
-              {/* Revenue summary */}
-              <div className="mt-5 grid gap-3 border-t border-slate-100 pt-5 sm:grid-cols-2">
-                <SmallSummary
-                  label="Highest Month"
-                  value={formatCurrency(revenueSummary.highest)}
-                />
-
-                <SmallSummary
-                  label="Lowest Month"
-                  value={formatCurrency(revenueSummary.lowest)}
-                />
-              </div>
+                    <p className="mt-1 text-xs text-slate-400">
+                      Paid revenue will appear here.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
 
@@ -378,7 +550,7 @@ function Analytics() {
               </p>
             </div>
 
-            <div className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 p-5 sm:grid-cols-3">
               <MiniMetric
                 label="Total Clients"
                 value={data.clients.totalClients}
@@ -390,58 +562,18 @@ function Analytics() {
               />
 
               <MiniMetric label="New Clients" value={data.clients.newClients} />
-
-              <MiniMetric
-                label="Returning Clients"
-                value={data.clients.returningClients}
-              />
             </div>
           </section>
 
           {/* =================================================
-              NO-SHOW OVERVIEW
-          ================================================== */}
-
-          <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 text-red-500">
-                  <CalendarX2 size={19} />
-                </div>
-
-                <div>
-                  <h2 className="text-base font-bold text-slate-900">
-                    No-show Overview
-                  </h2>
-
-                  <p className="mt-1 text-xs leading-5 text-slate-400">
-                    Percentage of scheduled sessions that were marked as
-                    no-show.
-                  </p>
-                </div>
-              </div>
-
-              <div className="text-left sm:text-right">
-                <p className="text-3xl font-bold text-slate-950">
-                  {formatPercent(data.overview.noShowRate)}
-                </p>
-
-                <p className="mt-1 text-[11px] text-slate-400">
-                  Current no-show rate
-                </p>
-              </div>
-            </div>
-          </section>
-
-          {/* =================================================
-              FOOTER NOTE
+              DATA NOTE
           ================================================== */}
 
           <div className="mt-5 flex items-center justify-center gap-2 text-[11px] text-slate-400">
             <BarChart3 size={14} />
 
             <span>
-              Analytics data will be connected to backend aggregation APIs.
+              Analytics are calculated from your real sessions and payment data.
             </span>
           </div>
         </div>
@@ -454,14 +586,7 @@ function Analytics() {
    STAT CARD
 ========================================================= */
 
-function StatCard({
-  title,
-  value,
-  subtitle,
-  icon,
-  trend,
-  trendPositive = true,
-}) {
+function StatCard({ title, value, subtitle, icon }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5">
       <div className="flex items-start justify-between gap-4">
@@ -473,16 +598,6 @@ function StatCard({
           </p>
 
           <p className="mt-1 text-[11px] text-slate-400">{subtitle}</p>
-
-          {trend && (
-            <p
-              className={`mt-2 text-[11px] font-semibold ${
-                trendPositive ? "text-emerald-600" : "text-red-500"
-              }`}
-            >
-              {trend}
-            </p>
-          )}
         </div>
 
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
