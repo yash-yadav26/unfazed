@@ -9,7 +9,6 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
-  MessageCircle,
   RefreshCw,
   UserRound,
   WalletCards,
@@ -631,70 +630,105 @@ function ClientPortal() {
       ====================================================== */}
 
       <div className="lg:pl-[270px]">
-        {/* Header */}
+        {/* Premium Header */}
 
-        <header className="sticky top-0 z-30 border-b border-slate-200 bg-white">
-          <div className="flex h-[78px] items-center justify-between px-5 sm:px-8 lg:px-10">
+        <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
+          <div className="flex h-[78px] items-center justify-between px-4 sm:px-7 lg:px-10">
+            {/* Mobile Menu */}
             <button
               type="button"
               onClick={() => setSidebarOpen(true)}
-              className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden"
+              className="group flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-all duration-200 hover:border-violet-200 hover:bg-violet-50 hover:text-violet-600 lg:hidden"
               aria-label="Open navigation"
             >
-              <Menu size={21} />
+              <Menu
+                size={20}
+                className="transition-transform duration-200 group-hover:scale-105"
+              />
             </button>
 
-            <div className="hidden lg:block">
-              <p className="text-xs font-medium text-slate-400">
-                Client Portal
-              </p>
+            {/* Desktop Portal Identity */}
+            <div className="hidden items-center gap-3 lg:flex">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-lg shadow-violet-200">
+                <HeartHandshake size={19} />
+              </div>
 
-              <p className="mt-0.5 text-sm font-semibold text-slate-800">
-                Your therapy dashboard
-              </p>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-violet-500">
+                  Client Portal
+                </p>
+                <p className="mt-0.5 text-sm font-semibold text-slate-900">
+                  Your therapy dashboard
+                </p>
+              </div>
             </div>
 
-            <div className="ml-auto flex items-center gap-4">
+            {/* Header Actions */}
+            <div className="ml-auto flex items-center gap-2 sm:gap-3">
+              {/* Refresh */}
               <button
                 type="button"
                 onClick={() => fetchDashboard(true)}
                 disabled={refreshing}
-                className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-violet-600 disabled:opacity-50"
+                className="group flex h-10 w-10 items-center justify-center rounded-xl border border-transparent text-slate-500 transition-all duration-200 hover:border-slate-200 hover:bg-slate-50 hover:text-violet-600 disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label="Refresh dashboard"
               >
                 <RefreshCw
                   size={18}
-                  className={refreshing ? "animate-spin" : ""}
+                  className={
+                    refreshing
+                      ? "animate-spin"
+                      : "transition-transform duration-300 group-hover:rotate-180"
+                  }
                 />
               </button>
 
+              {/* Notifications */}
               <Link
                 to="/client/notifications"
-                className="relative rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-violet-600"
+                className="group relative flex h-10 w-10 items-center justify-center rounded-xl border border-transparent text-slate-500 transition-all duration-200 hover:border-slate-200 hover:bg-slate-50 hover:text-violet-600"
               >
-                <Bell size={19} />
+                <Bell
+                  size={19}
+                  className="transition-transform duration-200 group-hover:-rotate-6"
+                />
 
                 {unreadCount > 0 && (
-                  <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-violet-600 px-1 text-[8px] font-bold text-white">
+                  <span className="absolute right-1 top-1 flex h-[17px] min-w-[17px] items-center justify-center rounded-full border-2 border-white bg-gradient-to-r from-violet-600 to-indigo-600 px-1 text-[8px] font-bold text-white shadow-sm">
                     {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 )}
               </Link>
 
-              <div className="h-7 w-px bg-slate-200" />
+              {/* Divider */}
+              <div className="mx-1 hidden h-9 w-px bg-slate-200 sm:block" />
 
-              <Link to="/client/profile" className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700">
-                  {getInitials(userName)}
+              {/* Profile */}
+              <Link
+                to="/client/profile"
+                className="group flex items-center gap-2 rounded-2xl border border-transparent py-1.5 pl-1.5 pr-2 transition-all duration-200 hover:border-slate-200 hover:bg-slate-50"
+              >
+                <div className="relative">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-100 via-violet-50 to-indigo-100 text-xs font-bold text-violet-700 shadow-sm ring-1 ring-violet-100 transition-transform duration-200 group-hover:scale-105">
+                    {getInitials(userName)}
+                  </div>
+
+                  <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-500" />
                 </div>
 
-                <div className="hidden sm:block">
-                  <p className="text-xs font-semibold text-slate-800">
+                <div className="hidden min-w-0 sm:block">
+                  <p className="max-w-[130px] truncate text-xs font-bold text-slate-900">
                     {userName}
                   </p>
-
-                  <p className="text-[10px] text-slate-400">My Profile</p>
+                  <p className="mt-0.5 text-[10px] font-medium text-slate-400 transition-colors group-hover:text-violet-500">
+                    My Profile
+                  </p>
                 </div>
+
+                <ChevronRight
+                  size={14}
+                  className="hidden text-slate-300 transition-transform duration-200 group-hover:translate-x-0.5 sm:block"
+                />
               </Link>
             </div>
           </div>
@@ -704,33 +738,105 @@ function ClientPortal() {
             CONTENT
         ==================================================== */}
 
-        <main className="px-5 py-7 sm:px-8 lg:px-10">
-          <div className="mx-auto max-w-7xl">
-            {/* Welcome */}
+        <main className="relative overflow-hidden bg-slate-50 px-4 py-6 sm:px-7 sm:py-8 lg:px-10">
+          {/* Background Glow */}
+          <div className="pointer-events-none absolute -right-32 top-0 h-96 w-96 rounded-full bg-violet-200/30 blur-3xl" />
+          <div className="pointer-events-none absolute left-1/3 top-20 h-64 w-64 rounded-full bg-indigo-100/30 blur-3xl" />
 
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-violet-600">
-                  Client Portal
-                </p>
+          <div className="relative mx-auto max-w-7xl">
+            {/* Premium Welcome Hero */}
+            <section className="relative overflow-hidden rounded-[28px] border border-violet-100 bg-gradient-to-br from-white via-violet-50/70 to-indigo-50/70 shadow-[0_20px_60px_-25px_rgba(99,102,241,0.25)]">
+              {/* Decorative Blobs */}
+              <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-violet-300/20 blur-3xl" />
+              <div className="pointer-events-none absolute -bottom-24 right-1/4 h-64 w-64 rounded-full bg-indigo-300/15 blur-3xl" />
 
-                <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
-                  Welcome back, {userName}
-                </h1>
+              {/* Top Accent */}
+              <div className="pointer-events-none absolute left-1/2 top-0 h-px w-1/2 bg-gradient-to-r from-transparent via-violet-300/60 to-transparent" />
 
-                <p className="mt-2 text-sm text-slate-500">
-                  Here’s your current therapy activity and appointments.
-                </p>
+              {/* Subtle Grid */}
+              <div
+                className="pointer-events-none absolute inset-0 opacity-[0.035]"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(#7c3aed 1px, transparent 1px), linear-gradient(90deg, #7c3aed 1px, transparent 1px)",
+                  backgroundSize: "32px 32px",
+                }}
+              />
+
+              <div className="relative flex flex-col gap-7 px-5 py-7 sm:px-8 sm:py-9 lg:flex-row lg:items-center lg:justify-between lg:px-10 lg:py-10">
+                {/* Welcome Content */}
+                <div className="max-w-2xl">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-violet-200/80 bg-white/80 px-3 py-1.5 shadow-sm backdrop-blur-sm">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-100 text-violet-600">
+                      <HeartHandshake size={11} />
+                    </span>
+
+                    <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-violet-700">
+                      Client Portal
+                    </span>
+
+                    <span className="h-1 w-1 rounded-full bg-emerald-400" />
+
+                    <span className="text-[9px] font-semibold text-emerald-600">
+                      Your space is ready
+                    </span>
+                  </div>
+
+                  <h1 className="mt-5 text-3xl font-extrabold tracking-[-0.035em] text-slate-950 sm:text-4xl lg:text-[42px] lg:leading-[1.1]">
+                    Welcome back,{" "}
+                    <span className="bg-gradient-to-r from-violet-600 via-indigo-600 to-violet-600 bg-clip-text text-transparent">
+                      {userName}
+                    </span>
+                  </h1>
+
+                  <p className="mt-3 max-w-xl text-sm leading-6 text-slate-500 sm:text-[15px]">
+                    Here’s your current therapy activity, upcoming appointments,
+                    and everything you need to stay on track.
+                  </p>
+
+                  <div className="mt-5 flex flex-wrap items-center gap-3">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/70 px-3 py-1.5 shadow-sm">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                      <span className="text-[10px] font-semibold text-slate-500">
+                        Private & Secure
+                      </span>
+                    </div>
+
+                    <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/70 px-3 py-1.5 shadow-sm">
+                      <HeartHandshake size={11} className="text-violet-500" />
+                      <span className="text-[10px] font-semibold text-slate-500">
+                        Your wellbeing matters
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Book Session CTA */}
+                <div className="shrink-0 lg:pr-2">
+                  <Link
+                    to="/client/therapists"
+                    className="group relative inline-flex w-full items-center justify-center gap-2.5 overflow-hidden rounded-2xl bg-gradient-to-r from-violet-600 via-violet-600 to-indigo-600 px-5 py-3.5 text-sm font-bold text-white shadow-xl shadow-violet-200 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-violet-300 sm:w-auto"
+                  >
+                    <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+
+                    <span className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-white/15">
+                      <CalendarDays size={17} />
+                    </span>
+
+                    <span className="relative">Book Session</span>
+
+                    <ChevronRight
+                      size={15}
+                      className="relative transition-transform duration-200 group-hover:translate-x-1"
+                    />
+                  </Link>
+
+                  <p className="mt-2.5 text-center text-[9px] font-medium text-slate-400">
+                    Find a therapist & choose a time
+                  </p>
+                </div>
               </div>
-
-              <Link
-                to="/client/therapists"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 text-xs font-semibold text-white shadow-lg shadow-violet-200 transition hover:bg-violet-700"
-              >
-                <CalendarDays size={16} />
-                Book Session
-              </Link>
-            </div>
+            </section>
 
             {/* =================================================
                 SUMMARY CARDS
@@ -1024,13 +1130,6 @@ function ClientPortal() {
                       icon={<CalendarDays size={17} />}
                       title="Book a Session"
                       description="Choose a therapist and available slot"
-                    />
-
-                    <QuickAction
-                      to="/client/chat"
-                      icon={<MessageCircle size={17} />}
-                      title="Message Therapist"
-                      description="Continue your conversation"
                     />
 
                     <QuickAction

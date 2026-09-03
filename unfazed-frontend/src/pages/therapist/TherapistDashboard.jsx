@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Bell,
   CalendarDays,
@@ -7,7 +7,9 @@ import {
   HeartHandshake,
   LayoutDashboard,
   LogOut,
+  Menu,
   RefreshCw,
+  X,
   TrendingUp,
   UserRound,
   Users,
@@ -110,6 +112,52 @@ const formatTodayLabel = () => {
   });
 };
 
+const getGreeting = () => {
+  const hour = new Date().getHours();
+
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+};
+
+const getStoredTherapist = () => {
+  try {
+    const storedUser = localStorage.getItem("user");
+    return storedUser ? JSON.parse(storedUser) : {};
+  } catch {
+    return {};
+  }
+};
+
+const getTherapistDisplayName = (user) => {
+  const firstName =
+    user?.firstName ||
+    user?.firstname ||
+    user?.name?.split(" ")?.[0] ||
+    "";
+
+  const lastName =
+    user?.lastName ||
+    user?.lastname ||
+    user?.name?.split(" ")?.slice(1).join(" ") ||
+    "";
+
+  return `${firstName} ${lastName}`.trim() || "Therapist";
+};
+
+const getTherapistInitials = (name) => {
+  const value = String(name || "Therapist").trim();
+
+  if (!value) return "T";
+
+  return value
+    .split(/\s+/)
+    .map((word) => word[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+};
+
 const formatCurrency = (value) => {
   return `₹${Number(value || 0).toLocaleString("en-IN")}`;
 };
@@ -193,7 +241,15 @@ const getInitials = (name) => {
 ========================================================= */
 
 function TherapistDashboard() {
+  const location = useLocation();
   const navigate = useNavigate();
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const therapistUser = useMemo(() => getStoredTherapist(), []);
+  const therapistName = getTherapistDisplayName(therapistUser);
+  const therapistInitials = getTherapistInitials(therapistName);
+  const greeting = getGreeting();
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -451,20 +507,23 @@ function TherapistDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 text-slate-900">
-        <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
+      <div className="relative min-h-screen overflow-hidden bg-[#f8f9fd] text-slate-900">
+      <div className="pointer-events-none fixed -left-40 top-24 h-80 w-80 rounded-full bg-violet-200/20 blur-3xl" />
+      <div className="pointer-events-none fixed -right-40 top-80 h-96 w-96 rounded-full bg-indigo-200/20 blur-3xl" />
+      <div className="pointer-events-none fixed bottom-0 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-fuchsia-200/10 blur-3xl" />
+        <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 shadow-[0_1px_0_rgba(15,23,42,0.02)] backdrop-blur-xl">
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
             <Link to="/therapist/dashboard" className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-600 text-white">
+              <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-200">
                 <HeartHandshake size={19} />
               </div>
 
               <div>
-                <p className="text-base font-bold tracking-tight text-slate-900">
+                <p className="text-base font-bold text-slate-900">
                   Unfazed
                 </p>
 
-                <p className="text-[9px] text-slate-500">Therapist Dashboard</p>
+                <p className="text-[9px] font-medium tracking-wide text-slate-400">Therapist Dashboard</p>
               </div>
             </Link>
           </div>
@@ -486,27 +545,30 @@ function TherapistDashboard() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-slate-50 text-slate-900">
-        <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
+      <div className="relative min-h-screen overflow-hidden bg-[#f8f9fd] text-slate-900">
+      <div className="pointer-events-none fixed -left-48 top-32 h-96 w-96 rounded-full bg-violet-200/20 blur-3xl" />
+      <div className="pointer-events-none fixed -right-48 top-[38%] h-[30rem] w-[30rem] rounded-full bg-indigo-200/20 blur-3xl" />
+      <div className="pointer-events-none fixed bottom-0 left-1/3 h-80 w-80 rounded-full bg-fuchsia-200/10 blur-3xl" />
+        <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 shadow-[0_1px_0_rgba(15,23,42,0.02)] backdrop-blur-xl">
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
             <Link to="/therapist/dashboard" className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-600 text-white">
+              <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-200">
                 <HeartHandshake size={19} />
               </div>
 
               <div>
-                <p className="text-base font-bold tracking-tight text-slate-900">
+                <p className="text-base font-bold text-slate-900">
                   Unfazed
                 </p>
 
-                <p className="text-[9px] text-slate-500">Therapist Dashboard</p>
+                <p className="text-[9px] font-medium tracking-wide text-slate-400">Therapist Dashboard</p>
               </div>
             </Link>
           </div>
         </header>
 
         <div className="flex min-h-[calc(100vh-64px)] items-center justify-center p-5">
-          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 text-center">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200/80 bg-white p-7 text-center shadow-2xl shadow-slate-200/60">
             <p className="text-sm font-semibold text-slate-800">
               Unable to load dashboard
             </p>
@@ -516,7 +578,7 @@ function TherapistDashboard() {
             <button
               type="button"
               onClick={() => fetchDashboard(true)}
-              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-violet-700"
+              className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-violet-200 transition hover:-translate-y-0.5"
             >
               <RefreshCw size={14} />
               Try Again
@@ -534,16 +596,34 @@ function TherapistDashboard() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       {/* =====================================================
-          TOP BAR
+          MOBILE OVERLAY
       ====================================================== */}
 
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
-          {/* Logo */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-slate-950/30 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
-          <Link to="/therapist/dashboard" className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-600 text-white">
-              <HeartHandshake size={19} />
+      {/* =====================================================
+          SIDEBAR
+      ====================================================== */}
+
+      <aside
+        className={`fixed left-0 top-0 z-50 flex h-screen w-[270px] flex-col border-r border-slate-200 bg-white transition-transform duration-300 lg:translate-x-0 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        {/* Logo */}
+        <div className="flex h-[78px] shrink-0 items-center border-b border-slate-100 px-5">
+          <Link
+            to="/therapist/dashboard"
+            onClick={() => setSidebarOpen(false)}
+            className="flex items-center gap-3"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-600 text-white">
+              <HeartHandshake size={21} />
             </div>
 
             <div>
@@ -551,102 +631,59 @@ function TherapistDashboard() {
                 Unfazed
               </p>
 
-              <p className="text-[9px] text-slate-500">Therapist Dashboard</p>
+              <p className="text-[10px] text-slate-500">
+                Therapist Portal
+              </p>
             </div>
           </Link>
 
-          {/* Right side */}
-
-          <div className="flex items-center gap-4">
-            {/* Refresh */}
-
-            <button
-              type="button"
-              onClick={() => fetchDashboard(true)}
-              disabled={refreshing}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-              aria-label="Refresh dashboard"
-            >
-              <RefreshCw
-                size={17}
-                className={refreshing ? "animate-spin" : ""}
-              />
-            </button>
-
-            {/* Notification */}
-
-            <Link
-              to="/therapist/notifications"
-              className="relative flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
-              aria-label="Notifications"
-            >
-              <Bell size={18} />
-
-              {unreadCount > 0 && (
-                <span className="absolute -right-2 -top-2 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-violet-600 px-1.5 text-[9px] font-bold text-white shadow-sm">
-                  {unreadCount > 99 ? "99+" : unreadCount}
-                </span>
-              )}
-            </Link>
-
-            <div className="hidden h-6 w-px bg-slate-200 sm:block" />
-
-            {/* Profile */}
-
-            <Link
-              to="/therapist/profile"
-              className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition hover:bg-slate-50"
-            >
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100 text-sm font-bold text-violet-700">
-                T
-              </div>
-
-              <div className="hidden text-left sm:block">
-                <p className="text-xs font-semibold text-slate-800">
-                  Therapist
-                </p>
-
-                <p className="text-[10px] text-slate-400">My Profile</p>
-              </div>
-            </Link>
-          </div>
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(false)}
+            className="ml-auto rounded-lg p-2 text-slate-400 hover:bg-slate-100 lg:hidden"
+            aria-label="Close navigation"
+          >
+            <X size={18} />
+          </button>
         </div>
-      </header>
 
-      {/* =====================================================
-          PAGE LAYOUT
-      ====================================================== */}
+        {/* Navigation — independently scrollable */}
+        <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-5">
+          <p className="px-3 pb-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            My Practice
+          </p>
 
-      <div className="flex">
-        {/* ===================================================
-            SIDEBAR
-        ==================================================== */}
-
-        <aside className="hidden min-h-[calc(100vh-64px)] w-60 shrink-0 border-r border-slate-200 bg-white lg:block">
-          <nav className="p-4">
+          <div className="space-y-1">
             <SidebarLink
               to="/therapist/dashboard"
               icon={<LayoutDashboard size={18} />}
               label="Dashboard"
-              active
+              active={location.pathname === "/therapist/dashboard"}
+              onClick={() => setSidebarOpen(false)}
             />
 
             <SidebarLink
               to="/therapist/schedule"
               icon={<CalendarDays size={18} />}
               label="Schedule"
+              active={location.pathname.startsWith("/therapist/schedule")}
+              onClick={() => setSidebarOpen(false)}
             />
 
             <SidebarLink
               to="/therapist/clients"
               icon={<Users size={18} />}
               label="Clients"
+              active={location.pathname.startsWith("/therapist/clients")}
+              onClick={() => setSidebarOpen(false)}
             />
 
             <SidebarLink
               to="/therapist/notes"
               icon={<FileTextIcon />}
               label="Notes"
+              active={location.pathname.startsWith("/therapist/notes")}
+              onClick={() => setSidebarOpen(false)}
             />
 
             <SidebarLink
@@ -654,127 +691,272 @@ function TherapistDashboard() {
               icon={<Bell size={18} />}
               label="Notifications"
               badge={unreadCount}
+              active={location.pathname.startsWith("/therapist/notifications")}
+              onClick={() => setSidebarOpen(false)}
             />
 
             <SidebarLink
               to="/therapist/analytics"
               icon={<TrendingUp size={18} />}
               label="Analytics"
+              active={location.pathname.startsWith("/therapist/analytics")}
+              onClick={() => setSidebarOpen(false)}
             />
+          </div>
 
-            <div className="my-5 h-px bg-slate-100" />
+          <div className="my-5 h-px bg-slate-100" />
 
-            <SidebarLink
-              to="/therapist/profile"
-              icon={<UserRound size={18} />}
-              label="Profile"
-            />
+          <p className="px-3 pb-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            Account
+          </p>
 
-            <div className="my-5 h-px bg-slate-100" />
+          <SidebarLink
+            to="/therapist/profile"
+            icon={<UserRound size={18} />}
+            label="Profile"
+            active={location.pathname.startsWith("/therapist/profile")}
+            onClick={() => setSidebarOpen(false)}
+          />
+        </nav>
 
+        {/* Logout */}
+        <div className="shrink-0 border-t border-slate-100 p-3">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-500 transition hover:bg-red-50 hover:text-red-600"
+          >
+            <LogOut size={18} />
+            Logout
+          </button>
+        </div>
+      </aside>
+
+      {/* =====================================================
+          MAIN WRAPPER
+      ====================================================== */}
+
+      <div className="lg:pl-[270px]">
+        {/* Header */}
+        <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
+          <div className="flex h-[78px] items-center justify-between px-4 sm:px-7 lg:px-10">
+            {/* Mobile Menu */}
             <button
               type="button"
-              onClick={handleLogout}
-              className="mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-500 transition hover:bg-red-50 hover:text-red-600"
+              onClick={() => setSidebarOpen(true)}
+              className="group flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-all duration-200 hover:border-violet-200 hover:bg-violet-50 hover:text-violet-600 lg:hidden"
+              aria-label="Open navigation"
             >
-              <LogOut size={18} />
-              Logout
+              <Menu size={20} />
             </button>
-          </nav>
-        </aside>
 
-        {/* ===================================================
-            MAIN CONTENT
-        ==================================================== */}
-
-        <main className="min-w-0 flex-1 p-5 sm:p-7 lg:p-8">
-          <div className="mx-auto max-w-7xl">
-            {/* =================================================
-                PAGE HEADER
-            ================================================== */}
-
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="text-sm font-medium text-violet-600">
-                  Good morning 👋
-                </p>
-
-                <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
-                  Welcome back, Therapist
-                </h1>
-
-                <p className="mt-2 text-sm text-slate-500">
-                  Here’s what’s happening with your practice today.
-                </p>
+            {/* Desktop Portal Identity */}
+            <div className="hidden items-center gap-3 lg:flex">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-lg shadow-violet-200">
+                <HeartHandshake size={19} />
               </div>
 
-              <Link
-                to="/therapist/schedule"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 text-sm font-semibold text-white shadow-lg shadow-violet-200 transition hover:bg-violet-700"
-              >
-                <CalendarDays size={17} />
-                View Schedule
-              </Link>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-violet-500">
+                  Therapist Portal
+                </p>
+
+                <p className="mt-0.5 text-sm font-semibold text-slate-900">
+                  Your practice dashboard
+                </p>
+              </div>
             </div>
 
-            {/* =================================================
-                STAT CARDS
-            ================================================== */}
+            {/* Header Actions */}
+            <div className="ml-auto flex items-center gap-2 sm:gap-3">
+              <button
+                type="button"
+                onClick={() => fetchDashboard(true)}
+                disabled={refreshing}
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-transparent text-slate-500 transition hover:border-slate-200 hover:bg-slate-50 hover:text-violet-600 disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="Refresh dashboard"
+              >
+                <RefreshCw
+                  size={18}
+                  className={refreshing ? "animate-spin" : ""}
+                />
+              </button>
 
+              <Link
+                to="/therapist/notifications"
+                className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-transparent text-slate-500 transition hover:border-slate-200 hover:bg-slate-50 hover:text-violet-600"
+                aria-label="Notifications"
+              >
+                <Bell size={19} />
+
+                {unreadCount > 0 && (
+                  <span className="absolute right-1 top-1 flex h-[17px] min-w-[17px] items-center justify-center rounded-full border-2 border-white bg-violet-600 px-1 text-[8px] font-bold text-white shadow-sm">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </Link>
+
+              <div className="mx-1 hidden h-9 w-px bg-slate-200 sm:block" />
+
+              <Link
+                to="/therapist/profile"
+                className="group flex items-center gap-2 rounded-2xl border border-transparent py-1.5 pl-1.5 pr-2 transition hover:border-slate-200 hover:bg-slate-50"
+              >
+                <div className="relative">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-100 via-violet-50 to-indigo-100 text-xs font-bold text-violet-700 shadow-sm ring-1 ring-violet-100 transition-transform duration-200 group-hover:scale-105">
+                    {therapistInitials}
+                  </div>
+
+                  <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-500" />
+                </div>
+
+                <div className="hidden min-w-0 sm:block">
+                  <p className="max-w-[140px] truncate text-xs font-bold text-slate-900">
+                    {therapistName}
+                  </p>
+
+                  <p className="mt-0.5 text-[10px] font-medium text-slate-400">
+                    My Profile
+                  </p>
+                </div>
+
+                <ChevronRight
+                  size={14}
+                  className="hidden text-slate-300 transition group-hover:translate-x-0.5 sm:block"
+                />
+              </Link>
+            </div>
+          </div>
+        </header>
+
+        {/* ===================================================
+            CONTENT
+        ==================================================== */}
+
+        <main className="relative overflow-hidden bg-slate-50 px-4 py-6 sm:px-7 sm:py-8 lg:px-10">
+          <div className="pointer-events-none absolute -right-32 top-0 h-96 w-96 rounded-full bg-violet-200/25 blur-3xl" />
+          <div className="pointer-events-none absolute left-1/3 top-24 h-64 w-64 rounded-full bg-indigo-100/25 blur-3xl" />
+
+          <div className="relative mx-auto max-w-7xl">
+            {/* Welcome */}
+            <section className="relative overflow-hidden rounded-[28px] border border-violet-100 bg-gradient-to-br from-white via-violet-50/60 to-indigo-50/60 shadow-[0_18px_55px_-25px_rgba(99,102,241,0.25)]">
+              <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-violet-200/20 blur-3xl" />
+              <div className="pointer-events-none absolute -bottom-24 left-1/3 h-64 w-64 rounded-full bg-indigo-200/15 blur-3xl" />
+
+              <div className="relative flex flex-col gap-6 px-5 py-7 sm:px-8 sm:py-9 lg:flex-row lg:items-center lg:justify-between lg:px-10 lg:py-10">
+                <div className="max-w-2xl">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-violet-200/80 bg-white/80 px-3 py-1.5 shadow-sm">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-100 text-violet-600">
+                      <HeartHandshake size={11} />
+                    </span>
+
+                    <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-violet-700">
+                      Therapist Portal
+                    </span>
+
+                    <span className="h-1 w-1 rounded-full bg-emerald-400" />
+
+                    <span className="text-[9px] font-semibold text-emerald-600">
+                      Practice overview
+                    </span>
+                  </div>
+
+                  <h1 className="mt-5 text-3xl font-bold tracking-[-0.03em] text-slate-950 sm:text-4xl lg:text-[40px] lg:leading-[1.1]">
+                    {greeting},{" "}
+                    <span className="bg-gradient-to-r from-violet-600 via-indigo-600 to-violet-600 bg-clip-text text-transparent">
+                      {therapistName}
+                    </span>
+                  </h1>
+
+                  <p className="mt-3 max-w-xl text-sm leading-6 text-slate-500 sm:text-[15px]">
+                    Here’s a quick look at what’s happening with your practice today.
+                  </p>
+
+                  <div className="mt-5 flex flex-wrap items-center gap-3">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/70 px-3 py-1.5 shadow-sm">
+                      <CalendarDays size={12} className="text-violet-500" />
+                      <span className="text-[10px] font-semibold text-slate-500">
+                        {formatTodayLabel()}
+                      </span>
+                    </div>
+
+                    <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/70 px-3 py-1.5 shadow-sm">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                      <span className="text-[10px] font-semibold text-slate-500">
+                        Your practice at a glance
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <Link
+                  to="/therapist/schedule"
+                  className="group inline-flex w-full shrink-0 items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-violet-200 transition hover:-translate-y-0.5 hover:shadow-xl sm:w-auto"
+                >
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15">
+                    <CalendarDays size={16} />
+                  </span>
+
+                  <span>View Schedule</span>
+
+                  <ChevronRight
+                    size={15}
+                    className="transition group-hover:translate-x-1"
+                  />
+                </Link>
+              </div>
+            </section>
+
+            {/* Stats */}
             <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <StatCard
                 title="Today's Sessions"
                 value={todaysSessionsCount}
                 subtitle="Scheduled for today"
-                icon={<CalendarDays size={20} />}
+                icon={<CalendarDays size={19} />}
               />
 
               <StatCard
                 title="Active Clients"
                 value={activeClients}
                 subtitle="Clients with active sessions"
-                icon={<Users size={20} />}
+                icon={<Users size={19} />}
               />
 
               <StatCard
                 title="Monthly Revenue"
                 value={formatCurrency(monthlyRevenue)}
                 subtitle="Current month paid revenue"
-                icon={<Wallet size={20} />}
+                icon={<Wallet size={19} />}
               />
             </div>
 
-            {/* =================================================
-                UPCOMING + TODAY
-            ================================================== */}
-
-            <div className="mt-7 grid gap-6 xl:grid-cols-[1.5fr_1fr]">
-              {/* Upcoming Sessions */}
-
-              <section className="rounded-2xl border border-slate-200 bg-white">
+            {/* Upcoming + Today */}
+            <div className="mt-6 grid gap-6 xl:grid-cols-[1.5fr_1fr]">
+              <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
                 <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
                   <div>
                     <h2 className="text-base font-bold text-slate-900">
                       Upcoming Sessions
                     </h2>
-
                     <p className="mt-1 text-xs text-slate-400">
-                      Your next scheduled sessions
+                      Your next scheduled appointments
                     </p>
                   </div>
 
                   <Link
-                    to="/therapist/clients"
-                    className="text-xs font-semibold text-violet-600 transition hover:text-violet-700"
+                    to="/therapist/schedule"
+                    className="flex items-center gap-1 text-xs font-semibold text-violet-600 hover:text-violet-700"
                   >
-                    View All
+                    View Schedule
+                    <ChevronRight size={14} />
                   </Link>
                 </div>
 
                 {upcomingSessions.length === 0 ? (
                   <EmptyState
                     title="No upcoming sessions"
-                    description="You do not have any upcoming confirmed or pending sessions."
+                    description="You currently have no confirmed or pending sessions."
                   />
                 ) : (
                   <div className="divide-y divide-slate-100">
@@ -792,12 +974,11 @@ function TherapistDashboard() {
                 )}
               </section>
 
-              {/* Today's Schedule */}
-
-              <section className="rounded-2xl border border-slate-200 bg-white">
+              <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
                 <div className="border-b border-slate-100 px-5 py-4">
-                  <h2 className="text-base font-bold text-slate-900">Today</h2>
-
+                  <h2 className="text-base font-bold text-slate-900">
+                    Today
+                  </h2>
                   <p className="mt-1 text-xs text-slate-400">
                     {formatTodayLabel()}
                   </p>
@@ -826,96 +1007,88 @@ function TherapistDashboard() {
               </section>
             </div>
 
-            {/* =================================================
-                LOWER CONTENT
-            ================================================== */}
-
-            <div className="mt-6">
-              {/* Recent Clients */}
-
-              <section className="rounded-2xl border border-slate-200 bg-white">
-                <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-                  <div>
-                    <h2 className="text-base font-bold text-slate-900">
-                      Recent Clients
-                    </h2>
-
-                    <p className="mt-1 text-xs text-slate-400">
-                      Recently active clients
-                    </p>
-                  </div>
-
-                  <Link
-                    to="/therapist/clients"
-                    className="text-xs font-semibold text-violet-600 transition hover:text-violet-700"
-                  >
-                    View All
-                  </Link>
-                </div>
-
-                {recentClients.length === 0 ? (
-                  <EmptyState
-                    title="No clients yet"
-                    description="Clients will appear here after they book sessions with you."
-                  />
-                ) : (
-                  <div className="divide-y divide-slate-100 p-2">
-                    {recentClients.map((client) => {
-                      const clientSessions = Array.isArray(client?.sessions)
-                        ? client.sessions
-                        : [];
-
-                      const latestSession = [...clientSessions].sort(
-                        (a, b) => getSessionDateTime(b) - getSessionDateTime(a),
-                      )[0];
-
-                      const sessionText = latestSession
-                        ? `${formatDate(latestSession.date)}, ${formatTime(
-                            latestSession.startTime,
-                          )}`
-                        : "No sessions";
-
-                      return (
-                        <ClientRow
-                          key={client?._id}
-                          name={getClientName(client)}
-                          email={getClientEmail(client)}
-                          session={sessionText}
-                          initials={getInitials(getClientName(client))}
-                        />
-                      );
-                    })}
-                  </div>
-                )}
-              </section>
-            </div>
-
-            {/* =================================================
-                ANALYTICS PREVIEW
-            ================================================== */}
-
-            <section className="mt-6 rounded-2xl border border-slate-200 bg-white">
-              <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+            {/* Recent Clients */}
+            <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
                 <div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
-                      <TrendingUp size={18} />
-                    </div>
+                  <h2 className="text-base font-bold text-slate-900">
+                    Recent Clients
+                  </h2>
 
-                    <h2 className="text-base font-bold text-slate-900">
-                      Practice Overview
-                    </h2>
-                  </div>
-
-                  <p className="mt-2 text-xs leading-5 text-slate-400">
-                    Track revenue and client performance from your analytics
-                    dashboard.
+                  <p className="mt-1 text-xs text-slate-400">
+                    Recently active clients
                   </p>
                 </div>
 
                 <Link
+                  to="/therapist/clients"
+                  className="flex items-center gap-1 text-xs font-semibold text-violet-600 hover:text-violet-700"
+                >
+                  View All
+                  <ChevronRight size={14} />
+                </Link>
+              </div>
+
+              {recentClients.length === 0 ? (
+                <EmptyState
+                  title="No clients yet"
+                  description="Clients will appear here after they book sessions with you."
+                />
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {recentClients.map((client) => {
+                    const clientSessions = Array.isArray(client?.sessions)
+                      ? client.sessions
+                      : [];
+
+                    const latestSession = [...clientSessions].sort(
+                      (a, b) => getSessionDateTime(b) - getSessionDateTime(a),
+                    )[0];
+
+                    const sessionText = latestSession
+                      ? `${formatDate(latestSession.date)}, ${formatTime(
+                          latestSession.startTime,
+                        )}`
+                      : "No sessions";
+
+                    return (
+                      <ClientRow
+                        key={client?._id}
+                        name={getClientName(client)}
+                        email={getClientEmail(client)}
+                        session={sessionText}
+                        initials={getInitials(getClientName(client))}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+
+            {/* Practice Overview */}
+            <section className="mt-6 overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-br from-white via-white to-violet-50/60">
+              <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+                      <TrendingUp size={18} />
+                    </div>
+
+                    <div>
+                      <h2 className="text-base font-bold text-slate-900">
+                        Practice Overview
+                      </h2>
+
+                      <p className="mt-1 text-xs text-slate-400">
+                        Track revenue and client performance from your analytics dashboard.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <Link
                   to="/therapist/analytics"
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-violet-50 px-4 py-2.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-100"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-violet-700 transition hover:border-violet-200 hover:bg-violet-50"
                 >
                   Open Analytics
                   <ChevronRight size={14} />
@@ -933,23 +1106,32 @@ function TherapistDashboard() {
    SIDEBAR LINK
 ========================================================= */
 
-function SidebarLink({ to, icon, label, active = false, badge = 0 }) {
+function SidebarLink({
+  to,
+  icon,
+  label,
+  active = false,
+  badge = 0,
+  onClick,
+}) {
   return (
     <Link
       to={to}
-      className={`mb-1 flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+      onClick={onClick}
+      className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition ${
         active
           ? "bg-violet-50 text-violet-700"
           : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
       }`}
     >
-      <div className="flex items-center gap-3">
+      <span className={active ? "text-violet-600" : "text-slate-400"}>
         {icon}
-        {label}
-      </div>
+      </span>
+
+      <span className="flex-1">{label}</span>
 
       {badge > 0 && (
-        <span className="flex min-h-5 min-w-5 items-center justify-center rounded-full bg-violet-600 px-1.5 text-[9px] font-bold text-white">
+        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-violet-600 px-1.5 text-[9px] font-bold text-white">
           {badge > 99 ? "99+" : badge}
         </span>
       )}
@@ -963,16 +1145,20 @@ function SidebarLink({ to, icon, label, active = false, badge = 0 }) {
 
 function StatCard({ title, value, subtitle, icon }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5">
-      <div className="flex items-start justify-between gap-4">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-violet-100 hover:shadow-sm">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-xs font-medium text-slate-500">{title}</p>
+          <p className="text-[11px] font-medium text-slate-500">
+            {title}
+          </p>
 
-          <p className="mt-2 text-2xl font-bold tracking-tight text-slate-950">
+          <p className="mt-1 text-2xl font-bold text-slate-950">
             {value}
           </p>
 
-          <p className="mt-1 text-[11px] text-slate-400">{subtitle}</p>
+          <p className="mt-1 text-[10px] text-slate-400">
+            {subtitle}
+          </p>
         </div>
 
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
@@ -987,11 +1173,12 @@ function StatCard({ title, value, subtitle, icon }) {
    SESSION ROW
 ========================================================= */
 
+
 function SessionRow({ name, time, date, type, status }) {
   return (
-    <div className="flex items-center justify-between gap-4 px-5 py-4">
+    <div className="flex items-center justify-between gap-4 px-5 py-4 transition hover:bg-violet-50/40">
       <div className="flex min-w-0 items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-indigo-100 text-xs font-semibold text-violet-700 ring-1 ring-violet-100">
           {getInitials(name)}
         </div>
 
@@ -1034,11 +1221,11 @@ function TimelineItem({ time, title, status, active = false }) {
 
       <div
         className={`h-3 w-3 shrink-0 rounded-full ${
-          active ? "bg-violet-600 ring-4 ring-violet-100" : "bg-slate-300"
+          active ? "bg-violet-600 ring-4 ring-violet-100 shadow-lg shadow-violet-200" : "bg-slate-300"
         }`}
       />
 
-      <div className="min-w-0 flex-1 rounded-xl bg-slate-50 px-3 py-2.5">
+      <div className="min-w-0 flex-1 rounded-2xl border border-slate-100 bg-gradient-to-r from-slate-50 to-violet-50/30 px-3.5 py-3">
         <div className="flex items-center justify-between gap-3">
           <p className="truncate text-xs font-semibold text-slate-700">
             {title}
@@ -1063,10 +1250,10 @@ function ClientRow({ name, email, session, initials }) {
   return (
     <Link
       to="/therapist/clients"
-      className="flex items-center justify-between rounded-xl px-3 py-3 transition hover:bg-slate-50"
+      className="flex items-center justify-between rounded-2xl px-3 py-3 transition hover:bg-violet-50/50"
     >
       <div className="flex min-w-0 items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-indigo-100 text-xs font-semibold text-violet-700 ring-1 ring-violet-100">
           {initials}
         </div>
 
