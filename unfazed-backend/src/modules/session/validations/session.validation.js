@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
+
 const { z } = require("zod");
+
 const ApiError = require("../../../utils/apiError");
 
 /* -------------------------------------------------------------------------- */
@@ -47,6 +49,7 @@ const isTodayOrFuture = (dateString) => {
   const today = new Date();
 
   today.setHours(0, 0, 0, 0);
+
   selectedDate.setHours(0, 0, 0, 0);
 
   return selectedDate >= today;
@@ -73,7 +76,7 @@ const getAvailableSlotsSchema = z
   });
 
 /* -------------------------------------------------------------------------- */
-/*                           Create Session                                   */
+/*                            Create Session                                  */
 /* -------------------------------------------------------------------------- */
 
 // POST /api/session
@@ -97,11 +100,12 @@ const createSessionSchema = z
   });
 
 /* -------------------------------------------------------------------------- */
-/*                         Session ID Params                                  */
+/*                           Session ID Params                                */
 /* -------------------------------------------------------------------------- */
 
 // GET    /api/session/:id
 // PATCH  /api/session/:id/cancel
+// POST   /api/session/:id/join
 
 const sessionIdParamsSchema = z
   .object({
@@ -139,22 +143,33 @@ const parseRequestPart = (schema, key) => {
 /* -------------------------------------------------------------------------- */
 
 // GET /api/session/slots
+
 const validateGetAvailableSlots = parseRequestPart(
   getAvailableSlotsSchema,
   "query",
 );
 
 // POST /api/session
+
 const validateCreateSession = parseRequestPart(createSessionSchema, "body");
 
 // GET /api/session/:id
+
 const validateSessionId = parseRequestPart(sessionIdParamsSchema, "params");
 
 // PATCH /api/session/:id/cancel
+
 const validateCancelSession = validateSessionId;
 
+// POST /api/session/:id/join
+//
+// Join API bhi same session ID params use karegi.
+// Request body ki zarurat nahi hai.
+
+const validateJoinSession = validateSessionId;
+
 /* -------------------------------------------------------------------------- */
-/*                                 Export                                     */
+/*                                  Export                                    */
 /* -------------------------------------------------------------------------- */
 
 module.exports = {
@@ -163,4 +178,5 @@ module.exports = {
   validateCreateSession,
   validateSessionId,
   validateCancelSession,
+  validateJoinSession,
 };

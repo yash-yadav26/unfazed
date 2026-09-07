@@ -14,6 +14,8 @@ import {
   UserRound,
   Users,
   Wallet,
+  Video,
+  Loader2,
 } from "lucide-react";
 
 import { getMyNotifications } from "../../api/notificationApi";
@@ -22,6 +24,7 @@ import {
   getAnalyticsOverview,
   getRevenueTrend,
 } from "../../api/therapistAnalyticsApi";
+import { joinSession } from "../../api/sessionApi";
 
 /* =========================================================
    HELPERS
@@ -53,6 +56,24 @@ const getSessionDateTime = (session) => {
   const date = normalizeDate(session.date);
 
   const [hours = 0, minutes = 0] = String(session.startTime)
+    .split(":")
+    .map(Number);
+
+  const dateTime = new Date(`${date}T00:00:00`);
+
+  dateTime.setHours(hours, minutes, 0, 0);
+
+  return dateTime.getTime();
+};
+
+const getSessionEndDateTime = (session) => {
+  if (!session?.date || !session?.endTime) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+
+  const date = normalizeDate(session.date);
+
+  const [hours = 0, minutes = 0] = String(session.endTime)
     .split(":")
     .map(Number);
 
@@ -117,12 +138,14 @@ const getGreeting = () => {
 
   if (hour < 12) return "Good morning";
   if (hour < 17) return "Good afternoon";
+
   return "Good evening";
 };
 
 const getStoredTherapist = () => {
   try {
     const storedUser = localStorage.getItem("user");
+
     return storedUser ? JSON.parse(storedUser) : {};
   } catch {
     return {};
@@ -131,10 +154,7 @@ const getStoredTherapist = () => {
 
 const getTherapistDisplayName = (user) => {
   const firstName =
-    user?.firstName ||
-    user?.firstname ||
-    user?.name?.split(" ")?.[0] ||
-    "";
+    user?.firstName || user?.firstname || user?.name?.split(" ")?.[0] || "";
 
   const lastName =
     user?.lastName ||
@@ -148,7 +168,9 @@ const getTherapistDisplayName = (user) => {
 const getTherapistInitials = (name) => {
   const value = String(name || "Therapist").trim();
 
-  if (!value) return "T";
+  if (!value) {
+    return "T";
+  }
 
   return value
     .split(/\s+/)
@@ -166,16 +188,54 @@ const normalizeStatus = (status) => {
   return String(status || "").toUpperCase();
 };
 
+/* =========================================================
+   SESSION STATUS
+========================================================= */
+
 const isActiveSession = (session) => {
   const status = normalizeStatus(session?.status);
 
-  return ["PENDING", "CONFIRMED"].includes(status);
+  return ["PENDING", "CONFIRMED", "IN_PROGRESS"].includes(status);
 };
 
-const isVisibleSession = (session) => {
+const isJoinableSession = (session, currentTime) => {
   const status = normalizeStatus(session?.status);
 
-  return status !== "CANCELLED";
+  if (!["CONFIRMED", "IN_PROGRESS"].includes(status)) {
+    return false;
+  }
+
+  const startTime = getSessionDateTime(session);
+  const endTime = getSessionEndDateTime(session);
+
+  if (
+    startTime === Number.MAX_SAFE_INTEGER ||
+    endTime === Number.MAX_SAFE_INTEGER
+  ) {
+    return false;
+  }
+
+  return currentTime >= startTime && currentTime <= endTime;
+};
+
+const getJoinButtonText = (session, currentTime) => {
+  if (isJoinableSession(session, currentTime)) {
+    return "Join Session";
+  }
+
+  const status = normalizeStatus(session?.status);
+
+  if (status === "IN_PROGRESS") {
+    return "Session in progress";
+  }
+
+  const startTime = getSessionDateTime(session);
+
+  if (startTime !== Number.MAX_SAFE_INTEGER && currentTime < startTime) {
+    return `Starts at ${formatTime(session?.startTime)}`;
+  }
+
+  return "Join unavailable";
 };
 
 const getSessionStatusLabel = (status) => {
@@ -188,11 +248,17 @@ const getSessionStatusLabel = (status) => {
     case "PENDING":
       return "Pending";
 
+    case "IN_PROGRESS":
+      return "In Progress";
+
     case "COMPLETED":
       return "Completed";
 
     case "CANCELLED":
       return "Cancelled";
+
+    case "NO_SHOW":
+      return "No Show";
 
     default:
       return normalizedStatus || "Unknown";
@@ -206,12 +272,34 @@ const getStatusClassName = (status) => {
     return "bg-emerald-50 text-emerald-600";
   }
 
+  if (normalizedStatus === "IN_PROGRESS") {
+    return "bg-violet-50 text-violet-600";
+  }
+
   if (normalizedStatus === "COMPLETED") {
     return "bg-slate-100 text-slate-600";
   }
 
+  if (normalizedStatus === "CANCELLED") {
+    return "bg-red-50 text-red-600";
+  }
+
+  if (normalizedStatus === "NO_SHOW") {
+    return "bg-orange-50 text-orange-600";
+  }
+
   return "bg-amber-50 text-amber-600";
 };
+
+const isVisibleSession = (session) => {
+  const status = normalizeStatus(session?.status);
+
+  return status !== "CANCELLED";
+};
+
+/* =========================================================
+   CLIENT HELPERS
+========================================================= */
 
 const getClientName = (client) => {
   return client?.name || "Client";
@@ -237,6 +325,32 @@ const getInitials = (name) => {
 };
 
 /* =========================================================
+   RECENT BOOKING HELPER
+========================================================= */
+
+const getBookingCreatedTime = (session) => {
+  const value = session?.createdAt || session?.bookedAt;
+
+  if (!value) {
+    return 0;
+  }
+
+  const time = new Date(value).getTime();
+
+  return Number.isNaN(time) ? 0 : time;
+};
+
+const getLatestBookedSession = (sessions) => {
+  if (!Array.isArray(sessions) || sessions.length === 0) {
+    return null;
+  }
+
+  return [...sessions].sort(
+    (a, b) => getBookingCreatedTime(b) - getBookingCreatedTime(a),
+  )[0];
+};
+
+/* =========================================================
    PAGE
 ========================================================= */
 
@@ -247,13 +361,17 @@ function TherapistDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const therapistUser = useMemo(() => getStoredTherapist(), []);
+
   const therapistName = getTherapistDisplayName(therapistUser);
+
   const therapistInitials = getTherapistInitials(therapistName);
+
   const greeting = getGreeting();
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+
     navigate("/login", { replace: true });
   };
 
@@ -281,15 +399,54 @@ function TherapistDashboard() {
   const [error, setError] = useState("");
   const [currentTime, setCurrentTime] = useState(0);
 
+  const [joiningSessionId, setJoiningSessionId] = useState(null);
+
+  /* =========================================================
+     CURRENT TIME
+  ========================================================== */
+
   useEffect(() => {
-    const updateCurrentTime = () => setCurrentTime(Date.now());
+    const updateCurrentTime = () => {
+      setCurrentTime(Date.now());
+    };
 
     updateCurrentTime();
 
-    const intervalId = setInterval(updateCurrentTime, 60000);
+    const intervalId = setInterval(updateCurrentTime, 1000);
 
     return () => clearInterval(intervalId);
   }, []);
+
+  /* =========================================================
+     JOIN SESSION
+  ========================================================== */
+
+  const handleJoinSession = async (session) => {
+    if (!session?._id) {
+      return;
+    }
+
+    if (!isJoinableSession(session, currentTime)) {
+      return;
+    }
+
+    try {
+      setJoiningSessionId(session._id);
+
+      await joinSession(session._id);
+
+      navigate(`/therapist/sessions/${session._id}/video`);
+    } catch (error) {
+      console.error("Failed to join session:", error);
+
+      setError(
+        error?.response?.data?.message ||
+          "Unable to join the session. Please try again.",
+      );
+    } finally {
+      setJoiningSessionId(null);
+    }
+  };
 
   /* =========================================================
      FETCH NOTIFICATIONS
@@ -300,6 +457,7 @@ function TherapistDashboard() {
       const response = await getMyNotifications();
 
       const responseBody = response?.data ?? response;
+
       const notificationData = responseBody?.data ?? responseBody ?? {};
 
       setUnreadCount(notificationData?.unreadCount || 0);
@@ -380,9 +538,7 @@ function TherapistDashboard() {
       fetchNotifications();
     }, 30000);
 
-    return () => {
-      clearInterval(interval);
-    };
+    return () => clearInterval(interval);
   }, []);
 
   /* =========================================================
@@ -433,11 +589,27 @@ function TherapistDashboard() {
   const upcomingSessions = useMemo(() => {
     return allSessions
       .filter((session) => {
+        const status = normalizeStatus(session?.status);
+
         if (!isActiveSession(session)) {
           return false;
         }
 
-        return getSessionDateTime(session) >= currentTime;
+        const startTime = getSessionDateTime(session);
+
+        const endTime = getSessionEndDateTime(session);
+
+        /*
+          IN_PROGRESS session remains visible until
+          its scheduled end time so therapist can
+          reconnect to the session.
+        */
+
+        if (status === "IN_PROGRESS") {
+          return endTime >= currentTime;
+        }
+
+        return startTime >= currentTime;
       })
       .sort((a, b) => getSessionDateTime(a) - getSessionDateTime(b))
       .slice(0, 4);
@@ -445,24 +617,24 @@ function TherapistDashboard() {
 
   /* =========================================================
      RECENT CLIENTS
+     
+     IMPORTANT:
+     Recent = latest booking creation time,
+     NOT latest session date.
   ========================================================== */
 
   const recentClients = useMemo(() => {
     return [...clients]
+      .map((client) => ({
+        ...client,
+        latestBookedSession: getLatestBookedSession(client?.sessions),
+      }))
+      .filter((client) => client?.latestBookedSession)
       .sort((a, b) => {
-        const aSessions = Array.isArray(a?.sessions) ? a.sessions : [];
-
-        const bSessions = Array.isArray(b?.sessions) ? b.sessions : [];
-
-        const latestA = aSessions.length
-          ? Math.max(...aSessions.map(getSessionDateTime))
-          : 0;
-
-        const latestB = bSessions.length
-          ? Math.max(...bSessions.map(getSessionDateTime))
-          : 0;
-
-        return latestB - latestA;
+        return (
+          getBookingCreatedTime(b.latestBookedSession) -
+          getBookingCreatedTime(a.latestBookedSession)
+        );
       })
       .slice(0, 3);
   }, [clients]);
@@ -475,8 +647,6 @@ function TherapistDashboard() {
 
   /* =========================================================
      CURRENT MONTH REVENUE
-     Revenue trend API se current month ka revenue derive
-     kar rahe hain.
   ========================================================== */
 
   const monthlyRevenue = useMemo(() => {
@@ -508,9 +678,12 @@ function TherapistDashboard() {
   if (loading) {
     return (
       <div className="relative min-h-screen overflow-hidden bg-[#f8f9fd] text-slate-900">
-      <div className="pointer-events-none fixed -left-40 top-24 h-80 w-80 rounded-full bg-violet-200/20 blur-3xl" />
-      <div className="pointer-events-none fixed -right-40 top-80 h-96 w-96 rounded-full bg-indigo-200/20 blur-3xl" />
-      <div className="pointer-events-none fixed bottom-0 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-fuchsia-200/10 blur-3xl" />
+        <div className="pointer-events-none fixed -left-40 top-24 h-80 w-80 rounded-full bg-violet-200/20 blur-3xl" />
+
+        <div className="pointer-events-none fixed -right-40 top-80 h-96 w-96 rounded-full bg-indigo-200/20 blur-3xl" />
+
+        <div className="pointer-events-none fixed bottom-0 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-fuchsia-200/10 blur-3xl" />
+
         <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 shadow-[0_1px_0_rgba(15,23,42,0.02)] backdrop-blur-xl">
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
             <Link to="/therapist/dashboard" className="flex items-center gap-3">
@@ -519,11 +692,11 @@ function TherapistDashboard() {
               </div>
 
               <div>
-                <p className="text-base font-bold text-slate-900">
-                  Unfazed
-                </p>
+                <p className="text-base font-bold text-slate-900">Unfazed</p>
 
-                <p className="text-[9px] font-medium tracking-wide text-slate-400">Therapist Dashboard</p>
+                <p className="text-[9px] font-medium tracking-wide text-slate-400">
+                  Therapist Dashboard
+                </p>
               </div>
             </Link>
           </div>
@@ -543,12 +716,15 @@ function TherapistDashboard() {
      ERROR
   ========================================================== */
 
-  if (error) {
+  if (error && !clients.length) {
     return (
       <div className="relative min-h-screen overflow-hidden bg-[#f8f9fd] text-slate-900">
-      <div className="pointer-events-none fixed -left-48 top-32 h-96 w-96 rounded-full bg-violet-200/20 blur-3xl" />
-      <div className="pointer-events-none fixed -right-48 top-[38%] h-[30rem] w-[30rem] rounded-full bg-indigo-200/20 blur-3xl" />
-      <div className="pointer-events-none fixed bottom-0 left-1/3 h-80 w-80 rounded-full bg-fuchsia-200/10 blur-3xl" />
+        <div className="pointer-events-none fixed -left-48 top-32 h-96 w-96 rounded-full bg-violet-200/20 blur-3xl" />
+
+        <div className="pointer-events-none fixed -right-48 top-[38%] h-[30rem] w-[30rem] rounded-full bg-indigo-200/20 blur-3xl" />
+
+        <div className="pointer-events-none fixed bottom-0 left-1/3 h-80 w-80 rounded-full bg-fuchsia-200/10 blur-3xl" />
+
         <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 shadow-[0_1px_0_rgba(15,23,42,0.02)] backdrop-blur-xl">
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
             <Link to="/therapist/dashboard" className="flex items-center gap-3">
@@ -557,11 +733,11 @@ function TherapistDashboard() {
               </div>
 
               <div>
-                <p className="text-base font-bold text-slate-900">
-                  Unfazed
-                </p>
+                <p className="text-base font-bold text-slate-900">Unfazed</p>
 
-                <p className="text-[9px] font-medium tracking-wide text-slate-400">Therapist Dashboard</p>
+                <p className="text-[9px] font-medium tracking-wide text-slate-400">
+                  Therapist Dashboard
+                </p>
               </div>
             </Link>
           </div>
@@ -615,7 +791,6 @@ function TherapistDashboard() {
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* Logo */}
         <div className="flex h-[78px] shrink-0 items-center border-b border-slate-100 px-5">
           <Link
             to="/therapist/dashboard"
@@ -631,9 +806,7 @@ function TherapistDashboard() {
                 Unfazed
               </p>
 
-              <p className="text-[10px] text-slate-500">
-                Therapist Portal
-              </p>
+              <p className="text-[10px] text-slate-500">Therapist Portal</p>
             </div>
           </Link>
 
@@ -647,7 +820,6 @@ function TherapistDashboard() {
           </button>
         </div>
 
-        {/* Navigation — independently scrollable */}
         <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-5">
           <p className="px-3 pb-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">
             My Practice
@@ -719,7 +891,6 @@ function TherapistDashboard() {
           />
         </nav>
 
-        {/* Logout */}
         <div className="shrink-0 border-t border-slate-100 p-3">
           <button
             type="button"
@@ -737,10 +908,8 @@ function TherapistDashboard() {
       ====================================================== */}
 
       <div className="lg:pl-[270px]">
-        {/* Header */}
         <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
           <div className="flex h-[78px] items-center justify-between px-4 sm:px-7 lg:px-10">
-            {/* Mobile Menu */}
             <button
               type="button"
               onClick={() => setSidebarOpen(true)}
@@ -750,7 +919,6 @@ function TherapistDashboard() {
               <Menu size={20} />
             </button>
 
-            {/* Desktop Portal Identity */}
             <div className="hidden items-center gap-3 lg:flex">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-lg shadow-violet-200">
                 <HeartHandshake size={19} />
@@ -767,7 +935,6 @@ function TherapistDashboard() {
               </div>
             </div>
 
-            {/* Header Actions */}
             <div className="ml-auto flex items-center gap-2 sm:gap-3">
               <button
                 type="button"
@@ -835,12 +1002,31 @@ function TherapistDashboard() {
 
         <main className="relative overflow-hidden bg-slate-50 px-4 py-6 sm:px-7 sm:py-8 lg:px-10">
           <div className="pointer-events-none absolute -right-32 top-0 h-96 w-96 rounded-full bg-violet-200/25 blur-3xl" />
+
           <div className="pointer-events-none absolute left-1/3 top-24 h-64 w-64 rounded-full bg-indigo-100/25 blur-3xl" />
 
           <div className="relative mx-auto max-w-7xl">
+            {/* Error Banner */}
+
+            {error && (
+              <div className="mb-5 flex items-center justify-between gap-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3">
+                <p className="text-xs font-medium text-red-600">{error}</p>
+
+                <button
+                  type="button"
+                  onClick={() => setError("")}
+                  className="text-xs font-semibold text-red-500 hover:text-red-700"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
+
             {/* Welcome */}
+
             <section className="relative overflow-hidden rounded-[28px] border border-violet-100 bg-gradient-to-br from-white via-violet-50/60 to-indigo-50/60 shadow-[0_18px_55px_-25px_rgba(99,102,241,0.25)]">
               <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-violet-200/20 blur-3xl" />
+
               <div className="pointer-events-none absolute -bottom-24 left-1/3 h-64 w-64 rounded-full bg-indigo-200/15 blur-3xl" />
 
               <div className="relative flex flex-col gap-6 px-5 py-7 sm:px-8 sm:py-9 lg:flex-row lg:items-center lg:justify-between lg:px-10 lg:py-10">
@@ -869,12 +1055,14 @@ function TherapistDashboard() {
                   </h1>
 
                   <p className="mt-3 max-w-xl text-sm leading-6 text-slate-500 sm:text-[15px]">
-                    Here’s a quick look at what’s happening with your practice today.
+                    Here’s a quick look at what’s happening with your practice
+                    today.
                   </p>
 
                   <div className="mt-5 flex flex-wrap items-center gap-3">
                     <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/70 px-3 py-1.5 shadow-sm">
                       <CalendarDays size={12} className="text-violet-500" />
+
                       <span className="text-[10px] font-semibold text-slate-500">
                         {formatTodayLabel()}
                       </span>
@@ -882,6 +1070,7 @@ function TherapistDashboard() {
 
                     <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/70 px-3 py-1.5 shadow-sm">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+
                       <span className="text-[10px] font-semibold text-slate-500">
                         Your practice at a glance
                       </span>
@@ -908,6 +1097,7 @@ function TherapistDashboard() {
             </section>
 
             {/* Stats */}
+
             <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <StatCard
                 title="Today's Sessions"
@@ -932,23 +1122,27 @@ function TherapistDashboard() {
             </div>
 
             {/* Upcoming + Today */}
+
             <div className="mt-6 grid gap-6 xl:grid-cols-[1.5fr_1fr]">
+              {/* Upcoming Sessions */}
+
               <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
                 <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
                   <div>
                     <h2 className="text-base font-bold text-slate-900">
                       Upcoming Sessions
                     </h2>
+
                     <p className="mt-1 text-xs text-slate-400">
                       Your next scheduled appointments
                     </p>
                   </div>
 
                   <Link
-                    to="/therapist/schedule"
+                    to="/therapist/clients"
                     className="flex items-center gap-1 text-xs font-semibold text-violet-600 hover:text-violet-700"
                   >
-                    View Schedule
+                    View All
                     <ChevronRight size={14} />
                   </Link>
                 </div>
@@ -960,25 +1154,39 @@ function TherapistDashboard() {
                   />
                 ) : (
                   <div className="divide-y divide-slate-100">
-                    {upcomingSessions.map((session) => (
-                      <SessionRow
-                        key={session?._id}
-                        name={session.clientName}
-                        time={formatTime(session.startTime)}
-                        date={formatDate(session.date)}
-                        type="Therapy Session"
-                        status={getSessionStatusLabel(session.status)}
-                      />
-                    ))}
+                    {upcomingSessions.map((session) => {
+                      const joinable = isJoinableSession(session, currentTime);
+
+                      const isJoining = joiningSessionId === session?._id;
+
+                      const status = normalizeStatus(session?.status);
+
+                      return (
+                        <SessionRow
+                          key={session?._id}
+                          name={session.clientName}
+                          time={formatTime(session.startTime)}
+                          date={formatDate(session.date)}
+                          type="Therapy Session"
+                          status={getSessionStatusLabel(session.status)}
+                          joinable={joinable}
+                          joining={isJoining}
+                          buttonText={getJoinButtonText(session, currentTime)}
+                          onJoin={() => handleJoinSession(session)}
+                          isInProgress={status === "IN_PROGRESS"}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </section>
 
+              {/* Today */}
+
               <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
                 <div className="border-b border-slate-100 px-5 py-4">
-                  <h2 className="text-base font-bold text-slate-900">
-                    Today
-                  </h2>
+                  <h2 className="text-base font-bold text-slate-900">Today</h2>
+
                   <p className="mt-1 text-xs text-slate-400">
                     {formatTodayLabel()}
                   </p>
@@ -1008,6 +1216,7 @@ function TherapistDashboard() {
             </div>
 
             {/* Recent Clients */}
+
             <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white">
               <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
                 <div>
@@ -1016,7 +1225,7 @@ function TherapistDashboard() {
                   </h2>
 
                   <p className="mt-1 text-xs text-slate-400">
-                    Recently active clients
+                    Recently booked clients
                   </p>
                 </div>
 
@@ -1037,13 +1246,7 @@ function TherapistDashboard() {
               ) : (
                 <div className="divide-y divide-slate-100">
                   {recentClients.map((client) => {
-                    const clientSessions = Array.isArray(client?.sessions)
-                      ? client.sessions
-                      : [];
-
-                    const latestSession = [...clientSessions].sort(
-                      (a, b) => getSessionDateTime(b) - getSessionDateTime(a),
-                    )[0];
+                    const latestSession = client?.latestBookedSession;
 
                     const sessionText = latestSession
                       ? `${formatDate(latestSession.date)}, ${formatTime(
@@ -1066,6 +1269,7 @@ function TherapistDashboard() {
             </section>
 
             {/* Practice Overview */}
+
             <section className="mt-6 overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-br from-white via-white to-violet-50/60">
               <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -1080,7 +1284,8 @@ function TherapistDashboard() {
                       </h2>
 
                       <p className="mt-1 text-xs text-slate-400">
-                        Track revenue and client performance from your analytics dashboard.
+                        Track revenue and client performance from your analytics
+                        dashboard.
                       </p>
                     </div>
                   </div>
@@ -1106,14 +1311,7 @@ function TherapistDashboard() {
    SIDEBAR LINK
 ========================================================= */
 
-function SidebarLink({
-  to,
-  icon,
-  label,
-  active = false,
-  badge = 0,
-  onClick,
-}) {
+function SidebarLink({ to, icon, label, active = false, badge = 0, onClick }) {
   return (
     <Link
       to={to}
@@ -1148,17 +1346,11 @@ function StatCard({ title, value, subtitle, icon }) {
     <div className="rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-violet-100 hover:shadow-sm">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-[11px] font-medium text-slate-500">
-            {title}
-          </p>
+          <p className="text-[11px] font-medium text-slate-500">{title}</p>
 
-          <p className="mt-1 text-2xl font-bold text-slate-950">
-            {value}
-          </p>
+          <p className="mt-1 text-2xl font-bold text-slate-950">{value}</p>
 
-          <p className="mt-1 text-[10px] text-slate-400">
-            {subtitle}
-          </p>
+          <p className="mt-1 text-[10px] text-slate-400">{subtitle}</p>
         </div>
 
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
@@ -1173,10 +1365,20 @@ function StatCard({ title, value, subtitle, icon }) {
    SESSION ROW
 ========================================================= */
 
-
-function SessionRow({ name, time, date, type, status }) {
+function SessionRow({
+  name,
+  time,
+  date,
+  type,
+  status,
+  joinable = false,
+  joining = false,
+  buttonText = "Join Session",
+  onJoin,
+  isInProgress = false,
+}) {
   return (
-    <div className="flex items-center justify-between gap-4 px-5 py-4 transition hover:bg-violet-50/40">
+    <div className="flex flex-col gap-4 px-5 py-4 transition hover:bg-violet-50/40 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 items-center gap-3">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-indigo-100 text-xs font-semibold text-violet-700 ring-1 ring-violet-100">
           {getInitials(name)}
@@ -1193,16 +1395,45 @@ function SessionRow({ name, time, date, type, status }) {
         </div>
       </div>
 
-      <div className="shrink-0 text-right">
-        <p className="text-xs font-semibold text-slate-700">{time}</p>
+      <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
+        <div className="flex items-center gap-2">
+          <p className="text-xs font-semibold text-slate-700">{time}</p>
 
-        <span
-          className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${getStatusClassName(
-            status,
-          )}`}
+          <span
+            className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+              isInProgress
+                ? "bg-violet-50 text-violet-600"
+                : getStatusClassName(status)
+            }`}
+          >
+            {status}
+          </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={onJoin}
+          disabled={!joinable || joining}
+          className={`inline-flex min-w-[145px] items-center justify-center gap-2 rounded-xl px-3.5 py-2 text-[11px] font-bold transition ${
+            joinable
+              ? "bg-violet-600 text-white shadow-md shadow-violet-100 hover:bg-violet-700"
+              : "cursor-not-allowed border border-slate-200 bg-slate-50 text-slate-400"
+          }`}
         >
-          {status}
-        </span>
+          {joining ? (
+            <>
+              <Loader2 size={14} className="animate-spin" />
+              Joining...
+            </>
+          ) : joinable ? (
+            <>
+              <Video size={14} />
+              {buttonText}
+            </>
+          ) : (
+            buttonText
+          )}
+        </button>
       </div>
     </div>
   );
@@ -1221,7 +1452,9 @@ function TimelineItem({ time, title, status, active = false }) {
 
       <div
         className={`h-3 w-3 shrink-0 rounded-full ${
-          active ? "bg-violet-600 ring-4 ring-violet-100 shadow-lg shadow-violet-200" : "bg-slate-300"
+          active
+            ? "bg-violet-600 ring-4 ring-violet-100 shadow-lg shadow-violet-200"
+            : "bg-slate-300"
         }`}
       />
 
@@ -1293,7 +1526,6 @@ function EmptyState({ title, description }) {
 
 /* =========================================================
    FILE TEXT ICON
-   Notes sidebar ke liye lightweight icon wrapper.
 ========================================================= */
 
 function FileTextIcon() {

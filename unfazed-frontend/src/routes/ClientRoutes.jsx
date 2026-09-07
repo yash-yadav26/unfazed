@@ -13,6 +13,8 @@ import Therapists from "../pages/client/Therapists";
 import Sessions from "../pages/client/Sessions";
 import SharedNotes from "../pages/client/SharedNotes";
 
+import VideoCall from "../components/video/VideoCall";
+
 function ClientRoutes() {
   return (
     <Routes>
@@ -21,7 +23,7 @@ function ClientRoutes() {
 
         <Route path="payment" element={<Payment />} />
 
-        <Route path="payments" element={<Payments />}/>
+        <Route path="payments" element={<Payments />} />
 
         <Route path="notifications" element={<Notifications />} />
 
@@ -34,6 +36,8 @@ function ClientRoutes() {
         <Route path="therapists" element={<Therapists />} />
 
         <Route path="sessions" element={<Sessions />} />
+
+        <Route path="sessions/:id/video" element={<VideoCall />} />
 
         <Route path="notes" element={<SharedNotes />} />
       </Route>

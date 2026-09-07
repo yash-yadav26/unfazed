@@ -15,13 +15,22 @@ const ApiError = require("../../../utils/apiError");
 /**
  * Sessions with these statuses occupy a therapist's slot.
  */
-const ACTIVE_SESSION_STATUSES = ["PENDING", "CONFIRMED"];
+const ACTIVE_SESSION_STATUSES = ["PENDING", "CONFIRMED", "IN_PROGRESS"];
+
+/**
+ * Sessions that can be processed by the
+ * session end / no-show job.
+ *
+ * PENDING is intentionally excluded because
+ * it may represent an unpaid/unconfirmed booking.
+ *
+ * COMPLETED is also excluded because once both
+ * participants join, the session is immediately completed.
+ */
+const SESSION_END_CHECK_STATUSES = ["CONFIRMED", "IN_PROGRESS"];
 
 /**
  * Application timezone.
- *
- * Availability/session times are entered as local clock times,
- * so today's slot filtering should also use the same timezone.
  */
 const APP_TIMEZONE = "Asia/Kolkata";
 
@@ -65,10 +74,7 @@ const isValidDateString = (dateString) => {
 };
 
 /**
- * Get today's date in the application timezone as YYYY-MM-DD.
- *
- * Example:
- * Asia/Kolkata current date -> "2026-09-02"
+ * Get today's date in application timezone as YYYY-MM-DD.
  */
 const getTodayDateString = () => {
   const formatter = new Intl.DateTimeFormat("en-CA", {
@@ -82,7 +88,7 @@ const getTodayDateString = () => {
 };
 
 /**
- * Check whether selected date is today in application timezone.
+ * Check whether selected date is today.
  */
 const isToday = (dateString) => {
   return dateString === getTodayDateString();
@@ -155,17 +161,16 @@ const timeToMinutes = (time) => {
  */
 const minutesToTime = (totalMinutes) => {
   const hours = Math.floor(totalMinutes / 60);
-
   const minutes = totalMinutes % 60;
 
-  return `${String(hours).padStart(
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
     2,
     "0",
-  )}:${String(minutes).padStart(2, "0")}`;
+  )}`;
 };
 
 /* -------------------------------------------------------------------------- */
-/*                    Session DateTime / Completion Helpers                   */
+/*                       Session DateTime Helpers                             */
 /* -------------------------------------------------------------------------- */
 
 /**
@@ -207,66 +212,201 @@ const getSessionEndDateTime = (session) => {
   return getSessionDateTime(session, "endTime");
 };
 
+/* -------------------------------------------------------------------------- */
+/*                        Session End Processing                              */
+/* -------------------------------------------------------------------------- */
+
 /**
- * Mark expired sessions as COMPLETED.
+ * Process sessions whose scheduled end time has passed.
  *
- * Temporary rule:
+ * Rules:
  *
- * 1:00 PM - 1:30 PM
- * -----------------
- * At/after 1:30 PM => COMPLETED
+ * 1. Both participants already joined
+ *    -> session would already be COMPLETED
+ *       and therefore is not processed here.
  *
- * No join logic.
- * No attendance logic.
- * No no-show logic.
+ * 2. Client joined, therapist did not join
+ *    -> NO_SHOW
+ *    -> Client gets notification
+ *
+ * 3. Therapist joined, client did not join
+ *    -> NO_SHOW
+ *    -> Therapist gets notification
+ *
+ * 4. Neither joined
+ *    -> NO_SHOW
+ *    -> Client + Therapist get notification
+ *
+ * Important:
+ * COMPLETED is NOT based on session duration.
+ * The session becomes COMPLETED immediately when
+ * the second participant joins.
  */
 const completeExpiredSessions = async () => {
   const today = parseDate(getTodayDateString());
 
   const candidateSessions = await Session.find({
     status: {
-      $in: ACTIVE_SESSION_STATUSES,
+      $in: SESSION_END_CHECK_STATUSES,
     },
+
     date: {
       $lte: today,
     },
-  }).select("_id date endTime status");
+  })
+    .select(
+      "_id clientId therapistId date endTime status clientJoined therapistJoined",
+    )
+    .lean();
 
   if (!candidateSessions.length) {
-    return 0;
+    return {
+      completedCount: 0,
+      noShowCount: 0,
+    };
   }
 
   const now = new Date();
 
-  const expiredIds = candidateSessions
-    .filter((session) => {
-      const endDateTime = getSessionEndDateTime(session);
+  const expiredSessions = candidateSessions.filter((session) => {
+    const endDateTime = getSessionEndDateTime(session);
 
-      return endDateTime && endDateTime <= now;
-    })
-    .map((session) => session._id);
+    return endDateTime && endDateTime <= now;
+  });
 
-  if (!expiredIds.length) {
-    return 0;
+  if (!expiredSessions.length) {
+    return {
+      completedCount: 0,
+      noShowCount: 0,
+    };
   }
 
-  const result = await Session.updateMany(
-    {
-      _id: {
-        $in: expiredIds,
-      },
-      status: {
-        $in: ACTIVE_SESSION_STATUSES,
-      },
-    },
-    {
-      $set: {
-        status: "COMPLETED",
-      },
-    },
-  );
+  let completedCount = 0;
+  let noShowCount = 0;
 
-  return result.modifiedCount || 0;
+  for (const session of expiredSessions) {
+    /**
+     * Normally this condition will not occur because
+     * both joined sessions are immediately marked COMPLETED.
+     *
+     * It is kept as a safety check.
+     */
+    if (session.clientJoined && session.therapistJoined) {
+      const completedSession = await sessionRepository.markSessionAsCompleted(
+        session._id,
+      );
+
+      if (completedSession) {
+        completedCount += 1;
+      }
+
+      continue;
+    }
+
+    /* ---------------------------------------------------------------------- */
+    /*                               NO SHOW                                  */
+    /* ---------------------------------------------------------------------- */
+
+    const noShowSession = await sessionRepository.markSessionAsNoShow(
+      session._id,
+    );
+
+    if (!noShowSession) {
+      continue;
+    }
+
+    noShowCount += 1;
+
+    /* ---------------------------------------------------------------------- */
+    /*                        Get Notification Users                          */
+    /* ---------------------------------------------------------------------- */
+
+    try {
+      const client = await Client.findById(session.clientId).select(
+        "_id userId",
+      );
+
+      const therapist = await Therapist.findById(session.therapistId).select(
+        "_id userId",
+      );
+
+      /* -------------------------------------------------------------------- */
+      /*                     Client Did Not Join                               */
+      /* -------------------------------------------------------------------- */
+
+      if (!session.clientJoined && session.therapistJoined) {
+        if (therapist?.userId) {
+          await notificationService.createNotification({
+            recipientId: therapist.userId,
+            type: "SESSION_NO_SHOW",
+            title: "Client Did Not Join",
+            message: "The client did not join the scheduled therapy session.",
+            sessionId: noShowSession._id,
+          });
+        }
+
+        continue;
+      }
+
+      /* -------------------------------------------------------------------- */
+      /*                    Therapist Did Not Join                            */
+      /* -------------------------------------------------------------------- */
+
+      if (session.clientJoined && !session.therapistJoined) {
+        if (client?.userId) {
+          await notificationService.createNotification({
+            recipientId: client.userId,
+            type: "SESSION_NO_SHOW",
+            title: "Therapist Did Not Join",
+            message:
+              "The therapist did not join the scheduled therapy session.",
+            sessionId: noShowSession._id,
+          });
+        }
+
+        continue;
+      }
+
+      /* -------------------------------------------------------------------- */
+      /*                         Neither Joined                                */
+      /* -------------------------------------------------------------------- */
+
+      if (!session.clientJoined && !session.therapistJoined) {
+        if (client?.userId) {
+          await notificationService.createNotification({
+            recipientId: client.userId,
+            type: "SESSION_NO_SHOW",
+            title: "Session Missed",
+            message:
+              "The scheduled therapy session was missed because the session was not joined.",
+            sessionId: noShowSession._id,
+          });
+        }
+
+        if (therapist?.userId) {
+          await notificationService.createNotification({
+            recipientId: therapist.userId,
+            type: "SESSION_NO_SHOW",
+            title: "Session Missed",
+            message:
+              "The scheduled therapy session was missed because the session was not joined.",
+            sessionId: noShowSession._id,
+          });
+        }
+      }
+    } catch (error) {
+      /**
+       * Session status is already updated successfully.
+       * Notification failure should not rollback the session result.
+       */
+      console.error("Failed to create session no-show notifications:", error);
+    }
+  }
+
+  return {
+    completedCount,
+    noShowCount,
+  };
 };
 
 /* -------------------------------------------------------------------------- */
@@ -348,7 +488,6 @@ const validateSessionDate = (dateString) => {
  */
 const generateSlots = ({ startTime, endTime, sessionDuration, bufferTime }) => {
   const startMinutes = timeToMinutes(startTime);
-
   const endMinutes = timeToMinutes(endTime);
 
   const slots = [];
@@ -370,15 +509,6 @@ const generateSlots = ({ startTime, endTime, sessionDuration, bufferTime }) => {
 
 /**
  * For today's date, remove slots that have already started.
- *
- * Example:
- *
- * Current time = 16:00
- *
- * 15:00 -> removed
- * 15:30 -> removed
- * 16:00 -> removed
- * 16:30 -> kept
  */
 const filterPastSlotsForToday = (slots, dateString) => {
   if (!isToday(dateString)) {
@@ -407,7 +537,7 @@ const getAvailableSlots = async (therapistId, date) => {
 
   await getTherapist(therapistId);
 
-  /* -------------------------- Get Day Of Week ----------------------------- */
+  /* ---------------------------- Day Of Week ------------------------------ */
 
   const dayOfWeek = getDayOfWeek(date);
 
@@ -465,18 +595,8 @@ const getAvailableSlots = async (therapistId, date) => {
   let effectiveAvailability = null;
 
   /**
-   * If an override exists, it always wins for that date.
-   *
-   * Example:
-   *
-   * Weekly Wednesday = 10:00 - 18:00
-   * Override date     = 10:00 - 16:00
-   *
-   * That specific Wednesday uses 10:00 - 16:00.
-   *
-   * If override isAvailable is false, that date has no slots.
+   * Override always wins for that date.
    */
-
   if (dateOverride) {
     if (dateOverride.isAvailable) {
       effectiveAvailability = dateOverride;
@@ -503,9 +623,7 @@ const getAvailableSlots = async (therapistId, date) => {
   /* -------------------------- Availability Data --------------------------- */
 
   const sessionDuration = effectiveAvailability.sessionDuration;
-
   const bufferTime = effectiveAvailability.bufferTime;
-
   const price = effectiveAvailability.price;
 
   /* -------------------------- Generate Raw Slots -------------------------- */
@@ -585,7 +703,6 @@ const createSession = async ({ userId, therapistId, date, startTime }) => {
   /* ---------------------------- Calculate End ----------------------------- */
 
   const startMinutes = timeToMinutes(startTime);
-
   const endMinutes = startMinutes + slotData.sessionDuration;
 
   const endTime = minutesToTime(endMinutes);
@@ -613,9 +730,12 @@ const createSession = async ({ userId, therapistId, date, startTime }) => {
     const session = await sessionRepository.createSession({
       clientId: client._id,
       therapistId,
+
       date: sessionDate,
+
       startTime,
       endTime,
+
       duration: slotData.sessionDuration,
 
       status: "PENDING",
@@ -627,6 +747,12 @@ const createSession = async ({ userId, therapistId, date, startTime }) => {
       cancelledAt: null,
 
       cancelledBy: null,
+
+      clientJoined: false,
+      clientJoinedAt: null,
+
+      therapistJoined: false,
+      therapistJoinedAt: null,
     });
 
     return session;
@@ -634,13 +760,6 @@ const createSession = async ({ userId, therapistId, date, startTime }) => {
     /* ---------------------------------------------------------------------- */
     /*                    MongoDB Unique Index Protection                    */
     /* ---------------------------------------------------------------------- */
-
-    /**
-     * Pre-check is not enough because two clients can request
-     * the same slot at exactly the same time.
-     *
-     * The MongoDB unique index is the final protection.
-     */
 
     if (error?.code === 11000) {
       throw new ApiError(
@@ -655,13 +774,218 @@ const createSession = async ({ userId, therapistId, date, startTime }) => {
 };
 
 /* -------------------------------------------------------------------------- */
+/*                             Join Session                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Client and therapist both use this same function.
+ *
+ * userId comes from authenticated user.
+ * sessionId comes from route params.
+ *
+ * Role is NOT accepted from request body.
+ *
+ * Lifecycle:
+ *
+ * CONFIRMED
+ *    ↓
+ * first participant joins
+ *    ↓
+ * IN_PROGRESS
+ *    ↓
+ * second participant joins
+ *    ↓
+ * COMPLETED
+ */
+const joinSession = async ({ userId, sessionId }) => {
+  /* --------------------------- Find Session ------------------------------ */
+
+  const session = await sessionRepository.findSessionById(sessionId);
+
+  if (!session) {
+    throw new ApiError(404, "Session not found.", "SESSION_NOT_FOUND");
+  }
+
+  /* -------------------------- Session Status ----------------------------- */
+
+  if (session.status === "CANCELLED") {
+    throw new ApiError(
+      400,
+      "Cancelled sessions cannot be joined.",
+      "SESSION_CANCELLED",
+    );
+  }
+
+  if (session.status === "COMPLETED") {
+    throw new ApiError(
+      400,
+      "Completed sessions cannot be joined.",
+      "SESSION_ALREADY_COMPLETED",
+    );
+  }
+
+  if (session.status === "NO_SHOW") {
+    throw new ApiError(
+      400,
+      "This session is marked as no-show.",
+      "SESSION_NO_SHOW",
+    );
+  }
+
+  if (session.status === "PENDING") {
+    throw new ApiError(
+      400,
+      "Session is not confirmed yet.",
+      "SESSION_NOT_CONFIRMED",
+    );
+  }
+
+  /* ------------------------ Identify Participant ------------------------- */
+
+  const client = await Client.findOne({
+    userId,
+  }).select("_id userId");
+
+  const therapist = await Therapist.findOne({
+    userId,
+  }).select("_id userId name slug");
+
+  const isClient =
+    client && client._id.toString() === session.clientId.toString();
+
+  const isTherapist =
+    therapist && therapist._id.toString() === session.therapistId.toString();
+
+  if (!isClient && !isTherapist) {
+    throw new ApiError(
+      403,
+      "You are not allowed to join this session.",
+      "SESSION_JOIN_ACCESS_DENIED",
+    );
+  }
+
+  /* --------------------------- Time Validation --------------------------- */
+
+  const now = new Date();
+
+  const sessionStart = getSessionDateTime(session, "startTime");
+
+  const sessionEnd = getSessionDateTime(session, "endTime");
+
+  if (!sessionStart || !sessionEnd) {
+    throw new ApiError(
+      500,
+      "Invalid session date or time configuration.",
+      "INVALID_SESSION_DATETIME",
+    );
+  }
+
+  /**
+   * Join is allowed only between
+   * session start and session end.
+   */
+
+  if (now < sessionStart) {
+    throw new ApiError(
+      400,
+      "The session has not started yet.",
+      "SESSION_NOT_STARTED",
+    );
+  }
+
+  if (now >= sessionEnd) {
+    throw new ApiError(400, "The session has already ended.", "SESSION_ENDED");
+  }
+
+  /* ------------------------------------------------------------------------ */
+  /*                              CLIENT JOIN                                 */
+  /* ------------------------------------------------------------------------ */
+
+  if (isClient) {
+    /* ------------------------ Already Joined ----------------------------- */
+
+    if (session.clientJoined) {
+      return {
+        session,
+        participant: "CLIENT",
+        alreadyJoined: true,
+      };
+    }
+
+    /**
+     * If therapist has already joined,
+     * this client is the second participant.
+     *
+     * Both have joined -> COMPLETED immediately.
+     *
+     * Otherwise first participant -> IN_PROGRESS.
+     */
+
+    const newStatus = session.therapistJoined ? "COMPLETED" : "IN_PROGRESS";
+
+    const updatedSession = await sessionRepository.updateSessionJoinStatus(
+      sessionId,
+      {
+        clientJoined: true,
+        clientJoinedAt: now,
+        status: newStatus,
+      },
+    );
+
+    return {
+      session: updatedSession,
+      participant: "CLIENT",
+      alreadyJoined: false,
+    };
+  }
+
+  /* ------------------------------------------------------------------------ */
+  /*                           THERAPIST JOIN                                 */
+  /* ------------------------------------------------------------------------ */
+
+  if (session.therapistJoined) {
+    return {
+      session,
+      participant: "THERAPIST",
+      alreadyJoined: true,
+    };
+  }
+
+  /**
+   * If client has already joined,
+   * therapist is the second participant.
+   *
+   * Both have joined -> COMPLETED immediately.
+   *
+   * Otherwise first participant -> IN_PROGRESS.
+   */
+
+  const newStatus = session.clientJoined ? "COMPLETED" : "IN_PROGRESS";
+
+  const updatedSession = await sessionRepository.updateSessionJoinStatus(
+    sessionId,
+    {
+      therapistJoined: true,
+      therapistJoinedAt: now,
+      status: newStatus,
+    },
+  );
+
+  return {
+    session: updatedSession,
+    participant: "THERAPIST",
+    alreadyJoined: false,
+  };
+};
+
+/* -------------------------------------------------------------------------- */
 /*                            Get My Sessions                                 */
 /* -------------------------------------------------------------------------- */
 
 const getMySessions = async (userId) => {
   /**
-   * First automatically complete any session
-   * whose end time has already passed.
+   * Self-correct expired sessions in case
+   * the cron has not run yet.
    */
   await completeExpiredSessions();
 
@@ -672,6 +996,7 @@ const getMySessions = async (userId) => {
   const upcoming = [];
   const completed = [];
   const cancelled = [];
+  const noShow = [];
 
   for (const session of sessions) {
     /* ----------------------------- Cancelled ----------------------------- */
@@ -681,28 +1006,30 @@ const getMySessions = async (userId) => {
       continue;
     }
 
-    /* ------------------------- Completed --------------------------------- */
+    /* ------------------------------ No Show ------------------------------ */
 
-    /**
-     * We do NOT decide completion simply because
-     * the current time is greater than start time.
-     *
-     * The database status must actually be COMPLETED.
-     *
-     * completeExpiredSessions() above handles the update
-     * based on endTime.
-     */
+    if (session.status === "NO_SHOW") {
+      noShow.push(session);
+      continue;
+    }
+
+    /* ------------------------------ Completed ---------------------------- */
+
     if (session.status === "COMPLETED") {
       completed.push(session);
-    } else {
-      upcoming.push(session);
+      continue;
     }
+
+    /* --------------------------- Upcoming / Active ----------------------- */
+
+    upcoming.push(session);
   }
 
   return {
     upcoming,
     completed,
     cancelled,
+    noShow,
   };
 };
 
@@ -753,6 +1080,26 @@ const cancelSession = async ({ userId, sessionId }) => {
     );
   }
 
+  /* -------------------------- No-Show Session ---------------------------- */
+
+  if (session.status === "NO_SHOW") {
+    throw new ApiError(
+      400,
+      "No-show sessions cannot be cancelled.",
+      "SESSION_ALREADY_NO_SHOW",
+    );
+  }
+
+  /* -------------------------- In Progress ------------------------------- */
+
+  if (session.status === "IN_PROGRESS") {
+    throw new ApiError(
+      400,
+      "A session in progress cannot be cancelled.",
+      "SESSION_IN_PROGRESS",
+    );
+  }
+
   /* ------------------------------ Cancel --------------------------------- */
 
   const cancelledSession = await sessionRepository.cancelSession(
@@ -763,15 +1110,6 @@ const cancelSession = async ({ userId, sessionId }) => {
   /* ------------------------------------------------------------------------ */
   /*                       Session Cancelled Notifications                   */
   /* ------------------------------------------------------------------------ */
-
-  /*
-   * Cancellation is successful at this point.
-   *
-   * Client and therapist both receive a notification.
-   *
-   * Notification failure should not make the already successful
-   * cancellation fail.
-   */
 
   try {
     const therapist = await getTherapist(session.therapistId);
@@ -839,6 +1177,7 @@ const getSessionById = async ({ userId, sessionId }) => {
 module.exports = {
   getAvailableSlots,
   createSession,
+  joinSession,
   getMySessions,
   cancelSession,
   getSessionById,

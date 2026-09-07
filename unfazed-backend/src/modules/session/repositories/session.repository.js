@@ -9,7 +9,7 @@ const findBookedSessionsByTherapistAndDate = async (therapistId, date) => {
     therapistId,
     date,
     status: {
-      $in: ["PENDING", "CONFIRMED"],
+      $in: ["PENDING", "CONFIRMED", "IN_PROGRESS"],
     },
   })
     .select("_id clientId therapistId date startTime endTime duration status")
@@ -20,7 +20,7 @@ const findBookedSessionsByTherapistAndDate = async (therapistId, date) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                          Find Session by ID                                */
+/*                           Find Session by ID                                */
 /* -------------------------------------------------------------------------- */
 
 const findSessionById = async (sessionId) => {
@@ -28,7 +28,7 @@ const findSessionById = async (sessionId) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                     Check Slot Availability                                */
+/*                       Check Slot Availability                              */
 /* -------------------------------------------------------------------------- */
 
 const findActiveSessionByTherapistDateAndTime = async (
@@ -41,13 +41,13 @@ const findActiveSessionByTherapistDateAndTime = async (
     date,
     startTime,
     status: {
-      $in: ["PENDING", "CONFIRMED"],
+      $in: ["PENDING", "CONFIRMED", "IN_PROGRESS"],
     },
   }).lean();
 };
 
 /* -------------------------------------------------------------------------- */
-/*                            Create Session                                  */
+/*                            Create Session                                   */
 /* -------------------------------------------------------------------------- */
 
 const createSession = async (sessionData) => {
@@ -55,7 +55,7 @@ const createSession = async (sessionData) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                         Find Client Sessions                               */
+/*                          Find Client Sessions                               */
 /* -------------------------------------------------------------------------- */
 
 const findSessionsByClientId = async (clientId) => {
@@ -74,7 +74,7 @@ const findSessionsByClientId = async (clientId) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                        Find Therapist Sessions                             */
+/*                         Find Therapist Sessions                             */
 /* -------------------------------------------------------------------------- */
 
 const findSessionsByTherapistId = async (therapistId) => {
@@ -93,7 +93,7 @@ const findSessionsByTherapistId = async (therapistId) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                            Update Session                                  */
+/*                            Update Session                                   */
 /* -------------------------------------------------------------------------- */
 
 const updateSession = async (sessionId, updateData) => {
@@ -104,7 +104,7 @@ const updateSession = async (sessionId, updateData) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                           Cancel Session                                   */
+/*                           Cancel Session                                    */
 /* -------------------------------------------------------------------------- */
 
 const cancelSession = async (sessionId, cancelledBy) => {
@@ -123,7 +123,7 @@ const cancelSession = async (sessionId, cancelledBy) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                        Update Payment Status                               */
+/*                       Update Payment Status                                 */
 /* -------------------------------------------------------------------------- */
 
 const updatePaymentStatus = async (sessionId, paymentData) => {
@@ -134,7 +134,7 @@ const updatePaymentStatus = async (sessionId, paymentData) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                       Find Session by Payment ID                           */
+/*                      Find Session by Payment ID                            */
 /* -------------------------------------------------------------------------- */
 
 const findSessionByPaymentId = async (paymentId) => {
@@ -144,7 +144,69 @@ const findSessionByPaymentId = async (paymentId) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                                Export                                      */
+/*                      Update Session Join Status                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Update client/therapist join information.
+ *
+ * updateData can contain:
+ * - clientJoined
+ * - clientJoinedAt
+ * - therapistJoined
+ * - therapistJoinedAt
+ * - status
+ */
+const updateSessionJoinStatus = async (sessionId, updateData) => {
+  return await Session.findByIdAndUpdate(sessionId, updateData, {
+    returnDocument: "after",
+    runValidators: true,
+  }).lean();
+};
+
+/* -------------------------------------------------------------------------- */
+/*                           Mark Session No-Show                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Used when the session end time has passed
+ * and one or both participants did not join.
+ */
+const markSessionAsNoShow = async (sessionId) => {
+  return await Session.findByIdAndUpdate(
+    sessionId,
+    {
+      status: "NO_SHOW",
+    },
+    {
+      returnDocument: "after",
+      runValidators: true,
+    },
+  ).lean();
+};
+
+/* -------------------------------------------------------------------------- */
+/*                           Complete Session                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Used when the actual session has been completed.
+ */
+const markSessionAsCompleted = async (sessionId) => {
+  return await Session.findByIdAndUpdate(
+    sessionId,
+    {
+      status: "COMPLETED",
+    },
+    {
+      returnDocument: "after",
+      runValidators: true,
+    },
+  ).lean();
+};
+
+/* -------------------------------------------------------------------------- */
+/*                               Export                                        */
 /* -------------------------------------------------------------------------- */
 
 module.exports = {
@@ -158,4 +220,7 @@ module.exports = {
   cancelSession,
   updatePaymentStatus,
   findSessionByPaymentId,
+  updateSessionJoinStatus,
+  markSessionAsNoShow,
+  markSessionAsCompleted,
 };

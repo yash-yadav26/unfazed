@@ -3,6 +3,7 @@ const express = require("express");
 const {
   getAvailableSlotsController,
   createSessionController,
+  joinSessionController,
   getMySessionsController,
   cancelSessionController,
   getSessionByIdController,
@@ -27,7 +28,7 @@ const router = express.Router();
  * @swagger
  * tags:
  *   name: Session
- *   description: Session booking and appointment management APIs
+ *   description: Session booking, joining and appointment management APIs
  */
 
 /* -------------------------------------------------------------------------- */
@@ -99,20 +100,17 @@ const router = express.Router();
  *                       minimum: 1
  *                       maximum: 240
  *                       example: 60
- *                       description: Session duration in minutes.
  *                     bufferTime:
  *                       type: integer
  *                       nullable: true
  *                       minimum: 0
  *                       maximum: 120
  *                       example: 15
- *                       description: Buffer time between sessions in minutes.
  *                     price:
  *                       type: number
  *                       nullable: true
  *                       minimum: 0
  *                       example: 1200
- *                       description: Price for one session.
  *                     slots:
  *                       type: array
  *                       items:
@@ -122,7 +120,6 @@ const router = express.Router();
  *                         - "10:00"
  *                         - "11:15"
  *                         - "12:30"
- *                         - "13:45"
  *
  *       400:
  *         description: Invalid query parameters.
@@ -186,12 +183,16 @@ router.get(
  *     responses:
  *       201:
  *         description: Session booked successfully.
+ *
  *       400:
  *         description: Invalid session data.
+ *
  *       401:
  *         description: Unauthorized.
+ *
  *       404:
  *         description: Therapist or client profile not found.
+ *
  *       409:
  *         description: Selected slot is no longer available.
  */
@@ -200,6 +201,98 @@ router.post(
   authMiddleware,
   validateCreateSession,
   createSessionController,
+);
+
+/* -------------------------------------------------------------------------- */
+/*                              Join Session                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * @swagger
+ * /api/session/{id}/join:
+ *   post:
+ *     summary: Join a therapy session
+ *     description: >
+ *       Allows the authenticated client or therapist to join a confirmed
+ *       therapy session. The server identifies the participant using the
+ *       authenticated user's profile. No role is accepted from the request
+ *       body.
+ *
+ *       When the first participant joins, the session becomes IN_PROGRESS.
+ *       When the second participant joins, the session becomes COMPLETED
+ *       according to the current application lifecycle.
+ *
+ *       The request must be made during the scheduled session window.
+ *
+ *     tags:
+ *       - Session
+ *     security:
+ *       - bearerAuth: []
+ *
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Session MongoDB ObjectId.
+ *         example: "68b123456789abcdef123456"
+ *
+ *     responses:
+ *       200:
+ *         description: Session joined successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 message:
+ *                   type: string
+ *                   example: Session joined successfully.
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     session:
+ *                       type: object
+ *                       description: Updated session object.
+ *                     participant:
+ *                       type: string
+ *                       enum:
+ *                         - CLIENT
+ *                         - THERAPIST
+ *                       example: CLIENT
+ *                     alreadyJoined:
+ *                       type: boolean
+ *                       example: false
+ *
+ *       400:
+ *         description: >
+ *           Session is not confirmed, has not started, has already ended,
+ *           has been cancelled, completed, or marked as no-show.
+ *
+ *       401:
+ *         description: Unauthorized.
+ *
+ *       403:
+ *         description: You are not allowed to join this session.
+ *
+ *       404:
+ *         description: Session not found.
+ *
+ *       500:
+ *         description: Invalid session date/time configuration.
+ */
+router.post(
+  "/:id/join",
+  authMiddleware,
+  validateSessionId,
+  joinSessionController,
 );
 
 /* -------------------------------------------------------------------------- */
@@ -212,8 +305,8 @@ router.post(
  *   get:
  *     summary: Get logged-in client's sessions
  *     description: >
- *       Returns upcoming, completed and cancelled sessions of the
- *       logged-in client.
+ *       Returns upcoming, completed, cancelled and no-show sessions
+ *       belonging to the logged-in client.
  *     tags:
  *       - Session
  *     security:
@@ -222,8 +315,10 @@ router.post(
  *     responses:
  *       200:
  *         description: Sessions fetched successfully.
+ *
  *       401:
  *         description: Unauthorized.
+ *
  *       404:
  *         description: Client profile not found.
  */
@@ -238,7 +333,8 @@ router.get("/my-sessions", authMiddleware, getMySessionsController);
  * /api/session/{id}:
  *   get:
  *     summary: Get session by ID
- *     description: Returns a single session belonging to the logged-in client.
+ *     description: >
+ *       Returns a single session belonging to the logged-in client.
  *     tags:
  *       - Session
  *     security:
@@ -256,12 +352,16 @@ router.get("/my-sessions", authMiddleware, getMySessionsController);
  *     responses:
  *       200:
  *         description: Session fetched successfully.
+ *
  *       400:
  *         description: Invalid session ID.
+ *
  *       401:
  *         description: Unauthorized.
+ *
  *       403:
  *         description: Access denied.
+ *
  *       404:
  *         description: Session not found.
  */
@@ -276,7 +376,8 @@ router.get("/:id", authMiddleware, validateSessionId, getSessionByIdController);
  * /api/session/{id}/cancel:
  *   patch:
  *     summary: Cancel a session
- *     description: Cancels a session booked by the logged-in client.
+ *     description: >
+ *       Cancels a session booked by the logged-in client.
  *     tags:
  *       - Session
  *     security:
@@ -294,14 +395,19 @@ router.get("/:id", authMiddleware, validateSessionId, getSessionByIdController);
  *     responses:
  *       200:
  *         description: Session cancelled successfully.
+ *
  *       400:
  *         description: Session cannot be cancelled.
+ *
  *       401:
  *         description: Unauthorized.
+ *
  *       403:
  *         description: Access denied.
+ *
  *       404:
  *         description: Session not found.
+ *
  *       409:
  *         description: Session is already cancelled.
  */

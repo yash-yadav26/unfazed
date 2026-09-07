@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 import {
   ArrowLeft,
@@ -7,14 +7,35 @@ import {
   CheckCircle2,
   Clock3,
   HeartHandshake,
+  Loader2,
   MapPin,
+  Video,
   UserRound,
   XCircle,
 } from "lucide-react";
 
-import { getMySessions } from "../../api/sessionApi";
+import { getMySessions, joinSession } from "../../api/sessionApi";
+
+/* =========================================================
+   CONSTANTS
+========================================================= */
+
+const SESSION_STATUSES = {
+  PENDING: "PENDING",
+  CONFIRMED: "CONFIRMED",
+  IN_PROGRESS: "IN_PROGRESS",
+  COMPLETED: "COMPLETED",
+  CANCELLED: "CANCELLED",
+  NO_SHOW: "NO_SHOW",
+};
+
+/* =========================================================
+   MAIN COMPONENT
+========================================================= */
 
 function Sessions() {
+  const navigate = useNavigate();
+
   /* =========================================================
      STATE
   ========================================================== */
@@ -29,6 +50,36 @@ function Sessions() {
 
   const [error, setError] = useState("");
 
+  /**
+   * Stores the session ID currently being joined.
+   *
+   * This prevents multiple join requests for the same
+   * or different sessions at the same time.
+   */
+  const [joiningSessionId, setJoiningSessionId] = useState(null);
+
+  /**
+   * Current time is updated every second.
+   *
+   * This allows the Join button to automatically become
+   * enabled exactly when the session starts.
+   */
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+
+  /* =========================================================
+     CURRENT TIME CLOCK
+  ========================================================== */
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => {
+      clearInterval(timer);
+    };
+  }, []);
+
   /* =========================================================
      FETCH MY SESSIONS
   ========================================================== */
@@ -36,7 +87,7 @@ function Sessions() {
   useEffect(() => {
     let isMounted = true;
 
-    const fetchSessions = async () => {
+    const loadSessions = async () => {
       try {
         setLoading(true);
         setError("");
@@ -74,12 +125,91 @@ function Sessions() {
       }
     };
 
-    fetchSessions();
+    loadSessions();
 
     return () => {
       isMounted = false;
     };
   }, []);
+
+  /* =========================================================
+     JOIN SESSION
+  ========================================================== */
+
+  const handleJoinSession = async (session) => {
+    if (!session?._id) {
+      return;
+    }
+
+    /**
+     * Frontend check is for UX.
+     *
+     * Backend still performs the actual authorization,
+     * participant and time validation.
+     */
+    if (!isSessionJoinable(session, currentTime)) {
+      return;
+    }
+
+    try {
+      setJoiningSessionId(session._id);
+      setError("");
+
+      const response = await joinSession(session._id);
+
+      const result = response?.data;
+
+      /**
+       * Backend returns:
+       *
+       * {
+       *   session,
+       *   participant,
+       *   alreadyJoined
+       * }
+       */
+
+      const updatedSession = result?.session || session;
+
+      /**
+       * Update the local session immediately.
+       *
+       * This keeps the UI synchronized without requiring
+       * a complete page reload.
+       */
+      setSessions((previous) => ({
+        ...previous,
+
+        upcoming: previous.upcoming.map((item) =>
+          item._id === updatedSession?._id ? updatedSession : item,
+        ),
+
+        completed: previous.completed.map((item) =>
+          item._id === updatedSession?._id ? updatedSession : item,
+        ),
+
+        cancelled: previous.cancelled.map((item) =>
+          item._id === updatedSession?._id ? updatedSession : item,
+        ),
+      }));
+
+      /**
+       * Open the actual video-call page.
+       *
+       * WebRTC + Socket.io will be handled there.
+       */
+      navigate(`/client/sessions/${session._id}/video`);
+    } catch (err) {
+      console.error("Failed to join session:", err);
+
+      setError(
+        err?.response?.data?.message ||
+          "Unable to join the session. Please try again.",
+      );
+    } finally {
+      setJoiningSessionId(null);
+    }
+  };
 
   /* =========================================================
      LOADING STATE
@@ -132,7 +262,7 @@ function Sessions() {
 
                 <div>
                   <p className="text-xs font-bold text-red-700">
-                    Unable to load sessions
+                    Unable to process session
                   </p>
 
                   <p className="mt-1 text-xs leading-5 text-red-600">{error}</p>
@@ -164,6 +294,9 @@ function Sessions() {
                     key={session._id}
                     session={session}
                     type="upcoming"
+                    currentTime={currentTime}
+                    joiningSessionId={joiningSessionId}
+                    onJoin={handleJoinSession}
                   />
                 ))}
               </div>
@@ -197,6 +330,9 @@ function Sessions() {
                     key={session._id}
                     session={session}
                     type="completed"
+                    currentTime={currentTime}
+                    joiningSessionId={joiningSessionId}
+                    onJoin={handleJoinSession}
                   />
                 ))}
               </div>
@@ -230,6 +366,9 @@ function Sessions() {
                     key={session._id}
                     session={session}
                     type="cancelled"
+                    currentTime={currentTime}
+                    joiningSessionId={joiningSessionId}
+                    onJoin={handleJoinSession}
                   />
                 ))}
               </div>
@@ -293,7 +432,7 @@ function PageHeader() {
    SESSION CARD
 ========================================================= */
 
-function SessionCard({ session, type }) {
+function SessionCard({ session, type, currentTime, joiningSessionId, onJoin }) {
   const therapist =
     session?.therapistId && typeof session.therapistId === "object"
       ? session.therapistId
@@ -302,15 +441,21 @@ function SessionCard({ session, type }) {
   const therapistName =
     therapist?.name || session?.therapistName || "Therapist";
 
-  const status = session?.status || "PENDING";
+  const status = String(
+    session?.status || SESSION_STATUSES.PENDING,
+  ).toUpperCase();
 
   const duration = session?.duration ?? null;
 
   const isUpcoming = type === "upcoming";
-
   const isCompleted = type === "completed";
-
   const isCancelled = type === "cancelled";
+
+  const joinState = useMemo(() => {
+    return getJoinState(session, currentTime);
+  }, [session, currentTime]);
+
+  const isJoining = joiningSessionId === session?._id;
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
@@ -328,7 +473,9 @@ function SessionCard({ session, type }) {
                 ? "bg-red-50 text-red-600"
                 : isCompleted
                   ? "bg-emerald-50 text-emerald-600"
-                  : "bg-violet-50 text-violet-600"
+                  : status === SESSION_STATUSES.IN_PROGRESS
+                    ? "bg-amber-50 text-amber-600"
+                    : "bg-violet-50 text-violet-600"
             }`}
           >
             {isCancelled ? (
@@ -356,7 +503,9 @@ function SessionCard({ session, type }) {
                     ? "bg-red-50 text-red-600"
                     : isCompleted
                       ? "bg-emerald-50 text-emerald-600"
-                      : "bg-violet-50 text-violet-600"
+                      : status === SESSION_STATUSES.IN_PROGRESS
+                        ? "bg-amber-50 text-amber-600"
+                        : "bg-violet-50 text-violet-600"
                 }`}
               >
                 {formatStatus(status)}
@@ -433,17 +582,75 @@ function SessionCard({ session, type }) {
             RIGHT
         ================================================== */}
 
-        <div className="flex items-center gap-2 lg:shrink-0">
+        <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center lg:shrink-0">
+          {/* ------------------------ UPCOMING ------------------------ */}
+
           {isUpcoming && (
-            <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-[10px] font-semibold text-emerald-600">
-              <CheckCircle2 size={14} />
-              Confirmed
-            </div>
+            <>
+              {status === SESSION_STATUSES.IN_PROGRESS ? (
+                <div className="flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-[10px] font-semibold text-amber-600">
+                  <Video size={14} />
+                  Session In Progress
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-[10px] font-semibold text-emerald-600">
+                  <CheckCircle2 size={14} />
+                  Confirmed
+                </div>
+              )}
+
+              {/* Join Button */}
+
+              {joinState.canJoin && (
+                <button
+                  type="button"
+                  onClick={() => onJoin(session)}
+                  disabled={isJoining}
+                  className="inline-flex min-w-[130px] items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isJoining ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      Joining...
+                    </>
+                  ) : (
+                    <>
+                      <Video size={14} />
+                      Join Session
+                    </>
+                  )}
+                </button>
+              )}
+
+              {/* Future Session */}
+
+              {joinState.state === "NOT_STARTED" && (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center">
+                  <p className="text-[10px] font-semibold text-slate-500">
+                    Starts at {formatTime(session?.startTime)}
+                  </p>
+                </div>
+              )}
+
+              {/* Session Ended / Waiting */}
+
+              {joinState.state === "ENDED" && (
+                <div className="rounded-xl bg-slate-100 px-3 py-2 text-center">
+                  <p className="text-[10px] font-semibold text-slate-500">
+                    Session window ended
+                  </p>
+                </div>
+              )}
+            </>
           )}
+
+          {/* ----------------------- COMPLETED ----------------------- */}
 
           {isCompleted && (
             <span className="text-xs text-slate-400">Session completed</span>
           )}
+
+          {/* ----------------------- CANCELLED ----------------------- */}
 
           {isCancelled && (
             <span className="text-xs text-red-400">Session cancelled</span>
@@ -452,6 +659,117 @@ function SessionCard({ session, type }) {
       </div>
     </div>
   );
+}
+
+/* =========================================================
+   JOIN STATE
+========================================================= */
+
+function getJoinState(session, currentTime) {
+  if (!session) {
+    return {
+      canJoin: false,
+      state: "UNAVAILABLE",
+    };
+  }
+
+  const status = String(session.status || "").toUpperCase();
+
+  /**
+   * Join is meaningful only for confirmed/in-progress
+   * sessions.
+   */
+  if (
+    status !== SESSION_STATUSES.CONFIRMED &&
+    status !== SESSION_STATUSES.IN_PROGRESS
+  ) {
+    return {
+      canJoin: false,
+      state: "UNAVAILABLE",
+    };
+  }
+
+  const startDateTime = getSessionDateTime(session, session.startTime);
+
+  const endDateTime = getSessionDateTime(session, session.endTime);
+
+  /**
+   * Invalid date/time configuration.
+   */
+  if (!startDateTime || !endDateTime) {
+    return {
+      canJoin: false,
+      state: "UNAVAILABLE",
+    };
+  }
+
+  const currentTimestamp = currentTime.getTime();
+
+  const startTimestamp = startDateTime.getTime();
+
+  const endTimestamp = endDateTime.getTime();
+
+  /* -------------------------- Before Start ------------------------- */
+
+  if (currentTimestamp < startTimestamp) {
+    return {
+      canJoin: false,
+      state: "NOT_STARTED",
+    };
+  }
+
+  /* ---------------------------- Ended ----------------------------- */
+
+  if (currentTimestamp >= endTimestamp) {
+    return {
+      canJoin: false,
+      state: "ENDED",
+    };
+  }
+
+  /* -------------------------- Join Allowed ------------------------- */
+
+  return {
+    canJoin: true,
+    state: "AVAILABLE",
+  };
+}
+
+function isSessionJoinable(session, currentTime) {
+  return getJoinState(session, currentTime).canJoin;
+}
+
+/* =========================================================
+   SESSION DATE + TIME
+========================================================= */
+
+function getSessionDateTime(session, timeValue) {
+  if (!session?.date || !timeValue) {
+    return null;
+  }
+
+  const normalizedDate = normalizeDate(session.date);
+
+  const [hours, minutes] = String(timeValue).split(":").map(Number);
+
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+    return null;
+  }
+
+  /**
+   * Session dates are stored as UTC midnight,
+   * but the selected session time is an Indian local
+   * clock time.
+   *
+   * For frontend display/join button purposes,
+   * we construct the local browser date using the
+   * same YYYY-MM-DD + HH:mm values.
+   */
+  const dateTime = new Date(`${normalizedDate}T00:00:00`);
+
+  dateTime.setHours(hours, minutes, 0, 0);
+
+  return dateTime;
 }
 
 /* =========================================================
@@ -520,6 +838,18 @@ function formatStatus(status) {
 }
 
 /* =========================================================
+   NORMALIZE DATE
+========================================================= */
+
+function normalizeDate(date) {
+  if (!date) {
+    return "";
+  }
+
+  return String(date).slice(0, 10);
+}
+
+/* =========================================================
    FORMAT DATE
 ========================================================= */
 
@@ -528,13 +858,15 @@ function formatDate(dateValue) {
     return "—";
   }
 
-  const date = new Date(dateValue);
+  const normalized = normalizeDate(dateValue);
 
-  if (Number.isNaN(date.getTime())) {
+  const parsedDate = new Date(`${normalized}T00:00:00`);
+
+  if (Number.isNaN(parsedDate.getTime())) {
     return "—";
   }
 
-  return date.toLocaleDateString("en-IN", {
+  return parsedDate.toLocaleDateString("en-IN", {
     weekday: "short",
     day: "numeric",
     month: "long",
@@ -567,5 +899,9 @@ function formatTime(timeValue) {
     hour12: true,
   });
 }
+
+/* =========================================================
+   EXPORT
+========================================================= */
 
 export default Sessions;
