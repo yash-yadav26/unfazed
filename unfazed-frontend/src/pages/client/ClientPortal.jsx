@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { io } from "socket.io-client";
 import {
   Bell,
   CalendarDays,
@@ -18,6 +19,15 @@ import {
 import { getMyNotifications } from "../../api/notificationApi";
 import { getMySessions } from "../../api/sessionApi";
 import { getMyPayments } from "../../api/paymentApi";
+import {
+  requestNotificationPermission,
+  showBrowserNotification,
+} from "../../utils/browserNotification";
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+
+const SOCKET_URL = API_BASE_URL.replace(/\/api\/?$/, "");
 
 /* =========================================================
    HELPERS
@@ -366,6 +376,84 @@ function ClientPortal() {
     }, 30000);
 
     return () => clearInterval(interval);
+  }, []);
+
+  /* =========================================================
+     BROWSER NOTIFICATION PERMISSION
+  ========================================================== */
+
+  useEffect(() => {
+    requestNotificationPermission().catch((error) => {
+      console.error("Failed to request notification permission:", error);
+    });
+  }, []);
+
+  /* =========================================================
+     REAL-TIME NOTIFICATION UPDATES
+  ========================================================== */
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      return undefined;
+    }
+
+    const socket = io(SOCKET_URL, {
+      auth: {
+        token,
+      },
+      transports: ["websocket", "polling"],
+    });
+
+    socket.on("connect", () => {
+      console.log("[Socket.io] Client portal connected for notifications.");
+    });
+
+    socket.on("notification-unread-updated", (response) => {
+      if (!response?.success) {
+        return;
+      }
+
+      const nextUnreadCount = Number(response.unreadCount) || 0;
+
+      setUnreadCount(nextUnreadCount);
+
+      /*
+       * Refresh the latest notification list so the new
+       * notification also appears in the dashboard card.
+       */
+      fetchNotifications();
+
+      if (nextUnreadCount > 0) {
+        showBrowserNotification({
+          title: "New message from your therapist",
+          body:
+            nextUnreadCount === 1
+              ? "You have 1 unread notification."
+              : `You have ${nextUnreadCount} unread notifications.`,
+        });
+      }
+    });
+
+    socket.on("connect_error", (error) => {
+      console.error(
+        "[Socket.io] Client portal notification connection failed:",
+        error?.message || error,
+      );
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log(
+        "[Socket.io] Client portal notification socket disconnected:",
+        reason,
+      );
+    });
+
+    return () => {
+      socket.removeAllListeners();
+      socket.disconnect();
+    };
   }, []);
 
   /* =========================================================

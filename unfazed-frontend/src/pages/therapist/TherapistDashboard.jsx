@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { io } from "socket.io-client";
 import {
   Bell,
   CalendarDays,
@@ -368,6 +369,11 @@ function TherapistDashboard() {
 
   const greeting = getGreeting();
 
+  const API_BASE_URL =
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+
+  const SOCKET_URL = API_BASE_URL.replace(/\/api\/?$/, "");
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -415,7 +421,7 @@ function TherapistDashboard() {
     const intervalId = setInterval(updateCurrentTime, 1000);
 
     return () => clearInterval(intervalId);
-  }, []);
+  }, [SOCKET_URL]);
 
   /* =========================================================
      JOIN SESSION
@@ -527,7 +533,7 @@ function TherapistDashboard() {
     }, 0);
 
     return () => clearTimeout(timeoutId);
-  }, []);
+  }, [SOCKET_URL]);
 
   /* =========================================================
      NOTIFICATION POLLING
@@ -539,7 +545,62 @@ function TherapistDashboard() {
     }, 30000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [SOCKET_URL]);
+
+  /* =========================================================
+     REAL-TIME NOTIFICATION UPDATES
+  ========================================================== */
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      return undefined;
+    }
+
+    const socket = io(SOCKET_URL, {
+      auth: {
+        token,
+      },
+      transports: ["websocket", "polling"],
+    });
+
+    socket.on("connect", () => {
+      console.log(
+        "[Socket.io] Therapist dashboard connected for notifications.",
+      );
+    });
+
+    socket.on("notification-unread-updated", (response) => {
+      if (!response?.success) {
+        return;
+      }
+
+      setUnreadCount(Number(response.unreadCount) || 0);
+
+      // Refresh the latest notifications shown on the dashboard.
+      fetchNotifications();
+    });
+
+    socket.on("connect_error", (error) => {
+      console.error(
+        "[Socket.io] Therapist notification connection failed:",
+        error?.message || error,
+      );
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log(
+        "[Socket.io] Therapist notification socket disconnected:",
+        reason,
+      );
+    });
+
+    return () => {
+      socket.removeAllListeners();
+      socket.disconnect();
+    };
+  }, [SOCKET_URL]);
 
   /* =========================================================
      FLATTEN CLIENT SESSIONS

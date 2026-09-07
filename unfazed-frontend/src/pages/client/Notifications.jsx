@@ -9,6 +9,7 @@ import {
   HeartHandshake,
   FileText,
   Clock3,
+  MessageCircle,
 } from "lucide-react";
 
 import {
@@ -56,6 +57,7 @@ function Notifications() {
        *
        * Isliye pehle response.data lenge.
        */
+
       const responseBody = response?.data ?? response;
 
       /*
@@ -65,25 +67,17 @@ function Notifications() {
        *
        * otherwise responseBody ko hi use karenge.
        */
-      const notificationData =
-        responseBody?.data ?? responseBody ?? {};
 
-      setNotifications(
-        notificationData?.notifications || [],
-      );
+      const notificationData = responseBody?.data ?? responseBody ?? {};
 
-      setUnreadCount(
-        notificationData?.unreadCount || 0,
-      );
+      setNotifications(notificationData?.notifications || []);
+
+      setUnreadCount(notificationData?.unreadCount || 0);
     } catch (error) {
-      console.error(
-        "Failed to fetch notifications:",
-        error,
-      );
+      console.error("Failed to fetch notifications:", error);
 
       setError(
-        error?.response?.data?.message ||
-          "Failed to load notifications.",
+        error?.response?.data?.message || "Failed to load notifications.",
       );
     } finally {
       setLoading(false);
@@ -127,32 +121,22 @@ function Notifications() {
       return "Just now";
     }
 
-    const differenceInMinutes = Math.floor(
-      differenceInSeconds / 60,
-    );
+    const differenceInMinutes = Math.floor(differenceInSeconds / 60);
 
     if (differenceInMinutes < 60) {
       return `${differenceInMinutes} min ago`;
     }
 
-    const differenceInHours = Math.floor(
-      differenceInMinutes / 60,
-    );
+    const differenceInHours = Math.floor(differenceInMinutes / 60);
 
     if (differenceInHours < 24) {
-      return `${differenceInHours} hour${
-        differenceInHours > 1 ? "s" : ""
-      } ago`;
+      return `${differenceInHours} hour${differenceInHours > 1 ? "s" : ""} ago`;
     }
 
-    const differenceInDays = Math.floor(
-      differenceInHours / 24,
-    );
+    const differenceInDays = Math.floor(differenceInHours / 24);
 
     if (differenceInDays < 7) {
-      return `${differenceInDays} day${
-        differenceInDays > 1 ? "s" : ""
-      } ago`;
+      return `${differenceInDays} day${differenceInDays > 1 ? "s" : ""} ago`;
     }
 
     return createdDate.toLocaleDateString("en-IN", {
@@ -170,6 +154,7 @@ function Notifications() {
     /*
      * Already read hai toh API call ki zarurat nahi.
      */
+
     if (notification.isRead) {
       return;
     }
@@ -180,6 +165,7 @@ function Notifications() {
       /*
        * Local state update.
        */
+
       setNotifications((previousNotifications) =>
         previousNotifications.map((item) =>
           item._id === notification._id
@@ -195,14 +181,10 @@ function Notifications() {
       /*
        * Unread count immediately decrease.
        */
-      setUnreadCount((previousCount) =>
-        Math.max(previousCount - 1, 0),
-      );
+
+      setUnreadCount((previousCount) => Math.max(previousCount - 1, 0));
     } catch (error) {
-      console.error(
-        "Failed to mark notification as read:",
-        error,
-      );
+      console.error("Failed to mark notification as read:", error);
     }
   };
 
@@ -223,22 +205,18 @@ function Notifications() {
       /*
        * Local state update.
        */
+
       setNotifications((previousNotifications) =>
         previousNotifications.map((notification) => ({
           ...notification,
           isRead: true,
-          readAt:
-            notification.readAt ||
-            new Date().toISOString(),
+          readAt: notification.readAt || new Date().toISOString(),
         })),
       );
 
       setUnreadCount(0);
     } catch (error) {
-      console.error(
-        "Failed to mark all notifications as read:",
-        error,
-      );
+      console.error("Failed to mark all notifications as read:", error);
     } finally {
       setMarkingAllRead(false);
     }
@@ -254,10 +232,7 @@ function Notifications() {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
           {/* Logo */}
 
-          <Link
-            to="/client"
-            className="flex items-center gap-3"
-          >
+          <Link to="/client" className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-600 text-white">
               <HeartHandshake size={19} />
             </div>
@@ -267,9 +242,7 @@ function Notifications() {
                 Unfazed
               </p>
 
-              <p className="text-[9px] text-slate-500">
-                Client Portal
-              </p>
+              <p className="text-[9px] text-slate-500">Client Portal</p>
             </div>
           </Link>
 
@@ -294,13 +267,9 @@ function Notifications() {
               </div>
 
               <div className="hidden sm:block">
-                <p className="text-xs font-semibold text-slate-800">
-                  Client
-                </p>
+                <p className="text-xs font-semibold text-slate-800">Client</p>
 
-                <p className="text-[10px] text-slate-400">
-                  My Profile
-                </p>
+                <p className="text-[10px] text-slate-400">My Profile</p>
               </div>
             </div>
           </div>
@@ -340,8 +309,8 @@ function Notifications() {
                   </h1>
 
                   <p className="mt-1 text-sm text-slate-500">
-                    Stay updated with your sessions, payments
-                    and other important updates.
+                    Stay updated with your sessions, payments and other
+                    important updates.
                   </p>
                 </div>
               </div>
@@ -357,9 +326,7 @@ function Notifications() {
                 >
                   <CheckCircle2 size={14} />
 
-                  {markingAllRead
-                    ? "Marking..."
-                    : "Mark all as read"}
+                  {markingAllRead ? "Marking..." : "Mark all as read"}
                 </button>
               )}
             </div>
@@ -407,9 +374,7 @@ function Notifications() {
                     Loading notifications...
                   </p>
 
-                  <p className="mt-1 text-xs text-slate-400">
-                    Please wait.
-                  </p>
+                  <p className="mt-1 text-xs text-slate-400">Please wait.</p>
                 </div>
               ) : error ? (
                 <div className="px-5 py-12 text-center">
@@ -421,9 +386,7 @@ function Notifications() {
                     Unable to load notifications
                   </p>
 
-                  <p className="mt-1 text-xs text-red-500">
-                    {error}
-                  </p>
+                  <p className="mt-1 text-xs text-red-500">{error}</p>
 
                   <button
                     type="button"
@@ -444,8 +407,7 @@ function Notifications() {
                   </p>
 
                   <p className="mt-1 text-xs text-slate-400">
-                    You’ll see important session and account
-                    updates here.
+                    You’ll see important session and account updates here.
                   </p>
                 </div>
               ) : (
@@ -466,8 +428,8 @@ function Notifications() {
           ================================================== */}
 
           <div className="mt-5 text-center text-[11px] text-slate-400">
-            You will receive notifications for important account
-            and session updates.
+            You will receive notifications for important account and session
+            updates.
           </div>
         </div>
       </main>
@@ -479,11 +441,7 @@ function Notifications() {
    NOTIFICATION ITEM
 ========================================================= */
 
-function NotificationItem({
-  notification,
-  onMarkAsRead,
-  formatTime,
-}) {
+function NotificationItem({ notification, onMarkAsRead, formatTime }) {
   /* =======================================================
      ICON
   ======================================================== */
@@ -505,6 +463,9 @@ function NotificationItem({
       case "NOTE_SHARED":
         return <FileText size={18} />;
 
+      case "CHAT_MESSAGE":
+        return <MessageCircle size={18} />;
+
       default:
         return <Bell size={18} />;
     }
@@ -521,9 +482,7 @@ function NotificationItem({
       type="button"
       onClick={() => onMarkAsRead(notification)}
       className={`flex w-full gap-4 px-5 py-5 text-left transition hover:bg-slate-50 ${
-        isUnread
-          ? "bg-violet-50/40"
-          : "bg-white"
+        isUnread ? "bg-violet-50/40" : "bg-white"
       }`}
     >
       {/* Icon */}
@@ -574,14 +533,10 @@ function NotificationItem({
               Unread
             </span>
           ) : (
-            <span className="text-[10px] font-medium text-slate-400">
-              Read
-            </span>
+            <span className="text-[10px] font-medium text-slate-400">Read</span>
           )}
 
-          <span className="text-[10px] text-slate-300">
-            •
-          </span>
+          <span className="text-[10px] text-slate-300">•</span>
 
           <span className="text-[10px] font-medium text-slate-400">
             {formatNotificationType(notification.type)}
@@ -612,6 +567,9 @@ function formatNotificationType(type) {
 
     case "NOTE_SHARED":
       return "Shared Note";
+
+    case "CHAT_MESSAGE":
+      return "Chat Message";
 
     default:
       return "Notification";

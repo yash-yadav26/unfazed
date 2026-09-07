@@ -1,7 +1,7 @@
 const Notification = require("../models/notification.model");
 
 /* -------------------------------------------------------------------------- */
-/*                         Create Notification                                */
+/*                          Create Notification                               */
 /* -------------------------------------------------------------------------- */
 
 const createNotification = async (notificationData) => {
@@ -9,7 +9,7 @@ const createNotification = async (notificationData) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                         Find Notification By ID                            */
+/*                        Find Notification By ID                            */
 /* -------------------------------------------------------------------------- */
 
 const findNotificationById = async (notificationId) => {
@@ -17,15 +17,15 @@ const findNotificationById = async (notificationId) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                         Get User Notifications                             */
+/*                        Get User Notifications                             */
 /* -------------------------------------------------------------------------- */
 
-/*
+/**
  * Returns notifications for a specific user.
  *
  * Optional isRead filter:
- * true  -> only read notifications
- * false -> only unread notifications
+ * true     -> only read notifications
+ * false    -> only unread notifications
  * undefined -> all notifications
  */
 const findNotificationsByRecipientId = async (recipientId, isRead) => {
@@ -52,7 +52,7 @@ const findNotificationsByRecipientId = async (recipientId, isRead) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                          Get Unread Count                                  */
+/*                            Get Unread Count                                */
 /* -------------------------------------------------------------------------- */
 
 const countUnreadNotifications = async (recipientId) => {
@@ -63,7 +63,7 @@ const countUnreadNotifications = async (recipientId) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                         Mark Notification Read                             */
+/*                        Mark Notification Read                              */
 /* -------------------------------------------------------------------------- */
 
 const markNotificationAsRead = async (notificationId) => {
@@ -84,7 +84,7 @@ const markNotificationAsRead = async (notificationId) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                       Mark All Notifications Read                          */
+/*                     Mark All Notifications Read                            */
 /* -------------------------------------------------------------------------- */
 
 const markAllNotificationsAsRead = async (recipientId) => {
@@ -103,7 +103,7 @@ const markAllNotificationsAsRead = async (recipientId) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                               Delete                                      */
+/*                              Delete Notification                           */
 /* -------------------------------------------------------------------------- */
 
 const deleteNotification = async (notificationId) => {

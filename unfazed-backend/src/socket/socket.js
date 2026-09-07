@@ -5,6 +5,8 @@ const Session = require("../modules/session/models/session.model");
 const Client = require("../modules/client/models/client.model");
 const Therapist = require("../modules/therapist/models/therapist.model");
 
+const registerChatSocket = require("./chat.socket");
+
 /* -------------------------------------------------------------------------- */
 /*                                  Constants                                 */
 /* -------------------------------------------------------------------------- */
@@ -29,7 +31,7 @@ const getRoomId = (sessionId) => {
 /**
  * Extract JWT from Socket.io handshake.
  *
- * Frontend will send:
+ * Frontend:
  *
  * socket = io(API_URL, {
  *   auth: {
@@ -59,12 +61,6 @@ const extractToken = (socket) => {
 
 /**
  * Verify JWT and return authenticated user ID.
- *
- * Expected payload:
- * {
- *   id: "userId",
- *   ...
- * }
  */
 const authenticateSocket = (socket) => {
   const token = extractToken(socket);
@@ -136,12 +132,6 @@ const getSessionParticipant = async (userId, session) => {
 /**
  * Check whether this participant has successfully
  * joined the session through the REST join API.
- *
- * This prevents someone from bypassing:
- *
- * POST /api/session/:id/join
- *
- * and directly entering the WebRTC room.
  */
 const hasParticipantJoined = (session, role) => {
   if (role === "CLIENT") {
@@ -179,10 +169,8 @@ const initializeSocket = (server) => {
     },
 
     /**
-     * Transport configuration.
-     *
-     * websocket is preferred, polling remains available
-     * as a fallback for development environments.
+     * WebSocket is preferred.
+     * Polling remains available as fallback.
      */
     transports: ["websocket", "polling"],
   });
@@ -216,6 +204,10 @@ const initializeSocket = (server) => {
 
   io.on("connection", (socket) => {
     console.log(`[Socket.io] Authenticated user connected: ${socket.user.id}`);
+
+    /* ---------------------------------------------------------------------- */
+    /*                             VIDEO CALL                                  */
+    /* ---------------------------------------------------------------------- */
 
     /* ---------------------------------------------------------------------- */
     /*                             Join Room                                  */
@@ -307,9 +299,6 @@ const initializeSocket = (server) => {
          * 2. Therapist
          *
          * Prevent extra sockets from entering the room.
-         *
-         * If the same socket reconnects, socket.rooms already
-         * contains the room and it will not increase the count.
          */
         if (!socket.rooms.has(roomId) && currentParticipants >= 2) {
           emitSocketError(
@@ -325,11 +314,6 @@ const initializeSocket = (server) => {
 
         socket.join(roomId);
 
-        /**
-         * Store session information on socket.
-         *
-         * Useful for cleanup and disconnect handling.
-         */
         socket.sessionRoom = {
           roomId,
           sessionId: session._id.toString(),
@@ -384,10 +368,6 @@ const initializeSocket = (server) => {
 
         const roomId = getRoomId(sessionId);
 
-        /**
-         * Only forward if this socket is actually inside
-         * the requested session room.
-         */
         if (!socket.rooms.has(roomId)) {
           emitSocketError(
             socket,
@@ -493,7 +473,7 @@ const initializeSocket = (server) => {
           return;
         }
 
-        const { roomId, sessionId, role } = sessionRoom;
+        const { roomId, role } = sessionRoom;
 
         socket.leave(roomId);
 
@@ -505,15 +485,6 @@ const initializeSocket = (server) => {
         console.log(`[Socket.io] ${role} ${socket.user.id} left ${roomId}`);
 
         socket.sessionRoom = null;
-
-        /**
-         * Important:
-         * Leaving the video room does NOT automatically reset
-         * clientJoined / therapistJoined in MongoDB.
-         *
-         * Those fields represent that the participant joined
-         * the scheduled session.
-         */
       } catch (error) {
         console.error("[Socket.io] Leave room failed:", error);
       }
@@ -537,6 +508,22 @@ const initializeSocket = (server) => {
 
       console.log(`[Socket.io] User ${socket.user.id} disconnected.`, reason);
     });
+
+    /* ---------------------------------------------------------------------- */
+    /*                               CHAT                                     */
+    /* ---------------------------------------------------------------------- */
+
+    /**
+     * Register chat events on the same authenticated socket.
+     *
+     * chat.socket.js handles:
+     * - join-chat
+     * - send-message
+     * - typing
+     * - stop-typing
+     * - leave-chat
+     */
+    registerChatSocket(io, socket);
   });
 
   console.log("[Socket.io] Secure socket server initialized.");

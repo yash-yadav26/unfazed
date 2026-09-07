@@ -24,7 +24,12 @@ const findBookedSessionsByTherapistAndDate = async (therapistId, date) => {
 /* -------------------------------------------------------------------------- */
 
 const findSessionById = async (sessionId) => {
-  return await Session.findById(sessionId).lean();
+  return await Session.findById(sessionId)
+    .populate({
+      path: "therapistId",
+      select: "_id name slug specializations languages",
+    })
+    .lean();
 };
 
 /* -------------------------------------------------------------------------- */
@@ -206,6 +211,27 @@ const markSessionAsCompleted = async (sessionId) => {
 };
 
 /* -------------------------------------------------------------------------- */
+/*                    Find Chat-Eligible Session Between Users                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Find whether a client and therapist have a valid session together.
+ *
+ * Used to authorize chat access.
+ */
+const findSessionBetweenClientAndTherapist = async (clientId, therapistId) => {
+  return await Session.findOne({
+    clientId,
+    therapistId,
+    status: {
+      $in: ["CONFIRMED", "IN_PROGRESS", "COMPLETED"],
+    },
+  })
+    .select("_id clientId therapistId status")
+    .lean();
+};
+
+/* -------------------------------------------------------------------------- */
 /*                               Export                                        */
 /* -------------------------------------------------------------------------- */
 
@@ -223,4 +249,5 @@ module.exports = {
   updateSessionJoinStatus,
   markSessionAsNoShow,
   markSessionAsCompleted,
+  findSessionBetweenClientAndTherapist,
 };

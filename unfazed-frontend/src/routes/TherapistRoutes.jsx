@@ -12,6 +12,7 @@ import Analytics from "../pages/therapist/Analytics";
 import TherapistNotifications from "../pages/therapist/Notifications";
 
 import VideoCall from "../components/video/VideoCall";
+import TherapistChat from "../pages/therapist/TherapistChat";
 
 function TherapistRoutes() {
   return (
@@ -34,6 +35,7 @@ function TherapistRoutes() {
         <Route path="notifications" element={<TherapistNotifications />} />
 
         <Route path="sessions/:id/video" element={<VideoCall />} />
+        <Route path="clients/:id/chat" element={<TherapistChat />} />
       </Route>
     </Routes>
   );
