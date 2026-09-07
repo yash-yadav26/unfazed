@@ -58,7 +58,43 @@ const createSessionController = async (req, res, next) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                         Get My Sessions                                    */
+/*                            Join Session                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Join a scheduled therapy session.
+ *
+ * Client and therapist use the same API.
+ *
+ * POST /api/session/:id/join
+ *
+ * The backend identifies whether the logged-in user is the
+ * client or therapist. Role is NOT accepted from request body.
+ */
+const joinSessionController = async (req, res, next) => {
+  try {
+    const { id } = req.validatedParams;
+
+    const result = await sessionService.joinSession({
+      userId: req.user.id,
+      sessionId: id,
+    });
+
+    return res.status(200).json({
+      success: true,
+      statusCode: 200,
+      message: result.alreadyJoined
+        ? "You have already joined this session."
+        : "Session joined successfully.",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/* -------------------------------------------------------------------------- */
+/*                           Get My Sessions                                  */
 /* -------------------------------------------------------------------------- */
 
 /**
@@ -146,6 +182,7 @@ const getSessionByIdController = async (req, res, next) => {
 module.exports = {
   getAvailableSlotsController,
   createSessionController,
+  joinSessionController,
   getMySessionsController,
   cancelSessionController,
   getSessionByIdController,

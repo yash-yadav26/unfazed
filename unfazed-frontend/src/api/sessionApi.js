@@ -61,6 +61,24 @@ export const getSessionById = async (sessionId) => {
 };
 
 /**
+ * Join a scheduled therapy session.
+ *
+ * POST /api/session/:id/join
+ *
+ * The backend identifies whether the authenticated
+ * user is the client or therapist.
+ *
+ * No role is required from the frontend.
+ *
+ * @param {string} sessionId
+ */
+export const joinSession = async (sessionId) => {
+  const response = await api.post(`/session/${sessionId}/join`);
+
+  return response.data;
+};
+
+/**
  * Cancel a session.
  *
  * PATCH /api/session/:id/cancel

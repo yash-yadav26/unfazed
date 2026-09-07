@@ -65,7 +65,7 @@ const sessionSchema = new mongoose.Schema(
     },
 
     /* ---------------------------------------------------------------------- */
-    /*                            Session Duration                             */
+    /*                           Session Duration                              */
     /* ---------------------------------------------------------------------- */
 
     duration: {
@@ -76,18 +76,53 @@ const sessionSchema = new mongoose.Schema(
     },
 
     /* ---------------------------------------------------------------------- */
-    /*                             Booking Status                              */
+    /*                              Session Status                             */
     /* ---------------------------------------------------------------------- */
 
     status: {
       type: String,
-      enum: ["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"],
+      enum: [
+        "PENDING",
+        "CONFIRMED",
+        "IN_PROGRESS",
+        "COMPLETED",
+        "CANCELLED",
+        "NO_SHOW",
+      ],
       default: "PENDING",
       index: true,
     },
 
     /* ---------------------------------------------------------------------- */
-    /*                             Payment Status                              */
+    /*                         Client Join / Attendance                        */
+    /* ---------------------------------------------------------------------- */
+
+    clientJoined: {
+      type: Boolean,
+      default: false,
+    },
+
+    clientJoinedAt: {
+      type: Date,
+      default: null,
+    },
+
+    /* ---------------------------------------------------------------------- */
+    /*                      Therapist Join / Attendance                        */
+    /* ---------------------------------------------------------------------- */
+
+    therapistJoined: {
+      type: Boolean,
+      default: false,
+    },
+
+    therapistJoinedAt: {
+      type: Date,
+      default: null,
+    },
+
+    /* ---------------------------------------------------------------------- */
+    /*                              Payment Status                             */
     /* ---------------------------------------------------------------------- */
 
     paymentStatus: {
@@ -98,7 +133,7 @@ const sessionSchema = new mongoose.Schema(
     },
 
     /* ---------------------------------------------------------------------- */
-    /*                               Payment ID                                */
+    /*                                Payment ID                               */
     /* ---------------------------------------------------------------------- */
 
     paymentId: {
@@ -108,7 +143,7 @@ const sessionSchema = new mongoose.Schema(
     },
 
     /* ---------------------------------------------------------------------- */
-    /*                                Cancellation                             */
+    /*                               Cancellation                              */
     /* ---------------------------------------------------------------------- */
 
     cancelledAt: {
@@ -129,7 +164,7 @@ const sessionSchema = new mongoose.Schema(
 );
 
 /* -------------------------------------------------------------------------- */
-/*                           Prevent Double Booking                           */
+/*                         Prevent Double Booking                             */
 /* -------------------------------------------------------------------------- */
 
 sessionSchema.index(
@@ -142,14 +177,14 @@ sessionSchema.index(
     unique: true,
     partialFilterExpression: {
       status: {
-        $in: ["PENDING", "CONFIRMED"],
+        $in: ["PENDING", "CONFIRMED", "IN_PROGRESS"],
       },
     },
   },
 );
 
 /* -------------------------------------------------------------------------- */
-/*                           Client Sessions Index                            */
+/*                           Client Sessions Index                             */
 /* -------------------------------------------------------------------------- */
 
 sessionSchema.index({
@@ -159,7 +194,7 @@ sessionSchema.index({
 });
 
 /* -------------------------------------------------------------------------- */
-/*                         Therapist Sessions Index                           */
+/*                          Therapist Sessions Index                           */
 /* -------------------------------------------------------------------------- */
 
 sessionSchema.index({
