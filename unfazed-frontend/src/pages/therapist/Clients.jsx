@@ -1,18 +1,51 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { io } from "socket.io-client";
+
 import {
   ArrowLeft,
+  CalendarDays,
+  CheckCircle2,
+  Clock3,
   HeartHandshake,
+  MessageCircle,
   Search,
+  ShieldCheck,
   SlidersHorizontal,
   Users,
-  CalendarDays,
-  Clock3,
+  XCircle,
 } from "lucide-react";
 
 import { getMyClients } from "../../api/clientApi";
+import { getUnreadMessagesCount } from "../../api/chatApi";
+
+import {
+  requestNotificationPermission,
+  showBrowserNotification,
+} from "../../utils/browserNotification";
+
+/* =========================================================
+   CONSTANTS
+========================================================= */
+
+const CHAT_ALLOWED_STATUSES = ["CONFIRMED", "IN_PROGRESS", "COMPLETED"];
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+
+const SOCKET_URL = API_BASE_URL.replace(/\/api\/?$/, "");
+
+/* =========================================================
+   MAIN COMPONENT
+========================================================= */
 
 function Clients() {
+  const navigate = useNavigate();
+
+  /* =========================================================
+     STATE
+  ========================================================== */
+
   const [clients, setClients] = useState([]);
 
   const [search, setSearch] = useState("");
@@ -21,11 +54,38 @@ function Clients() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  /*
+   * Stores unread count by client profile ID.
+   *
+   * Example:
+   *
+   * {
+   *   "clientId1": 2,
+   *   "clientId2": 5
+   * }
+   */
+  const [unreadCounts, setUnreadCounts] = useState({});
+
   /* =========================================================
-     Fetch Therapist Clients
-  ========================================================= */
+     REQUEST BROWSER NOTIFICATION PERMISSION
+  ========================================================== */
 
   useEffect(() => {
+    requestNotificationPermission().catch((error) => {
+      console.error(
+        "Failed to request browser notification permission:",
+        error,
+      );
+    });
+  }, []);
+
+  /* =========================================================
+     FETCH THERAPIST CLIENTS
+  ========================================================== */
+
+  useEffect(() => {
+    let isMounted = true;
+
     const fetchClients = async () => {
       try {
         setLoading(true);
@@ -33,27 +93,172 @@ function Clients() {
 
         const response = await getMyClients();
 
+        if (!isMounted) {
+          return;
+        }
+
         const clientData = Array.isArray(response?.data) ? response.data : [];
 
         setClients(clientData);
-      } catch (error) {
-        console.error("Failed to fetch clients:", error);
+      } catch (err) {
+        if (!isMounted) {
+          return;
+        }
+
+        console.error("Failed to fetch clients:", err);
 
         setError(
-          error?.response?.data?.message ||
+          err?.response?.data?.message ||
             "Failed to load clients. Please try again.",
         );
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchClients();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   /* =========================================================
-     Filter + Sort
-  ========================================================= */
+     FETCH INITIAL UNREAD COUNTS
+  ========================================================== */
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadUnreadCounts = async () => {
+      try {
+        const response = await getUnreadMessagesCount();
+
+        if (!isMounted) {
+          return;
+        }
+
+        const data = response?.data || {};
+
+        const conversations = Array.isArray(data.conversations)
+          ? data.conversations
+          : [];
+
+        const unreadMap = {};
+
+        conversations.forEach((conversation) => {
+          if (!conversation?.userId) {
+            return;
+          }
+
+          /*
+           * Backend returns the sender's
+           * CLIENT/THERAPIST profile ID.
+           */
+          unreadMap[String(conversation.userId)] =
+            Number(conversation.unreadCount) || 0;
+        });
+
+        setUnreadCounts(unreadMap);
+      } catch (err) {
+        /*
+         * Unread count should never break
+         * the Clients page.
+         */
+        console.error("Failed to fetch unread message counts:", err);
+      }
+    };
+
+    loadUnreadCounts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  /* =========================================================
+     REAL-TIME CHAT UNREAD + BROWSER NOTIFICATION
+  ========================================================== */
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      return undefined;
+    }
+
+    const socket = io(SOCKET_URL, {
+      auth: {
+        token,
+      },
+      transports: ["websocket", "polling"],
+    });
+
+    socket.on("connect", () => {
+      console.log("[Socket.io] Clients page connected for chat notifications.");
+    });
+
+    socket.on("chat-unread-updated", (response) => {
+      if (!response?.success || !response?.userId) {
+        return;
+      }
+
+      /*
+       * userId is the sender's CLIENT profile ID.
+       */
+      const participantId = String(response.userId);
+
+      const unreadCount = Number(response.unreadCount) || 0;
+
+      /* ---------------------------------------------------- */
+      /*                  Update Chat Badge                   */
+      /* ---------------------------------------------------- */
+
+      setUnreadCounts((previous) => ({
+        ...previous,
+        [participantId]: unreadCount,
+      }));
+
+      /* ---------------------------------------------------- */
+      /*               Browser Notification                   */
+      /* ---------------------------------------------------- */
+
+      if (unreadCount > 0) {
+        showBrowserNotification({
+          title: "New message from your client",
+          body:
+            unreadCount === 1
+              ? "You have 1 unread message."
+              : `You have ${unreadCount} unread messages.`,
+        });
+      }
+    });
+
+    socket.on("connect_error", (err) => {
+      console.error(
+        "[Socket.io] Clients unread notification connection failed:",
+        err?.message || err,
+      );
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log(
+        "[Socket.io] Clients unread notification socket disconnected:",
+        reason,
+      );
+    });
+
+    return () => {
+      socket.removeAllListeners();
+      socket.disconnect();
+    };
+  }, []);
+
+  /* =========================================================
+     FILTER + SORT
+  ========================================================== */
 
   const filteredClients = useMemo(() => {
     const searchValue = String(search || "")
@@ -62,7 +267,9 @@ function Clients() {
 
     const filtered = clients.filter((client) => {
       const name = String(client?.name || "").toLowerCase();
+
       const email = String(client?.email || "").toLowerCase();
+
       const phone = String(client?.phone || "").toLowerCase();
 
       return (
@@ -86,30 +293,75 @@ function Clients() {
   }, [clients, search, sortBy]);
 
   /* =========================================================
-     Render
-  ========================================================= */
+     TOTAL CLIENTS
+  ========================================================== */
+
+  const totalClients = clients.length;
+
+  const totalSessions = useMemo(() => {
+    return clients.reduce(
+      (total, client) => total + Number(client?.sessionsCount || 0),
+      0,
+    );
+  }, [clients]);
+
+  const chatEnabledClients = useMemo(() => {
+    return clients.filter((client) => hasChatEligibleSession(client?.sessions))
+      .length;
+  }, [clients]);
+
+  /* =========================================================
+     OPEN CHAT
+  ========================================================== */
+
+  const handleOpenChat = (client) => {
+    if (!client?._id) {
+      return;
+    }
+
+    /*
+     * Frontend only allows opening the chat button
+     * for clients with a valid session.
+     *
+     * Backend performs the real authorization again.
+     */
+    if (!hasChatEligibleSession(client?.sessions)) {
+      return;
+    }
+
+    navigate(`/therapist/clients/${client._id}/chat`);
+  };
+
+  /* =========================================================
+     RENDER
+  ========================================================== */
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="min-h-screen bg-[#f6f7fb] text-slate-900">
       {/* =====================================================
           HEADER
       ====================================================== */}
 
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
+        <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-10">
           {/* Logo */}
 
-          <Link to="/therapist/dashboard" className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-600 text-white">
+          <Link
+            to="/therapist/dashboard"
+            className="group flex items-center gap-3"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-md shadow-violet-200 transition group-hover:scale-105">
               <HeartHandshake size={19} />
             </div>
 
             <div>
-              <p className="text-base font-bold tracking-tight text-slate-900">
+              <p className="text-base font-bold tracking-tight text-slate-950">
                 Unfazed
               </p>
 
-              <p className="text-[9px] text-slate-500">Therapist Dashboard</p>
+              <p className="text-[9px] font-medium uppercase tracking-[0.12em] text-slate-400">
+                Therapist Dashboard
+              </p>
             </div>
           </Link>
 
@@ -117,9 +369,12 @@ function Clients() {
 
           <Link
             to="/therapist/dashboard"
-            className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition hover:text-violet-600"
+            className="group inline-flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-violet-600"
           >
-            <ArrowLeft size={14} />
+            <ArrowLeft
+              size={14}
+              className="transition-transform group-hover:-translate-x-0.5"
+            />
             Back to Dashboard
           </Link>
         </div>
@@ -129,71 +384,98 @@ function Clients() {
           MAIN
       ====================================================== */}
 
-      <main className="px-5 py-7 sm:px-8 lg:px-10">
-        <div className="mx-auto max-w-7xl">
-          {/* Page Heading */}
+      <main className="relative overflow-hidden px-4 py-8 sm:px-6 lg:px-10">
+        {/* Background Decoration */}
 
-          <div>
-            <div className="flex items-center gap-2 text-violet-600">
-              <Users size={18} />
+        <div className="pointer-events-none absolute -left-32 top-10 h-72 w-72 rounded-full bg-violet-200/30 blur-3xl" />
 
-              <span className="text-xs font-bold uppercase tracking-wide">
-                Client CRM
-              </span>
-            </div>
+        <div className="pointer-events-none absolute right-0 top-0 h-80 w-80 rounded-full bg-indigo-200/20 blur-3xl" />
 
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
-              Your Clients
-            </h1>
+        <div className="relative mx-auto max-w-7xl">
+          {/* ===================================================
+              PAGE HEADING
+          ==================================================== */}
 
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-              View clients who have booked sessions with you.
-            </p>
-          </div>
+          <section>
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-100 bg-violet-50 px-3 py-1.5">
+                  <Users size={13} className="text-violet-600" />
 
-          {/* =================================================
-              CLIENT TABLE
-          ================================================== */}
+                  <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-violet-600">
+                    Client CRM
+                  </span>
+                </div>
 
-          <section className="mt-7 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-            {/* Toolbar */}
+                <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+                  Your Clients
+                </h1>
 
-            <div className="flex flex-col gap-4 border-b border-slate-100 p-5 lg:flex-row lg:items-center lg:justify-between">
-              {/* Search */}
-
-              <div className="relative w-full lg:max-w-lg">
-                <Search
-                  size={17}
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search by name, email or phone..."
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
-                />
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
+                  Manage your clients, review booked sessions, and continue
+                  conversations securely.
+                </p>
               </div>
 
-              {/* Sort */}
+              {/* Summary */}
 
-              <div className="flex items-center gap-2">
-                <SlidersHorizontal size={15} className="text-slate-400" />
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                <SummaryCard value={totalClients} label="Clients" />
 
-                <span className="text-xs font-semibold text-slate-500">
-                  Sort
-                </span>
+                <SummaryCard value={totalSessions} label="Sessions" />
 
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 outline-none focus:border-violet-500"
-                >
-                  <option value="name">Sort by Name</option>
+                <SummaryCard value={chatEnabledClients} label="Chat" />
+              </div>
+            </div>
+          </section>
 
-                  <option value="sessions">Sort by Sessions</option>
-                </select>
+          {/* ===================================================
+              CLIENT TABLE
+          ==================================================== */}
+
+          <section className="mt-8 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_20px_70px_-40px_rgba(15,23,42,0.35)]">
+            {/* =================================================
+                TOOLBAR
+            ================================================== */}
+
+            <div className="border-b border-slate-100 px-5 py-5 sm:px-6">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                {/* Search */}
+
+                <div className="relative w-full xl:max-w-xl">
+                  <Search
+                    size={17}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                  />
+
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Search by name, email or phone..."
+                    className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/60 pl-11 pr-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-violet-400 focus:bg-white focus:ring-4 focus:ring-violet-100"
+                  />
+                </div>
+
+                {/* Sort */}
+
+                <div className="flex items-center gap-2">
+                  <SlidersHorizontal size={15} className="text-slate-400" />
+
+                  <span className="text-xs font-semibold text-slate-500">
+                    Sort
+                  </span>
+
+                  <select
+                    value={sortBy}
+                    onChange={(event) => setSortBy(event.target.value)}
+                    className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                  >
+                    <option value="name">Sort by Name</option>
+
+                    <option value="sessions">Sort by Sessions</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -202,11 +484,17 @@ function Clients() {
             ================================================== */}
 
             {loading && (
-              <div className="px-5 py-16 text-center">
-                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-violet-600" />
+              <div className="px-5 py-20 text-center">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-50">
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-violet-200 border-t-violet-600" />
+                </div>
 
-                <p className="mt-4 text-sm font-medium text-slate-500">
-                  Loading clients...
+                <p className="mt-4 text-sm font-semibold text-slate-700">
+                  Loading your clients...
+                </p>
+
+                <p className="mt-1 text-xs text-slate-400">
+                  Fetching your client records
                 </p>
               </div>
             )}
@@ -216,16 +504,18 @@ function Clients() {
             ================================================== */}
 
             {!loading && error && (
-              <div className="px-5 py-16 text-center">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 text-red-500">
-                  <Users size={22} />
+              <div className="px-5 py-20 text-center">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50">
+                  <XCircle size={24} className="text-red-500" />
                 </div>
 
-                <p className="mt-4 text-sm font-semibold text-slate-700">
+                <p className="mt-4 text-sm font-bold text-slate-700">
                   Unable to load clients
                 </p>
 
-                <p className="mt-1 text-xs text-red-500">{error}</p>
+                <p className="mx-auto mt-1 max-w-md text-xs leading-5 text-red-500">
+                  {error}
+                </p>
               </div>
             )}
 
@@ -235,162 +525,161 @@ function Clients() {
 
             {!loading && !error && (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[950px] table-fixed">
+                <table className="w-full min-w-[1080px]">
                   <colgroup>
-                    <col className="w-[30%]" />
-                    <col className="w-[55%]" />
-                    <col className="w-[15%]" />
+                    <col className="w-[27%]" />
+                    <col className="w-[51%]" />
+                    <col className="w-[12%]" />
+                    <col className="w-[10%]" />
                   </colgroup>
 
                   <thead>
                     <tr className="border-b border-slate-100 bg-slate-50/70">
-                      <th className="px-6 py-3 text-left text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                      <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
                         Client
                       </th>
 
-                      <th className="px-5 py-3 text-left text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                      <th className="px-5 py-4 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
                         Booked Sessions
                       </th>
 
-                      <th className="px-5 py-3 text-left text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                      <th className="px-5 py-4 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
                         Total
+                      </th>
+
+                      <th className="px-5 py-4 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                        Action
                       </th>
                     </tr>
                   </thead>
 
                   <tbody className="divide-y divide-slate-100">
-                    {filteredClients.map((client) => (
-                      <tr
-                        key={client?._id}
-                        className="transition hover:bg-slate-50/70"
-                      >
-                        {/* =================================================
-                            CLIENT
-                        ================================================== */}
+                    {filteredClients.map((client) => {
+                      const canChat = hasChatEligibleSession(client?.sessions);
 
-                        <td className="px-6 py-5 align-top">
-                          <div className="flex items-start gap-3">
-                            {/* Avatar */}
+                      const unreadCount =
+                        Number(unreadCounts[String(client?._id)]) || 0;
 
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-violet-100 text-sm font-bold text-violet-700">
-                              {getInitials(client?.name || "Client")}
-                            </div>
+                      return (
+                        <tr
+                          key={client?._id}
+                          className="group transition hover:bg-violet-50/30"
+                        >
+                          {/* =================================================
+                                CLIENT
+                            ================================================== */}
 
-                            {/* Details */}
+                          <td className="px-6 py-6 align-top">
+                            <div className="flex items-start gap-3.5">
+                              {/* Avatar */}
 
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold text-slate-800">
-                                {client?.name || "Unknown Client"}
-                              </p>
+                              <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-indigo-100 text-sm font-bold text-violet-700">
+                                {getInitials(client?.name || "Client")}
 
-                              <p className="mt-1 break-all text-xs text-slate-400">
-                                {client?.email || "Email not available"}
-                              </p>
+                                {canChat && (
+                                  <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-500" />
+                                )}
+                              </div>
 
-                              {client?.phone && (
-                                <p className="mt-1 text-xs text-slate-400">
-                                  {client.phone}
+                              {/* Details */}
+
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-bold text-slate-900">
+                                  {client?.name || "Unknown Client"}
                                 </p>
-                              )}
 
-                              {client?.age && (
-                                <p className="mt-1 text-xs text-slate-400">
-                                  Age: {client.age}
+                                <p className="mt-1 break-all text-xs text-slate-400">
+                                  {client?.email || "Email not available"}
                                 </p>
+
+                                {client?.phone && (
+                                  <p className="mt-1 text-xs text-slate-400">
+                                    {client.phone}
+                                  </p>
+                                )}
+
+                                {client?.age && (
+                                  <p className="mt-1 text-xs text-slate-400">
+                                    Age: {client.age}
+                                  </p>
+                                )}
+
+                                {canChat && (
+                                  <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-bold text-emerald-600">
+                                    <MessageCircle size={10} />
+                                    Chat available
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* =================================================
+                                BOOKED SESSIONS
+                            ================================================== */}
+
+                          <td className="px-5 py-6 align-top">
+                            {Array.isArray(client?.sessions) &&
+                            client.sessions.length > 0 ? (
+                              <div className="space-y-2.5">
+                                {client.sessions.map((session, index) => (
+                                  <SessionCard
+                                    key={session?._id || index}
+                                    session={session}
+                                    index={index}
+                                  />
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-slate-400">
+                                No session data
+                              </span>
+                            )}
+                          </td>
+
+                          {/* =================================================
+                                TOTAL SESSIONS
+                            ================================================== */}
+
+                          <td className="px-5 py-6 align-top">
+                            <div className="inline-flex items-center gap-2 rounded-xl border border-violet-100 bg-violet-50 px-3 py-2">
+                              <span className="text-sm font-bold text-violet-700">
+                                {client?.sessionsCount || 0}
+                              </span>
+
+                              <span className="text-[10px] font-semibold text-violet-600">
+                                {client?.sessionsCount === 1
+                                  ? "session"
+                                  : "sessions"}
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* =================================================
+                                CHAT
+                            ================================================== */}
+
+                          <td className="px-5 py-6 align-top">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenChat(client)}
+                              disabled={!canChat}
+                              className={`relative inline-flex h-10 w-full min-w-[105px] items-center justify-center gap-2 rounded-xl px-3 text-xs font-bold transition ${
+                                canChat
+                                  ? "border border-violet-200 bg-violet-50 text-violet-700 hover:border-violet-300 hover:bg-violet-100 hover:shadow-sm"
+                                  : "cursor-not-allowed border border-slate-100 bg-slate-50 text-slate-300"
+                              }`}
+                            >
+                              <MessageCircle size={14} />
+                              Chat
+                              {canChat && unreadCount > 0 && (
+                                <UnreadBadge count={unreadCount} />
                               )}
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* =================================================
-                            BOOKED SESSIONS
-                        ================================================== */}
-
-                        <td className="px-5 py-5 align-top">
-                          {Array.isArray(client?.sessions) &&
-                          client.sessions.length > 0 ? (
-                            <div className="space-y-3">
-                              {client.sessions.map((session, index) => (
-                                <div
-                                  key={session?._id}
-                                  className="rounded-xl border border-slate-100 bg-slate-50/70 px-4 py-3"
-                                >
-                                  {/* Session header */}
-
-                                  <div className="flex items-center justify-between gap-3">
-                                    <div className="flex items-center gap-2">
-                                      <CalendarDays
-                                        size={14}
-                                        className="shrink-0 text-violet-500"
-                                      />
-
-                                      <span className="text-xs font-semibold text-slate-700">
-                                        Session {index + 1}
-                                      </span>
-                                    </div>
-
-                                    <SessionStatus status={session?.status} />
-                                  </div>
-
-                                  {/* Date + Time */}
-
-                                  <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1">
-                                    <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                                      <CalendarDays size={13} />
-
-                                      <span>
-                                        {formatSessionDate(session?.date)}
-                                      </span>
-                                    </div>
-
-                                    <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                                      <Clock3 size={13} />
-
-                                      <span>
-                                        {session?.startTime || "--:--"}
-                                        {" - "}
-                                        {session?.endTime || "--:--"}
-                                      </span>
-                                    </div>
-                                  </div>
-
-                                  {/* Duration + Payment */}
-
-                                  <div className="mt-2 text-[11px] text-slate-400">
-                                    Duration: {session?.duration ?? 0} minutes
-                                    {" • "}
-                                    Payment:{" "}
-                                    {formatStatus(session?.paymentStatus)}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-slate-400">
-                              No session data
-                            </span>
-                          )}
-                        </td>
-
-                        {/* =================================================
-                            TOTAL SESSIONS
-                        ================================================== */}
-
-                        <td className="px-5 py-5 align-top">
-                          <div className="inline-flex items-center rounded-lg bg-violet-50 px-3 py-2">
-                            <span className="text-sm font-bold text-violet-700">
-                              {client?.sessionsCount || 0}
-                            </span>
-
-                            <span className="ml-1.5 text-xs font-medium text-violet-600">
-                              {client?.sessionsCount === 1
-                                ? "session"
-                                : "sessions"}
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
 
@@ -399,16 +688,16 @@ function Clients() {
                 ================================================== */}
 
                 {filteredClients.length === 0 && (
-                  <div className="px-5 py-16 text-center">
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
-                      <Users size={22} />
+                  <div className="px-5 py-20 text-center">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 text-slate-400">
+                      <Users size={24} />
                     </div>
 
-                    <p className="mt-4 text-sm font-semibold text-slate-700">
+                    <p className="mt-4 text-sm font-bold text-slate-700">
                       No clients found
                     </p>
 
-                    <p className="mt-1 text-xs text-slate-400">
+                    <p className="mx-auto mt-1 max-w-md text-xs leading-5 text-slate-400">
                       {search
                         ? "Try a different name, email or phone number."
                         : "No clients have booked a session with you yet."}
@@ -419,10 +708,14 @@ function Clients() {
             )}
           </section>
 
-          {/* Privacy Note */}
+          {/* ===================================================
+              PRIVACY
+          ==================================================== */}
 
-          <div className="mt-5 text-center text-[11px] text-slate-400">
-            Client information is private and visible only to authorized users.
+          <div className="mt-5 flex items-center justify-center gap-2 text-[11px] text-slate-400">
+            <ShieldCheck size={13} className="text-emerald-500" />
+            Client information and conversations are private and securely
+            handled.
           </div>
         </div>
       </main>
@@ -431,7 +724,122 @@ function Clients() {
 }
 
 /* =========================================================
-   Session Status
+   UNREAD BADGE
+========================================================= */
+
+function UnreadBadge({ count }) {
+  const displayCount = count > 99 ? "99+" : count;
+
+  return (
+    <span className="absolute -right-1 -top-2 flex min-h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-red-500 px-1.5 text-[9px] font-bold leading-none text-white shadow-sm">
+      {displayCount}
+    </span>
+  );
+}
+
+/* =========================================================
+   SUMMARY CARD
+========================================================= */
+
+function SummaryCard({ value, label }) {
+  return (
+    <div className="min-w-[82px] rounded-2xl border border-slate-200 bg-white px-3 py-3 text-center shadow-sm sm:min-w-[96px] sm:px-4">
+      <p className="text-lg font-bold tracking-tight text-slate-900">{value}</p>
+
+      <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-slate-400">
+        {label}
+      </p>
+    </div>
+  );
+}
+
+/* =========================================================
+   SESSION CARD
+========================================================= */
+
+function SessionCard({ session, index }) {
+  const status = String(session?.status || "").toUpperCase();
+
+  const isInProgress = status === "IN_PROGRESS";
+
+  const isCompleted = status === "COMPLETED";
+
+  const isCancelled = status === "CANCELLED";
+
+  return (
+    <div
+      className={`rounded-2xl border px-4 py-3 transition ${
+        isCompleted
+          ? "border-emerald-100 bg-emerald-50/40"
+          : isCancelled
+            ? "border-red-100 bg-red-50/40"
+            : isInProgress
+              ? "border-amber-100 bg-amber-50/40"
+              : "border-slate-100 bg-slate-50/70 hover:border-violet-100 hover:bg-violet-50/30"
+      }`}
+    >
+      {/* Header */}
+
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white shadow-sm">
+            <CalendarDays
+              size={13}
+              className={
+                isCompleted
+                  ? "text-emerald-600"
+                  : isCancelled
+                    ? "text-red-500"
+                    : "text-violet-500"
+              }
+            />
+          </div>
+
+          <span className="text-[10px] font-bold text-slate-700">
+            Session {index + 1}
+          </span>
+        </div>
+
+        <SessionStatus status={status} />
+      </div>
+
+      {/* Date */}
+
+      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+        <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
+          <CalendarDays size={12} />
+
+          <span>{formatSessionDate(session?.date)}</span>
+        </div>
+
+        <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
+          <Clock3 size={12} />
+
+          <span>
+            {session?.startTime || "--:--"}
+            {" - "}
+            {session?.endTime || "--:--"}
+          </span>
+        </div>
+      </div>
+
+      {/* Footer */}
+
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+        <span className="text-[10px] text-slate-400">
+          Duration: {session?.duration ?? 0} min
+        </span>
+
+        <span className="text-[10px] text-slate-400">
+          Payment: {formatStatus(session?.paymentStatus)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   SESSION STATUS
 ========================================================= */
 
 function SessionStatus({ status }) {
@@ -439,27 +847,59 @@ function SessionStatus({ status }) {
 
   let className = "bg-slate-100 text-slate-500";
 
+  let icon = null;
+
   if (normalizedStatus === "CONFIRMED") {
     className = "bg-emerald-50 text-emerald-600";
+
+    icon = <CheckCircle2 size={10} />;
   } else if (normalizedStatus === "PENDING") {
     className = "bg-amber-50 text-amber-600";
+
+    icon = <Clock3 size={10} />;
+  } else if (normalizedStatus === "IN_PROGRESS") {
+    className = "bg-amber-50 text-amber-700";
+
+    icon = <Clock3 size={10} />;
   } else if (normalizedStatus === "COMPLETED") {
     className = "bg-violet-50 text-violet-600";
+
+    icon = <CheckCircle2 size={10} />;
   } else if (normalizedStatus === "CANCELLED") {
     className = "bg-red-50 text-red-600";
+
+    icon = <XCircle size={10} />;
   }
 
   return (
     <span
-      className={`rounded-full px-2.5 py-1 text-[9px] font-bold ${className}`}
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[9px] font-bold ${className}`}
     >
+      {icon}
+
       {formatStatus(status)}
     </span>
   );
 }
 
 /* =========================================================
-   Format Session Date
+   CHAT ELIGIBILITY
+========================================================= */
+
+function hasChatEligibleSession(sessions) {
+  if (!Array.isArray(sessions) || sessions.length === 0) {
+    return false;
+  }
+
+  return sessions.some((session) => {
+    const status = String(session?.status || "").toUpperCase();
+
+    return CHAT_ALLOWED_STATUSES.includes(status);
+  });
+}
+
+/* =========================================================
+   FORMAT SESSION DATE
 ========================================================= */
 
 function formatSessionDate(date) {
@@ -481,7 +921,7 @@ function formatSessionDate(date) {
 }
 
 /* =========================================================
-   Format Status
+   FORMAT STATUS
 ========================================================= */
 
 function formatStatus(value) {
@@ -496,11 +936,11 @@ function formatStatus(value) {
 }
 
 /* =========================================================
-   Get Initials
+   GET INITIALS
 ========================================================= */
 
 function getInitials(name) {
-  return name
+  return String(name)
     .split(" ")
     .filter(Boolean)
     .map((word) => word[0])
@@ -508,5 +948,9 @@ function getInitials(name) {
     .slice(0, 2)
     .toUpperCase();
 }
+
+/* =========================================================
+   EXPORT
+========================================================= */
 
 export default Clients;

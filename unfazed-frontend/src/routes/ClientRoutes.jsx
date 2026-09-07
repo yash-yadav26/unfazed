@@ -14,6 +14,7 @@ import Sessions from "../pages/client/Sessions";
 import SharedNotes from "../pages/client/SharedNotes";
 
 import VideoCall from "../components/video/VideoCall";
+import ClientChat from "../pages/client/ClientChat";
 
 function ClientRoutes() {
   return (
@@ -40,6 +41,8 @@ function ClientRoutes() {
         <Route path="sessions/:id/video" element={<VideoCall />} />
 
         <Route path="notes" element={<SharedNotes />} />
+
+        <Route path="sessions/:id/chat" element={<ClientChat />}/>
       </Route>
     </Routes>
   );

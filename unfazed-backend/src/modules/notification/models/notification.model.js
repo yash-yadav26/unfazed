@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 /* -------------------------------------------------------------------------- */
-/*                              Notification Types                            */
+/*                            Notification Types                              */
 /* -------------------------------------------------------------------------- */
 
 const NOTIFICATION_TYPES = {
@@ -10,15 +10,18 @@ const NOTIFICATION_TYPES = {
   SESSION_CANCELLED: "SESSION_CANCELLED",
   SESSION_REMINDER: "SESSION_REMINDER",
   NOTE_SHARED: "NOTE_SHARED",
+
+  // Chat message notification
+  CHAT_MESSAGE: "CHAT_MESSAGE",
 };
 
 /* -------------------------------------------------------------------------- */
-/*                            Notification Schema                             */
+/*                           Notification Schema                              */
 /* -------------------------------------------------------------------------- */
 
 const notificationSchema = new mongoose.Schema(
   {
-    /*
+    /**
      * Notification kis user ko milegi.
      *
      * Client aur Therapist dono User collection mein hain,
@@ -31,7 +34,7 @@ const notificationSchema = new mongoose.Schema(
       index: true,
     },
 
-    /*
+    /**
      * Notification kis event ki wajah se create hui.
      */
     type: {
@@ -44,7 +47,7 @@ const notificationSchema = new mongoose.Schema(
       index: true,
     },
 
-    /*
+    /**
      * Notification ka heading.
      */
     title: {
@@ -54,7 +57,7 @@ const notificationSchema = new mongoose.Schema(
       maxlength: 200,
     },
 
-    /*
+    /**
      * User ko dikhne wala actual message.
      */
     message: {
@@ -64,10 +67,9 @@ const notificationSchema = new mongoose.Schema(
       maxlength: 1000,
     },
 
-    /*
+    /**
      * Session related notification ke liye.
      *
-     * Example:
      * SESSION_BOOKED
      * SESSION_COMPLETED
      * SESSION_CANCELLED
@@ -80,7 +82,7 @@ const notificationSchema = new mongoose.Schema(
       index: true,
     },
 
-    /*
+    /**
      * NOTE_SHARED notification ke liye.
      */
     noteId: {
@@ -90,7 +92,7 @@ const notificationSchema = new mongoose.Schema(
       index: true,
     },
 
-    /*
+    /**
      * Notification read hui ya nahi.
      *
      * false -> unread
@@ -102,7 +104,7 @@ const notificationSchema = new mongoose.Schema(
       index: true,
     },
 
-    /*
+    /**
      * Notification kab read hui.
      *
      * Unread -> null
@@ -123,7 +125,7 @@ const notificationSchema = new mongoose.Schema(
 /*                                  Indexes                                   */
 /* -------------------------------------------------------------------------- */
 
-/*
+/**
  * User ki notifications latest first fetch karne ke liye.
  */
 notificationSchema.index({
@@ -131,7 +133,7 @@ notificationSchema.index({
   createdAt: -1,
 });
 
-/*
+/**
  * User ki unread notifications quickly fetch karne ke liye.
  */
 notificationSchema.index({
@@ -140,7 +142,7 @@ notificationSchema.index({
   createdAt: -1,
 });
 
-/*
+/**
  * Same session ki notifications ko efficiently query karne ke liye.
  */
 notificationSchema.index({
@@ -148,18 +150,16 @@ notificationSchema.index({
   createdAt: -1,
 });
 
-/*
+/**
  * Prevent duplicate SESSION_REMINDER notifications
  * for the same user and same session.
  *
- * Example:
- *
  * Client + Session A + SESSION_REMINDER
- *         ↓
+ *        ↓
  * Only one reminder allowed.
  *
  * Therapist + Session A + SESSION_REMINDER
- *         ↓
+ *        ↓
  * One separate reminder allowed.
  *
  * Client and Therapist therefore each get exactly one reminder.
@@ -182,13 +182,13 @@ notificationSchema.index(
 );
 
 /* -------------------------------------------------------------------------- */
-/*                                   Model                                    */
+/*                                    Model                                   */
 /* -------------------------------------------------------------------------- */
 
 const Notification = mongoose.model("Notification", notificationSchema);
 
 /* -------------------------------------------------------------------------- */
-/*                                  Exports                                   */
+/*                                   Exports                                  */
 /* -------------------------------------------------------------------------- */
 
 module.exports = Notification;
