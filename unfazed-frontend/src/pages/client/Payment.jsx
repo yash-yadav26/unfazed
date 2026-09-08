@@ -12,7 +12,7 @@ import {
   LockKeyhole,
   ShieldCheck,
   UserRound,
-  Wallet,
+  Sparkles,
 } from "lucide-react";
 
 import { createPaymentOrder, completePayment } from "../../api/paymentApi";
@@ -395,29 +395,122 @@ function Payment() {
           </button>
 
           {/* ===================================================
-              HEADING
+              GUIDED PAYMENT HEADER
           ==================================================== */}
 
-          <div className="mt-7">
-            <p className="text-xs font-bold uppercase tracking-wide text-violet-600">
-              Payment
-            </p>
+          <section className="mt-7 overflow-hidden rounded-[28px] border border-violet-100 bg-gradient-to-br from-white via-violet-50/70 to-indigo-50/80 p-6 shadow-[0_22px_65px_-40px_rgba(79,70,229,0.5)] sm:p-7">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+              <div className="max-w-2xl">
+                <div className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white/85 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-violet-700 shadow-sm">
+                  <Sparkles size={12} />
+                  Guided checkout
+                </div>
 
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
-              Complete your payment
-            </h1>
+                <h1 className="mt-3 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
+                  One final step to{" "}
+                  <span className="bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600 bg-clip-text text-transparent">
+                    confirm your session
+                  </span>
+                </h1>
 
-            <p className="mt-2 text-sm text-slate-500">
-              Review your session details and continue securely.
-            </p>
-          </div>
+                <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">
+                  Review your appointment details first. When everything looks
+                  right, continue to secure payment and your session will be
+                  confirmed after successful verification.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-white/90 bg-white/85 px-4 py-3 shadow-sm backdrop-blur">
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                  Booking status
+                </p>
+                <p className="mt-1 text-sm font-black text-slate-800">
+                  Step 04 of 04
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-3 md:grid-cols-4">
+              {[
+                ["01", "Date", "Selected"],
+                ["02", "Time", "Selected"],
+                ["03", "Review", "You're here"],
+                ["04", "Payment", "Secure checkout"],
+              ].map(([number, label, helper], index) => {
+                const active = index === 3;
+                const complete = index < 3;
+
+                return (
+                  <div
+                    key={number}
+                    className={`rounded-2xl border p-3.5 ${
+                      active
+                        ? "border-violet-300 bg-violet-50 shadow-sm"
+                        : complete
+                          ? "border-emerald-200 bg-emerald-50/70"
+                          : "border-slate-100 bg-white/70"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[11px] font-black ${
+                          active
+                            ? "bg-violet-600 text-white shadow-md shadow-violet-200"
+                            : complete
+                              ? "bg-emerald-500 text-white"
+                              : "bg-slate-100 text-slate-400"
+                        }`}
+                      >
+                        {complete ? "✓" : number}
+                      </div>
+
+                      <div>
+                        <p
+                          className={`text-[9px] font-bold uppercase tracking-[0.12em] ${
+                            active
+                              ? "text-violet-600"
+                              : complete
+                                ? "text-emerald-600"
+                                : "text-slate-400"
+                          }`}
+                        >
+                          {number}
+                        </p>
+                        <p className="mt-0.5 text-xs font-bold text-slate-800">
+                          {label}
+                        </p>
+                        <p className="mt-0.5 text-[10px] text-slate-500">
+                          {helper}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-4 flex items-start gap-3 rounded-2xl border border-violet-100 bg-white/75 px-4 py-3.5">
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
+                <ShieldCheck size={15} />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-violet-800">
+                  Review before you pay
+                </p>
+                <p className="mt-1 text-[11px] leading-5 text-violet-700/80">
+                  Your therapist, date, time, duration and final amount are shown
+                  below. Check these details before opening the payment checkout.
+                </p>
+              </div>
+            </div>
+          </section>
 
           {/* ===================================================
               ERROR
           ==================================================== */}
 
           {paymentError && (
-            <div className="mt-6 rounded-xl border border-red-100 bg-red-50 px-4 py-3">
+            <div className="mt-6 rounded-2xl border border-red-100 bg-gradient-to-r from-red-50 to-rose-50 px-4 py-3.5 shadow-sm">
               <div className="flex items-start gap-3">
                 <CreditCard
                   size={17}
@@ -446,22 +539,34 @@ function Payment() {
                 SESSION DETAILS
             ================================================== */}
 
-            <section className="rounded-2xl border border-slate-200 bg-white">
-              <div className="border-b border-slate-100 px-5 py-4 sm:px-6">
-                <h2 className="text-base font-bold text-slate-900">
-                  Session Details
-                </h2>
+            <section className="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-[0_18px_55px_-38px_rgba(15,23,42,0.45)]">
+              <div className="border-b border-slate-100 bg-gradient-to-r from-white to-violet-50/70 px-5 py-5 sm:px-6">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-700">
+                    <CalendarDays size={18} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-violet-700">
+                        Step 03
+                      </span>
+                      <h2 className="text-base font-black text-slate-900">
+                        Review Session
+                      </h2>
+                    </div>
 
-                <p className="mt-1 text-xs text-slate-400">
-                  Review your appointment before payment.
-                </p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      Make sure everything is correct before moving to secure payment.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div className="p-5 sm:p-6">
                 {/* Therapist */}
 
-                <div className="flex items-center gap-4 rounded-2xl bg-violet-50 p-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-violet-600 shadow-sm">
+                <div className="flex items-center gap-4 rounded-2xl border border-violet-100 bg-gradient-to-r from-violet-50 to-indigo-50 p-4 shadow-sm">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-violet-600 shadow-sm">
                     <UserRound size={20} />
                   </div>
 
@@ -508,9 +613,25 @@ function Payment() {
                   />
                 </div>
 
+                <div className="mt-5 flex items-start gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/80 p-4">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-600 shadow-sm">
+                    <ShieldCheck size={16} />
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-black text-emerald-800">
+                      Details verified for checkout
+                    </p>
+                    <p className="mt-1 text-[11px] leading-5 text-emerald-700/80">
+                      The payment order is created from the server using the selected
+                      therapist, date and time.
+                    </p>
+                  </div>
+                </div>
+
                 {/* Test Mode */}
 
-                <div className="mt-5 flex items-start gap-3 rounded-xl bg-slate-50 p-4">
+                <div className="mt-4 flex items-start gap-3 rounded-2xl bg-slate-50 p-4">
                   <ShieldCheck
                     size={17}
                     className="mt-0.5 shrink-0 text-emerald-600"
@@ -533,15 +654,30 @@ function Payment() {
                 PAYMENT SUMMARY
             ================================================== */}
 
-            <section className="rounded-2xl border border-slate-200 bg-white">
-              <div className="border-b border-slate-100 px-5 py-4 sm:px-6">
-                <h2 className="text-base font-bold text-slate-900">
-                  Payment Summary
-                </h2>
+            <section className="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-[0_18px_55px_-38px_rgba(15,23,42,0.45)]">
+              <div className="border-b border-slate-100 bg-gradient-to-r from-white to-indigo-50/70 px-5 py-5 sm:px-6">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700">
+                    <CreditCard size={18} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full bg-indigo-100 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-indigo-700">
+                        Step 04
+                      </span>
+                      <h2 className="text-base font-black text-slate-900">
+                        Secure Payment
+                      </h2>
+                    </div>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      Complete payment to confirm your therapy session.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div className="p-5 sm:p-6">
-                <div className="rounded-2xl bg-slate-50 p-5">
+                <div className="rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-indigo-50 p-5 shadow-sm">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-slate-500">
                       Therapy Session
@@ -571,25 +707,35 @@ function Payment() {
                   type="button"
                   onClick={handlePayment}
                   disabled={paymentLoading}
-                  className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 text-sm font-bold text-white shadow-lg shadow-violet-200 transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600 px-4 text-sm font-black text-white shadow-[0_16px_34px_-16px_rgba(124,58,237,0.9)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_38px_-16px_rgba(124,58,237,0.95)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
                 >
                   {paymentLoading ? (
                     <>
                       <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                      Processing...
+                      Securing your payment...
                     </>
                   ) : (
                     <>
-                      <Wallet size={17} />
-                      Pay ₹{amount.toLocaleString("en-IN")}
+                      <LockKeyhole size={16} />
+                      Pay ₹{amount.toLocaleString("en-IN")} Securely
                       <ArrowRight size={16} />
                     </>
                   )}
                 </button>
 
-                <div className="mt-4 flex items-center justify-center gap-2 text-[10px] text-slate-400">
+                <div className="mt-4 flex items-center justify-center gap-2 text-[10px] font-medium text-slate-400">
                   <LockKeyhole size={13} />
                   Secure Razorpay Test Checkout
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+                  <p className="text-[10px] font-bold text-slate-700">
+                    What happens next?
+                  </p>
+                  <p className="mt-1 text-[10px] leading-4 text-slate-500">
+                    Razorpay checkout opens → payment is verified → your session is
+                    created → you return to a booking-confirmed screen.
+                  </p>
                 </div>
               </div>
             </section>

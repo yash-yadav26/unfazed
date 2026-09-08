@@ -178,18 +178,26 @@ function TherapistNotifications() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="relative min-h-screen overflow-hidden bg-[#f7f8fc] text-slate-900">
+      <div className="pointer-events-none fixed -left-32 top-20 h-80 w-80 rounded-full bg-violet-200/20 blur-3xl" />
+      <div className="pointer-events-none fixed -right-28 top-10 h-96 w-96 rounded-full bg-indigo-200/20 blur-3xl" />
+      <div className="pointer-events-none fixed bottom-0 left-1/3 h-72 w-72 rounded-full bg-fuchsia-100/20 blur-3xl" />
       {/* =====================================================
           TOP BAR
       ====================================================== */}
 
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5 sm:px-8">
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-8">
           {/* Left */}
 
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-600 text-white">
+            <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-200">
               <Bell size={18} />
+              {unreadCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full border-2 border-white bg-rose-500 px-1 text-[8px] font-extrabold text-white">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
             </div>
 
             <div>
@@ -203,18 +211,30 @@ function TherapistNotifications() {
             </div>
           </div>
 
-          {/* Mark all */}
+          <div className="flex items-center gap-2">
+            {/* Back to dashboard */}
 
-          {unreadCount > 0 && (
-            <button
-              type="button"
-              onClick={handleMarkAllAsRead}
-              className="inline-flex items-center gap-2 rounded-xl bg-violet-50 px-3.5 py-2 text-xs font-semibold text-violet-700 transition hover:bg-violet-100"
+            <a
+              href="/therapist/dashboard"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-500 shadow-sm transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
             >
-              <Check size={14} />
-              Mark all as read
-            </button>
-          )}
+              <span aria-hidden="true">←</span>
+              Back to Dashboard
+            </a>
+
+            {/* Mark all */}
+
+            {unreadCount > 0 && (
+              <button
+                type="button"
+                onClick={handleMarkAllAsRead}
+                className="inline-flex items-center gap-2 rounded-xl bg-violet-50 px-3.5 py-2 text-xs font-semibold text-violet-700 transition hover:bg-violet-100"
+              >
+                <Check size={14} />
+                Mark all as read
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
@@ -222,41 +242,71 @@ function TherapistNotifications() {
           MAIN CONTENT
       ====================================================== */}
 
-      <main className="mx-auto max-w-5xl p-5 sm:p-8">
+      <main className="relative mx-auto max-w-6xl px-5 py-8 sm:px-8 lg:py-10">
         {/* Page heading */}
 
-        <div className="mb-6">
-          <p className="text-sm font-medium text-violet-600">
-            Therapist Portal
-          </p>
-
-          <div className="mt-1 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-2xl font-bold tracking-tight text-slate-950">
-                Your Notifications
-              </h2>
-
-              <p className="mt-1 text-sm text-slate-500">
-                Updates about your sessions, clients and
-                practice.
-              </p>
-            </div>
+        <div className="mb-7">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-2 rounded-full border border-violet-200/80 bg-white/85 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-violet-700 shadow-sm backdrop-blur-sm">
+              <Bell size={12} />
+              Therapist Portal
+            </span>
 
             {unreadCount > 0 && (
-              <span className="w-fit shrink-0 rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-violet-700">
+              <span className="rounded-full border border-violet-100 bg-violet-50 px-2.5 py-1 text-[9px] font-extrabold text-violet-700">
                 {unreadCount} unread
               </span>
             )}
           </div>
+
+          <div className="mt-3">
+            <h2 className="text-3xl font-extrabold tracking-[-0.04em] text-slate-950 sm:text-4xl">
+              Your Notifications
+            </h2>
+
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+              Keep track of session bookings, reminders, shared notes and new
+              messages from your practice.
+            </p>
+          </div>
         </div>
+
+        <section className="mb-7 grid gap-3 sm:grid-cols-3">
+          <SummaryCard
+            icon={<Bell size={16} />}
+            label="Total"
+            value={notifications.length}
+            description="Notifications in your inbox"
+          />
+
+          <SummaryCard
+            icon={<MessageCircle size={16} />}
+            label="Unread"
+            value={unreadCount}
+            description={
+              unreadCount > 0
+                ? "Tap a notification to mark it read"
+                : "You're all caught up"
+            }
+            accent="violet"
+          />
+
+          <SummaryCard
+            icon={<CheckCircle2 size={16} />}
+            label="Updates"
+            value="Live"
+            description="Bookings, notes, reminders and chat"
+            accent="emerald"
+          />
+        </section>
 
         {/* =====================================================
             LOADING
         ====================================================== */}
 
         {loading && (
-          <div className="flex min-h-[350px] items-center justify-center rounded-2xl border border-slate-200 bg-white">
-            <div className="flex items-center gap-2 text-sm text-slate-500">
+          <div className="flex min-h-[360px] items-center justify-center rounded-[30px] border border-slate-200/80 bg-white shadow-[0_24px_70px_-38px_rgba(15,23,42,0.24)]">
+            <div className="flex items-center gap-3 rounded-2xl border border-violet-100 bg-violet-50/70 px-4 py-3 text-sm font-medium text-slate-500">
               <Loader2
                 size={18}
                 className="animate-spin"
@@ -271,18 +321,30 @@ function TherapistNotifications() {
         ====================================================== */}
 
         {!loading && error && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-5">
-            <p className="text-sm text-red-600">
-              {error}
-            </p>
+          <div className="rounded-[26px] border border-red-100 bg-gradient-to-r from-red-50 via-white to-rose-50 p-5 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-600">
+                <Bell size={17} />
+              </div>
 
-            <button
-              type="button"
-              onClick={fetchNotifications}
-              className="mt-3 text-xs font-semibold text-red-700 underline"
-            >
-              Try again
-            </button>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-extrabold text-slate-800">
+                  Unable to load notifications
+                </p>
+
+                <p className="mt-1 text-sm leading-6 text-red-600">
+              {error}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={fetchNotifications}
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-[11px] font-bold text-red-700 shadow-sm transition hover:bg-red-50"
+                >
+                  Try again
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -293,18 +355,25 @@ function TherapistNotifications() {
         {!loading &&
           !error &&
           notifications.length === 0 && (
-            <div className="flex min-h-[350px] flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-violet-50 text-violet-600">
-                <Bell size={24} />
+            <div className="relative flex min-h-[380px] flex-col items-center justify-center overflow-hidden rounded-[28px] border border-slate-200/80 bg-white px-5 text-center shadow-[0_20px_60px_-35px_rgba(15,23,42,0.22)]">
+              <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-violet-100/60 blur-2xl" />
+              <div className="absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-indigo-100/60 blur-2xl" />
+
+              <div className="relative flex h-16 w-16 items-center justify-center rounded-[22px] bg-gradient-to-br from-violet-100 to-indigo-100 text-violet-600 shadow-sm ring-8 ring-violet-50">
+                <Bell size={25} />
               </div>
 
-              <h3 className="mt-4 text-base font-bold text-slate-900">
-                No notifications
+              <span className="mt-6 rounded-full bg-emerald-50 px-3 py-1 text-[9px] font-extrabold uppercase tracking-[0.14em] text-emerald-700">
+                All caught up
+              </span>
+
+              <h3 className="mt-3 text-lg font-extrabold tracking-tight text-slate-900">
+                Nothing new right now
               </h3>
 
-              <p className="mt-1 max-w-sm text-sm leading-6 text-slate-400">
-                You're all caught up. New session bookings,
-                reminders and updates will appear here.
+              <p className="mt-2 max-w-md text-sm leading-6 text-slate-400">
+                New session bookings, reminders, shared notes and chat updates
+                will automatically appear here.
               </p>
             </div>
           )}
@@ -316,7 +385,7 @@ function TherapistNotifications() {
         {!loading &&
           !error &&
           notifications.length > 0 && (
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+            <div className="overflow-hidden rounded-[30px] border border-slate-200/80 bg-white shadow-[0_24px_70px_-38px_rgba(15,23,42,0.24)]">
               {notifications.map((notification) => {
                 const Icon = getNotificationIcon(
                   notification.type,
@@ -325,19 +394,23 @@ function TherapistNotifications() {
                 return (
                   <div
                     key={notification._id}
-                    className={`group flex gap-4 border-b border-slate-100 px-5 py-5 transition last:border-b-0 sm:px-6 ${
+                    className={`group relative flex gap-4 border-b border-slate-100 px-5 py-5 transition last:border-b-0 sm:px-6 ${
                       notification.isRead
-                        ? "bg-white"
-                        : "bg-violet-50/40"
+                        ? "bg-white hover:bg-slate-50/70"
+                        : "bg-gradient-to-r from-violet-50/80 via-white to-indigo-50/30 hover:from-violet-50"
                     }`}
                   >
+                    {!notification.isRead && (
+                      <span className="absolute left-0 top-5 h-10 w-1 rounded-r-full bg-gradient-to-b from-violet-500 to-indigo-500" />
+                    )}
+
                     {/* Notification Icon */}
 
                     <div
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-sm ${
                         notification.isRead
                           ? "bg-slate-100 text-slate-500"
-                          : "bg-violet-100 text-violet-600"
+                          : "bg-gradient-to-br from-violet-100 to-indigo-100 text-violet-600 ring-1 ring-violet-100"
                       }`}
                     >
                       <Icon size={18} />
@@ -352,39 +425,49 @@ function TherapistNotifications() {
                       }
                       className="min-w-0 flex-1 text-left"
                     >
-                      <div className="flex items-start gap-2">
-                        <h3
-                          className={`truncate text-sm font-semibold ${
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <h3
+                            className={`truncate text-sm ${
+                              notification.isRead
+                                ? "font-semibold text-slate-700"
+                                : "font-extrabold text-slate-900"
+                            }`}
+                          >
+                            {notification.title}
+                          </h3>
+
+                          {!notification.isRead && (
+                            <span className="h-2 w-2 shrink-0 rounded-full bg-violet-600 shadow-[0_0_0_4px_rgba(124,58,237,0.08)]" />
+                          )}
+                        </div>
+
+                        <span
+                          className={`hidden shrink-0 rounded-full px-2.5 py-1 text-[8px] font-extrabold uppercase tracking-[0.12em] sm:inline-flex ${
                             notification.isRead
-                              ? "text-slate-700"
-                              : "text-slate-900"
+                              ? "bg-slate-100 text-slate-400"
+                              : "bg-violet-100 text-violet-700"
                           }`}
                         >
-                          {notification.title}
-                        </h3>
-
-                        {/* Unread Dot */}
-
-                        {!notification.isRead && (
-                          <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-violet-600" />
-                        )}
+                          {formatNotificationType(notification.type)}
+                        </span>
                       </div>
 
                       <p className="mt-1 text-sm leading-6 text-slate-500">
                         {notification.message}
                       </p>
 
-                      <p className="mt-2 text-[11px] text-slate-400">
-                        {formatNotificationTime(
-                          notification.createdAt,
-                        )}
-                      </p>
+                      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <p className="text-[10px] font-semibold text-slate-400">
+                          {formatNotificationTime(notification.createdAt)}
+                        </p>
 
-                      <p className="mt-1 text-[10px] font-medium text-slate-400">
-                        {formatNotificationType(
-                          notification.type,
-                        )}
-                      </p>
+                        <span className="h-1 w-1 rounded-full bg-slate-200" />
+
+                        <p className="text-[10px] font-medium text-slate-400">
+                          {formatNotificationType(notification.type)}
+                        </p>
+                      </div>
                     </button>
 
                     {/* Delete */}
@@ -396,7 +479,7 @@ function TherapistNotifications() {
                           notification._id,
                         )
                       }
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-300 transition hover:bg-red-50 hover:text-red-500"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-transparent text-slate-300 transition hover:border-red-100 hover:bg-red-50 hover:text-red-500 sm:opacity-0 sm:group-hover:opacity-100"
                       aria-label="Delete notification"
                     >
                       <Trash2 size={15} />
@@ -407,6 +490,58 @@ function TherapistNotifications() {
             </div>
           )}
       </main>
+    </div>
+  );
+}
+
+/* =========================================================
+   SUMMARY CARD
+========================================================= */
+
+function SummaryCard({ icon, label, value, description, accent = "slate" }) {
+  const variants = {
+    slate: {
+      icon: "bg-slate-100 text-slate-600",
+      value: "text-slate-900",
+      border: "border-slate-200/80",
+    },
+    violet: {
+      icon: "bg-violet-100 text-violet-700",
+      value: "text-violet-700",
+      border: "border-violet-100",
+    },
+    emerald: {
+      icon: "bg-emerald-100 text-emerald-700",
+      value: "text-emerald-700",
+      border: "border-emerald-100",
+    },
+  };
+
+  const style = variants[accent] || variants.slate;
+
+  return (
+    <div
+      className={`rounded-[22px] border bg-white p-4 shadow-[0_14px_45px_-30px_rgba(15,23,42,0.20)] ${style.border}`}
+    >
+      <div className="flex items-center gap-3">
+        <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${style.icon}`}>
+          {icon}
+        </div>
+
+        <div className="min-w-0">
+          <p className="text-[9px] font-extrabold uppercase tracking-[0.14em] text-slate-400">
+            {label}
+          </p>
+
+          <p className={`mt-0.5 text-xl font-extrabold tracking-tight ${style.value}`}>
+            {value}
+          </p>
+        </div>
+      </div>
+
+      <p className="mt-3 text-[10px] leading-5 text-slate-400">
+        {description}
+      </p>
     </div>
   );
 }

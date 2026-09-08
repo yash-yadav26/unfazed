@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 
 import {
   ArrowLeft,
+  Activity,
   BarChart3,
   HeartHandshake,
   RefreshCw,
@@ -180,11 +181,14 @@ function Analytics() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 text-slate-900">
-        <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
+      <div className="relative min-h-screen overflow-hidden bg-[#f7f8fc] text-slate-900">
+        <div className="pointer-events-none fixed -left-32 top-20 h-80 w-80 rounded-full bg-violet-200/20 blur-3xl" />
+        <div className="pointer-events-none fixed -right-28 top-10 h-96 w-96 rounded-full bg-indigo-200/20 blur-3xl" />
+
+        <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl">
           <div className="mx-auto flex h-16 max-w-7xl items-center px-5 sm:px-8 lg:px-10">
             <Link to="/therapist/dashboard" className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-600 text-white">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-200">
                 <HeartHandshake size={19} />
               </div>
 
@@ -228,11 +232,14 @@ function Analytics() {
 
   if (error && !data.revenue.length) {
     return (
-      <div className="min-h-screen bg-slate-50 text-slate-900">
-        <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
+      <div className="relative min-h-screen overflow-hidden bg-[#f7f8fc] text-slate-900">
+        <div className="pointer-events-none fixed -left-32 top-20 h-80 w-80 rounded-full bg-violet-200/20 blur-3xl" />
+        <div className="pointer-events-none fixed -right-28 top-10 h-96 w-96 rounded-full bg-indigo-200/20 blur-3xl" />
+
+        <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl">
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
             <Link to="/therapist/dashboard" className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-600 text-white">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-200">
                 <HeartHandshake size={19} />
               </div>
 
@@ -247,7 +254,7 @@ function Analytics() {
 
             <Link
               to="/therapist/dashboard"
-              className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition hover:text-violet-600"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-500 shadow-sm transition hover:-translate-y-0.5 hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700 hover:shadow-md"
             >
               <ArrowLeft size={14} />
               Back to Dashboard
@@ -284,7 +291,10 @@ function Analytics() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="relative min-h-screen overflow-hidden bg-[#f7f8fc] text-slate-900">
+      <div className="pointer-events-none fixed -left-32 top-20 h-80 w-80 rounded-full bg-violet-200/20 blur-3xl" />
+      <div className="pointer-events-none fixed -right-28 top-10 h-96 w-96 rounded-full bg-indigo-200/20 blur-3xl" />
+      <div className="pointer-events-none fixed bottom-0 left-1/3 h-72 w-72 rounded-full bg-fuchsia-100/20 blur-3xl" />
       {/* =====================================================
           HEADER
       ====================================================== */}
@@ -292,7 +302,7 @@ function Analytics() {
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
           <Link to="/therapist/dashboard" className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-600 text-white">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-200">
               <HeartHandshake size={19} />
             </div>
 
@@ -307,7 +317,7 @@ function Analytics() {
 
           <Link
             to="/therapist/dashboard"
-            className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition hover:text-violet-600"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-500 shadow-sm transition hover:-translate-y-0.5 hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700 hover:shadow-md"
           >
             <ArrowLeft size={14} />
             Back to Dashboard
@@ -319,28 +329,28 @@ function Analytics() {
           MAIN
       ====================================================== */}
 
-      <main className="px-5 py-7 sm:px-8 lg:px-10">
+      <main className="relative px-5 py-8 sm:px-8 lg:px-10 lg:py-10">
         <div className="mx-auto max-w-7xl">
           {/* =================================================
               PAGE HEADER
           ================================================== */}
 
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <div className="flex items-center gap-2 text-violet-600">
-                <BarChart3 size={17} />
-
-                <span className="text-xs font-bold uppercase tracking-wide">
+              <div className="inline-flex items-center gap-2 rounded-full border border-violet-200/80 bg-white/85 px-3 py-1.5 shadow-sm backdrop-blur-sm">
+                <BarChart3 size={12} className="text-violet-600" />
+                <span className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-violet-700">
                   Practice Analytics
                 </span>
               </div>
 
-              <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+              <h1 className="mt-3 text-3xl font-extrabold tracking-[-0.04em] text-slate-950 sm:text-4xl">
                 Analytics
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                Track your practice revenue and client activity.
+                Get a quick view of revenue performance, client activity, and
+                the trends shaping your practice.
               </p>
             </div>
 
@@ -348,7 +358,7 @@ function Analytics() {
               type="button"
               onClick={handleRefresh}
               disabled={refreshing}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
             >
               <RefreshCw
                 size={15}
@@ -364,8 +374,21 @@ function Analytics() {
           ================================================== */}
 
           {error && (
-            <div className="mt-5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-xs font-medium text-red-600">
-              {error}
+            <div className="mt-5 rounded-2xl border border-red-100 bg-gradient-to-r from-red-50 via-white to-rose-50 px-4 py-3.5 shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-600">
+                  <Activity size={16} />
+                </div>
+
+                <div>
+                  <p className="text-xs font-extrabold text-slate-800">
+                    Analytics refreshed with an issue
+                  </p>
+                  <p className="mt-0.5 text-xs leading-5 text-red-600">
+                    {error}
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -373,23 +396,29 @@ function Analytics() {
               TOP STATS
           ================================================== */}
 
-          <div className="mt-7 grid gap-4 md:grid-cols-2">
-            {/* Revenue */}
-
+          <div className="mt-7 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <StatCard
               title="Revenue"
               value={formatCurrency(data.overview.revenue)}
               subtitle="Total paid revenue"
               icon={<Wallet size={20} />}
+              accent="violet"
             />
-
-            {/* Active Clients */}
 
             <StatCard
               title="Active Clients"
               value={data.overview.activeClients}
               subtitle="Clients with valid sessions"
               icon={<Users size={20} />}
+              accent="indigo"
+            />
+
+            <StatCard
+              title="New Clients"
+              value={data.clients.newClients}
+              subtitle="New clients in the current analytics period"
+              icon={<TrendingUp size={20} />}
+              accent="emerald"
             />
           </div>
 
@@ -397,7 +426,7 @@ function Analytics() {
               REVENUE TREND
           ================================================== */}
 
-          <section className="mt-6 rounded-2xl border border-slate-200 bg-white">
+          <section className="mt-6 overflow-hidden rounded-[30px] border border-slate-200/80 bg-white shadow-[0_24px_70px_-38px_rgba(15,23,42,0.24)]">
             <div className="flex flex-col gap-4 border-b border-slate-100 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="flex items-center gap-2">
@@ -415,14 +444,10 @@ function Analytics() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="rounded-full bg-violet-50 px-3 py-1.5 text-[10px] font-semibold text-violet-700">
-                  Monthly
-                </span>
-              </div>
+              <div className="hidden" />
             </div>
 
-            <div className="p-5">
+            <div className="p-5 sm:p-6">
               {data.revenue.length > 0 ? (
                 <>
                   <div className="h-[340px] w-full">
@@ -539,15 +564,23 @@ function Analytics() {
               CLIENT OVERVIEW
           ================================================== */}
 
-          <section className="mt-6 rounded-2xl border border-slate-200 bg-white">
-            <div className="border-b border-slate-100 px-5 py-5">
-              <h2 className="text-base font-bold text-slate-900">
-                Client Overview
-              </h2>
+          <section className="mt-6 overflow-hidden rounded-[30px] border border-slate-200/80 bg-white shadow-[0_24px_70px_-38px_rgba(15,23,42,0.24)]">
+            <div className="border-b border-slate-100 bg-gradient-to-r from-white via-violet-50/20 to-indigo-50/30 px-5 py-5 sm:px-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+                  <Users size={18} />
+                </div>
 
-              <p className="mt-1 text-xs text-slate-400">
-                Client-related practice metrics.
-              </p>
+                <div>
+                  <h2 className="text-base font-extrabold text-slate-900">
+                    Client Overview
+                  </h2>
+
+                  <p className="mt-1 text-xs text-slate-400">
+                    Understand your client base at a glance.
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="grid gap-4 p-5 sm:grid-cols-3">
@@ -569,12 +602,9 @@ function Analytics() {
               DATA NOTE
           ================================================== */}
 
-          <div className="mt-5 flex items-center justify-center gap-2 text-[11px] text-slate-400">
-            <BarChart3 size={14} />
-
-            <span>
-              Analytics are calculated from your real sessions and payment data.
-            </span>
+          <div className="mt-5 flex items-center justify-center gap-2 text-center text-[10px] font-medium text-slate-400">
+            <BarChart3 size={13} className="text-violet-400" />
+            Analytics are calculated from your real sessions and payment data.
           </div>
         </div>
       </main>
@@ -586,21 +616,41 @@ function Analytics() {
    STAT CARD
 ========================================================= */
 
-function StatCard({ title, value, subtitle, icon }) {
+function StatCard({ title, value, subtitle, icon, accent = "violet" }) {
+  const variants = {
+    violet: {
+      icon: "from-violet-100 to-indigo-100 text-violet-700 ring-violet-100",
+      value: "text-violet-700",
+      border: "border-violet-100/80",
+    },
+    indigo: {
+      icon: "from-indigo-100 to-blue-100 text-indigo-700 ring-indigo-100",
+      value: "text-indigo-700",
+      border: "border-indigo-100/80",
+    },
+    emerald: {
+      icon: "from-emerald-100 to-teal-100 text-emerald-700 ring-emerald-100",
+      value: "text-emerald-700",
+      border: "border-emerald-100/80",
+    },
+  };
+
+  const variant = variants[accent] || variants.violet;
+
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5">
+    <div className={`rounded-[24px] border bg-white p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.24)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_20px_60px_-34px_rgba(99,102,241,0.22)] ${variant.border}`}>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-xs font-medium text-slate-500">{title}</p>
 
-          <p className="mt-2 truncate text-2xl font-bold tracking-tight text-slate-950">
+          <p className={`mt-2 truncate text-2xl font-extrabold tracking-tight ${variant.value}`}>
             {value}
           </p>
 
           <p className="mt-1 text-[11px] text-slate-400">{subtitle}</p>
         </div>
 
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-indigo-100 text-violet-700 shadow-sm ring-1 ring-violet-100">
           {icon}
         </div>
       </div>
@@ -614,7 +664,7 @@ function StatCard({ title, value, subtitle, icon }) {
 
 function MiniMetric({ label, value }) {
   return (
-    <div className="rounded-xl bg-slate-50 p-4">
+    <div className="rounded-2xl border border-slate-100 bg-gradient-to-br from-slate-50 to-white p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[11px] font-medium text-slate-500">{label}</p>
@@ -636,7 +686,7 @@ function MiniMetric({ label, value }) {
 
 function SmallSummary({ label, value }) {
   return (
-    <div className="rounded-xl bg-slate-50 p-4">
+    <div className="rounded-2xl border border-slate-100 bg-gradient-to-br from-slate-50 to-white p-4 shadow-sm">
       <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
         {label}
       </p>

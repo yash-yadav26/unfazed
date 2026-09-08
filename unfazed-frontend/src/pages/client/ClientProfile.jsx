@@ -143,8 +143,10 @@ function ClientProfile() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <p className="text-sm text-slate-500">Loading profile...</p>
+      <div className="flex min-h-screen items-center justify-center bg-[#f7f8fc]">
+        <p className="rounded-2xl border border-slate-200 bg-white px-6 py-4 text-sm font-semibold text-slate-500 shadow-sm">
+          Loading profile...
+        </p>
       </div>
     );
   }
@@ -155,22 +157,24 @@ function ClientProfile() {
 
   if (!client) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <p className="text-sm text-red-500">Unable to load profile.</p>
+      <div className="flex min-h-screen items-center justify-center bg-[#f7f8fc]">
+        <p className="rounded-2xl border border-red-100 bg-red-50 px-6 py-4 text-sm font-semibold text-red-600 shadow-sm">
+          Unable to load profile.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="relative min-h-screen overflow-hidden bg-[#f7f8fc] text-slate-900">
       {/* =====================================================
           HEADER
       ====================================================== */}
 
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5 sm:px-8">
           <Link to="/client" className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-600 text-white">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-200">
               <HeartHandshake size={19} />
             </div>
 
@@ -185,7 +189,7 @@ function ClientProfile() {
 
           <Link
             to="/client"
-            className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition hover:text-violet-600"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-500 shadow-sm transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
           >
             <ArrowLeft size={14} />
             Back to Dashboard
@@ -193,21 +197,28 @@ function ClientProfile() {
         </div>
       </header>
 
+      <div className="pointer-events-none fixed -left-32 top-24 h-80 w-80 rounded-full bg-violet-200/20 blur-3xl" />
+      <div className="pointer-events-none fixed -right-28 top-20 h-96 w-96 rounded-full bg-indigo-200/20 blur-3xl" />
+      <div className="pointer-events-none fixed bottom-0 left-1/3 h-72 w-72 rounded-full bg-fuchsia-100/15 blur-3xl" />
+
       {/* =====================================================
           MAIN
       ====================================================== */}
 
-      <main className="px-5 py-8 sm:px-8">
+      <main className="relative px-5 py-8 sm:px-8 sm:py-10">
         <div className="mx-auto max-w-3xl">
           {/* Heading */}
 
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-violet-600">
-                My Profile
-              </p>
+              <div className="inline-flex items-center gap-2 rounded-full border border-violet-200/80 bg-white/85 px-3 py-1.5 shadow-sm backdrop-blur-sm">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-violet-700">
+                  My Profile
+                </span>
+              </div>
 
-              <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">
+              <h1 className="mt-4 text-3xl font-extrabold tracking-[-0.04em] text-slate-950 sm:text-4xl">
                 Profile Details
               </h1>
 
@@ -220,7 +231,7 @@ function ClientProfile() {
               <button
                 type="button"
                 onClick={() => setEditMode(true)}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-xs font-bold text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700 hover:shadow-md"
               >
                 <Edit3 size={15} />
                 Edit Profile
@@ -230,12 +241,12 @@ function ClientProfile() {
 
           {/* Profile Card */}
 
-          <section className="mt-7 rounded-2xl border border-slate-200 bg-white">
+          <section className="relative mt-7 overflow-hidden rounded-[30px] border border-violet-100/80 bg-white shadow-[0_24px_70px_-38px_rgba(99,102,241,0.30)]">
             {/* Profile Header */}
 
-            <div className="border-b border-slate-100 px-5 py-6">
-              <div className="flex items-center gap-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-100 text-lg font-bold text-violet-700">
+            <div className="relative overflow-hidden border-b border-slate-100 bg-gradient-to-br from-white via-violet-50/45 to-indigo-50/45 px-5 py-7">
+              <div className="relative flex items-center gap-4">
+                <div className="flex h-[72px] w-[72px] items-center justify-center rounded-[24px] bg-gradient-to-br from-violet-600 to-indigo-600 text-xl font-extrabold text-white shadow-xl shadow-violet-200 ring-8 ring-white">
                   {getInitials(client.name)}
                 </div>
 
@@ -252,7 +263,7 @@ function ClientProfile() {
             {/* View */}
 
             {!editMode && (
-              <div className="grid gap-5 p-5 sm:grid-cols-2">
+              <div className="grid gap-4 p-5 sm:grid-cols-2 sm:p-6">
                 <InfoCard
                   icon={<UserRound size={16} />}
                   label="Full Name"
@@ -288,7 +299,7 @@ function ClientProfile() {
             {/* Edit Form */}
 
             {editMode && (
-              <form onSubmit={handleSave} className="space-y-5 p-5">
+              <form onSubmit={handleSave} className="space-y-6 p-5 sm:p-6">
                 <div className="grid gap-5 sm:grid-cols-2">
                   {/* Name */}
 
@@ -298,7 +309,7 @@ function ClientProfile() {
                       value={editForm.name}
                       onChange={handleChange}
                       required
-                      className="h-11 w-full rounded-xl border border-slate-200 px-4 text-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
+                      className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 text-sm font-medium text-slate-700 outline-none transition hover:border-violet-200 hover:bg-white focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100"
                     />
                   </FormField>
 
@@ -310,7 +321,7 @@ function ClientProfile() {
                       value={editForm.phone}
                       onChange={handleChange}
                       required
-                      className="h-11 w-full rounded-xl border border-slate-200 px-4 text-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
+                      className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 text-sm font-medium text-slate-700 outline-none transition hover:border-violet-200 hover:bg-white focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100"
                     />
                   </FormField>
 
@@ -325,7 +336,7 @@ function ClientProfile() {
                       required
                       min="1"
                       max="120"
-                      className="h-11 w-full rounded-xl border border-slate-200 px-4 text-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
+                      className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 text-sm font-medium text-slate-700 outline-none transition hover:border-violet-200 hover:bg-white focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100"
                     />
                   </FormField>
 
@@ -337,7 +348,7 @@ function ClientProfile() {
                       value={editForm.gender}
                       onChange={handleChange}
                       required
-                      className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
+                      className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 text-sm font-medium text-slate-700 outline-none transition hover:border-violet-200 hover:bg-white focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100"
                     >
                       <option value="Male">Male</option>
 
@@ -359,14 +370,14 @@ function ClientProfile() {
                       value={editForm.occupation}
                       onChange={handleChange}
                       required
-                      className="h-11 w-full rounded-xl border border-slate-200 px-4 text-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
+                      className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 text-sm font-medium text-slate-700 outline-none transition hover:border-violet-200 hover:bg-white focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100"
                     />
                   </FormField>
                 </div>
 
                 {/* Actions */}
 
-                <div className="flex justify-end gap-2 border-t border-slate-100 pt-5">
+                <div className="flex flex-col justify-end gap-2 border-t border-slate-100 pt-5 sm:flex-row">
                   <button
                     type="button"
                     onClick={() => {
@@ -381,7 +392,7 @@ function ClientProfile() {
                       setEditMode(false);
                     }}
                     disabled={saving}
-                    className="h-10 rounded-xl border border-slate-200 px-4 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="h-11 rounded-2xl border border-slate-200 bg-white px-5 text-xs font-bold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     Cancel
                   </button>
@@ -389,7 +400,7 @@ function ClientProfile() {
                   <button
                     type="submit"
                     disabled={saving}
-                    className="inline-flex h-10 items-center gap-2 rounded-xl bg-violet-600 px-4 text-xs font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 text-xs font-bold text-white shadow-lg shadow-violet-200 transition hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <Save size={14} />
 
@@ -411,14 +422,14 @@ function ClientProfile() {
 
 function InfoCard({ icon, label, value }) {
   return (
-    <div className="rounded-xl bg-slate-50 p-4">
+    <div className="group rounded-2xl border border-slate-100 bg-gradient-to-br from-slate-50/80 to-white p-4.5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-violet-100 hover:shadow-md">
       <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-violet-600 shadow-sm">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 bg-white text-violet-700 shadow-sm transition group-hover:scale-[1.03]">
           {icon}
         </div>
 
         <div className="min-w-0">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+          <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-400">
             {label}
           </p>
 

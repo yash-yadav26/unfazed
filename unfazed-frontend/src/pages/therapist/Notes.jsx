@@ -218,6 +218,18 @@ function Notes() {
   );
 
   /* =========================================================
+     NOTE CREATION GUIDE STATE
+  ========================================================= */
+
+  const currentGuideStep = isEditorOpen
+    ? 3
+    : selectedSession
+      ? 3
+      : selectedClient
+        ? 2
+        : 1;
+
+  /* =========================================================
      FETCH NOTES FOR SELECTED SESSION
      ---------------------------------------------------------
      GET /api/notes/session/:sessionId
@@ -496,15 +508,15 @@ function Notes() {
   }, [notes, selectedSessionId, typeFilter]);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="relative min-h-screen overflow-hidden bg-[#f7f8fc] text-slate-900">
       {/* =====================================================
           HEADER
       ====================================================== */}
 
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
+      <header className="sticky top-0 z-40 border-b border-white/70 bg-white/80 backdrop-blur-2xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
           <Link to="/therapist/dashboard" className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-600 text-white">
+            <div className="flex h-11 w-11 items-center justify-center rounded-[15px] bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 text-white shadow-xl shadow-violet-200/70 transition duration-300 hover:-translate-y-0.5">
               <HeartHandshake size={19} />
             </div>
 
@@ -519,7 +531,7 @@ function Notes() {
 
           <Link
             to="/therapist/dashboard"
-            className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition hover:text-violet-600"
+            className="group inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/85 px-4 py-2.5 text-xs font-bold text-slate-500 shadow-sm backdrop-blur-sm transition duration-200 hover:-translate-y-0.5 hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700 hover:shadow-md"
           >
             <ArrowLeft size={14} />
             Back to Dashboard
@@ -527,11 +539,15 @@ function Notes() {
         </div>
       </header>
 
+      <div className="pointer-events-none fixed -left-36 top-20 h-96 w-96 rounded-full bg-violet-200/25 blur-3xl" />
+      <div className="pointer-events-none fixed -right-28 top-24 h-[420px] w-[420px] rounded-full bg-indigo-200/20 blur-3xl" />
+      <div className="pointer-events-none fixed bottom-0 left-[36%] h-80 w-80 rounded-full bg-fuchsia-100/20 blur-3xl" />
+
       {/* =====================================================
           MAIN
       ====================================================== */}
 
-      <main className="px-5 py-7 sm:px-8 lg:px-10">
+      <main className="relative px-5 py-8 sm:px-8 lg:px-10 lg:py-10">
         <div className="mx-auto max-w-7xl">
           {/* =================================================
               PAGE HEADER
@@ -539,17 +555,20 @@ function Notes() {
 
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-violet-600">
-                Clinical Documentation
-              </p>
+              <div className="inline-flex items-center gap-2 rounded-full border border-violet-200/80 bg-white/85 px-3 py-1.5 shadow-sm backdrop-blur-sm">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-violet-700">
+                  Clinical Documentation
+                </span>
+              </div>
 
-              <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+              <h1 className="mt-4 text-3xl font-extrabold tracking-[-0.04em] text-slate-950 sm:text-4xl lg:text-[42px]">
                 Session Notes
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                Find a client, select their session, and manage the notes for
-                that specific session.
+                Follow the simple 3-step flow below: choose a client, pick a
+                session, then add and save the note.
               </p>
             </div>
 
@@ -557,12 +576,80 @@ function Notes() {
               type="button"
               onClick={handleOpenCreate}
               disabled={!selectedSession || savingNote}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 text-xs font-semibold text-white shadow-lg shadow-violet-200 transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 text-xs font-bold text-white shadow-lg shadow-violet-200 transition hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Plus size={16} />
               New Note
             </button>
           </div>
+
+          {!selectedSession && (
+            <div className="mt-3 flex justify-end">
+              <p className="rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-[10px] font-semibold text-slate-500 shadow-sm">
+                {!selectedClient
+                  ? "Start by selecting a client below."
+                  : "Great — now select one of their sessions."}
+              </p>
+            </div>
+          )}
+
+          {/* =================================================
+              QUICK START GUIDE
+          ================================================== */}
+
+          <section className="mt-6 overflow-hidden rounded-[26px] border border-violet-200/80 bg-gradient-to-br from-violet-50 via-white to-indigo-50/70 p-5 shadow-[0_18px_55px_-35px_rgba(124,58,237,0.35)] sm:p-6">
+            <div className="flex flex-col gap-5">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white/80 px-2.5 py-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
+                    <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-violet-700">
+                      Quick start
+                    </span>
+                  </div>
+
+                  <h2 className="mt-2 text-base font-extrabold tracking-tight text-slate-900">
+                    Create a session note in 3 simple steps
+                  </h2>
+
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    New here? Just follow the flow from left to right. Nothing
+                    needs to be set up before you start.
+                  </p>
+                </div>
+
+                <div className="rounded-full border border-violet-200 bg-white/80 px-3 py-1.5 text-[10px] font-bold text-violet-700 shadow-sm">
+                  Step {currentGuideStep} of 3
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-3">
+                <GuideStep
+                  number="01"
+                  title="Choose a client"
+                  description="Click the client you want to document."
+                  active={!selectedClient}
+                  completed={Boolean(selectedClient)}
+                />
+
+                <GuideStep
+                  number="02"
+                  title="Select a session"
+                  description="Pick the exact session where the note belongs."
+                  active={Boolean(selectedClient) && !selectedSession}
+                  completed={Boolean(selectedSession)}
+                />
+
+                <GuideStep
+                  number="03"
+                  title="Add & save note"
+                  description="Click Add Note, choose privacy, write, then save."
+                  active={Boolean(selectedSession)}
+                  completed={sessionNotes.length > 0}
+                />
+              </div>
+            </div>
+          </section>
 
           {/* =================================================
               PRIVACY INFO
@@ -571,14 +658,14 @@ function Notes() {
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             <PrivacyCard
               type="Private"
-              description="Only you can access these notes."
+              description="Use this for your internal observations, assessments, and therapist-only documentation."
               icon={<ShieldCheck size={18} />}
               variant="private"
             />
 
             <PrivacyCard
               type="Shared"
-              description="These notes can be shown to the selected client."
+              description="Use this for summaries, takeaways, or notes you intentionally want the selected client to see."
               icon={<UserRound size={18} />}
               variant="shared"
             />
@@ -588,21 +675,27 @@ function Notes() {
               CLIENT SEARCH + CLIENT LIST
           ================================================== */}
 
-          <section className="mt-6 rounded-2xl border border-slate-200 bg-white">
-            <div className="border-b border-slate-100 p-5">
+          <section className="mt-7 overflow-hidden rounded-[28px] border border-slate-200/80 bg-white/95 shadow-[0_22px_70px_-38px_rgba(15,23,42,0.26)] backdrop-blur-sm">
+            <div className="border-b border-slate-100 bg-gradient-to-r from-white via-violet-50/15 to-indigo-50/25 p-5">
               <div className="flex items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
                   <UserRound size={16} />
                 </div>
 
                 <div>
-                  <h2 className="text-sm font-bold text-slate-900">
-                    Select Client
-                  </h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-bold text-slate-900">
+                      Select Client
+                    </h2>
+
+                    <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[9px] font-extrabold text-violet-700">
+                      STEP 1
+                    </span>
+                  </div>
 
                   <p className="mt-0.5 text-[11px] text-slate-400">
-                    Only clients who have booked a session with you are shown
-                    here.
+                    Start here — click a client to unlock their sessions.
+                    Only clients who have booked with you are shown.
                   </p>
                 </div>
               </div>
@@ -627,7 +720,7 @@ function Notes() {
                     setNotes([]);
                   }}
                   placeholder="Search client by name, email or phone..."
-                  className="h-11 w-full rounded-xl border border-slate-200 pl-11 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
+                  className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/60 pl-11 pr-4 text-sm font-medium text-slate-700 outline-none transition duration-200 placeholder:text-slate-400 hover:border-violet-200 hover:bg-white focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100"
                 />
               </div>
             </div>
@@ -683,17 +776,17 @@ function Notes() {
                       key={client?._id}
                       type="button"
                       onClick={() => handleSelectClient(client?._id)}
-                      className={`rounded-xl border p-4 text-left transition ${
+                      className={`group rounded-2xl border p-4 text-left shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md ${
                         isSelected
-                          ? "border-violet-300 bg-violet-50"
-                          : "border-slate-200 bg-white hover:border-violet-200 hover:bg-violet-50/40"
+                          ? "border-violet-300 bg-gradient-to-br from-violet-50 to-indigo-50 shadow-md shadow-violet-100"
+                          : "border-slate-200/90 bg-white hover:border-violet-200 hover:bg-violet-50/40"
                       }`}
                     >
                       <div className="flex items-center gap-3">
                         {/* Avatar */}
 
                         <div
-                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-xs font-extrabold shadow-sm transition ${
                             isSelected
                               ? "bg-violet-600 text-white"
                               : "bg-violet-100 text-violet-700"
@@ -729,17 +822,25 @@ function Notes() {
                       </div>
 
                       <div className="mt-3 flex items-center justify-between">
-                        <span className="text-[10px] font-medium text-slate-400">
-                          {clientSessionCount}{" "}
-                          {clientSessionCount === 1 ? "session" : "sessions"}
+                        <span className="text-[10px] font-semibold text-slate-400">
+                          {isSelected
+                            ? "Client selected"
+                            : "Click to select"}
                         </span>
 
-                        <ChevronDown
-                          size={14}
-                          className={`text-slate-300 transition ${
-                            isSelected ? "rotate-180 text-violet-500" : ""
-                          }`}
-                        />
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-medium text-slate-400">
+                            {clientSessionCount}{" "}
+                            {clientSessionCount === 1 ? "session" : "sessions"}
+                          </span>
+
+                          <ChevronDown
+                            size={14}
+                            className={`text-slate-300 transition ${
+                              isSelected ? "rotate-180 text-violet-500" : ""
+                            }`}
+                          />
+                        </div>
                       </div>
                     </button>
                   );
@@ -774,21 +875,28 @@ function Notes() {
           ================================================== */}
 
           {selectedClient && (
-            <section className="mt-6 rounded-2xl border border-slate-200 bg-white">
-              <div className="border-b border-slate-100 p-5">
+            <section className="mt-7 overflow-hidden rounded-[28px] border border-slate-200/80 bg-white/95 shadow-[0_22px_70px_-38px_rgba(15,23,42,0.26)] backdrop-blur-sm">
+              <div className="border-b border-slate-100 bg-gradient-to-r from-white via-violet-50/15 to-indigo-50/25 p-5">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-indigo-100 text-violet-700 shadow-sm ring-1 ring-violet-100">
                       <FileText size={19} />
                     </div>
 
                     <div>
-                      <h2 className="text-sm font-bold text-slate-900">
-                        {selectedClient.name}'s Sessions
-                      </h2>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-sm font-bold text-slate-900">
+                          {selectedClient.name}'s Sessions
+                        </h2>
+
+                        <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[9px] font-extrabold text-indigo-700">
+                          STEP 2
+                        </span>
+                      </div>
 
                       <p className="mt-1 text-[11px] text-slate-400">
-                        Select a session to view or create notes.
+                        Now choose the exact session you want to document.
+                        Selecting one will open the note area below.
                       </p>
                     </div>
                   </div>
@@ -806,7 +914,7 @@ function Notes() {
                       value={sessionSearch}
                       onChange={(e) => setSessionSearch(e.target.value)}
                       placeholder="Search session..."
-                      className="h-10 w-full rounded-xl border border-slate-200 pl-10 pr-4 text-xs outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
+                      className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/60 pl-10 pr-4 text-xs font-medium text-slate-700 outline-none transition hover:border-violet-200 hover:bg-white focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100"
                     />
                   </div>
                 </div>
@@ -825,10 +933,10 @@ function Notes() {
                         key={session.id}
                         type="button"
                         onClick={() => handleSelectSession(session.id)}
-                        className={`rounded-xl border p-4 text-left transition ${
+                        className={`group rounded-2xl border p-4.5 text-left shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md ${
                           isSelected
-                            ? "border-violet-300 bg-violet-50"
-                            : "border-slate-200 bg-white hover:border-violet-200 hover:bg-violet-50/40"
+                            ? "border-violet-300 bg-gradient-to-br from-violet-50 to-indigo-50 shadow-md shadow-violet-100"
+                            : "border-slate-200/90 bg-white hover:border-violet-200 hover:bg-violet-50/40"
                         }`}
                       >
                         <div className="flex items-start justify-between gap-3">
@@ -847,11 +955,21 @@ function Notes() {
                                 : "Therapy Session"}
                             </p>
 
-                            <div className="mt-2 flex flex-wrap gap-2">
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                              {isSelected ? (
+                                <span className="rounded-full bg-violet-100 px-2.5 py-1.5 text-[9px] font-bold text-violet-700">
+                                  Session selected
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-semibold text-violet-600">
+                                  Click to use this session
+                                </span>
+                              )}
+
                               <SessionStatus status={session.status} />
 
                               {session.paymentStatus && (
-                                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[9px] font-bold text-slate-500">
+                                <span className="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1.5 text-[9px] font-bold text-slate-600 shadow-sm">
                                   Payment: {formatStatus(session.paymentStatus)}
                                 </span>
                               )}
@@ -890,23 +1008,34 @@ function Notes() {
           ================================================== */}
 
           {selectedSession && (
-            <section className="mt-6 rounded-2xl border border-slate-200 bg-white">
+            <section className="mt-7 overflow-hidden rounded-[28px] border border-slate-200/80 bg-white/95 shadow-[0_22px_70px_-38px_rgba(15,23,42,0.26)] backdrop-blur-sm">
               {/* Session Header */}
 
               <div className="flex flex-col gap-4 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-indigo-100 text-violet-700 shadow-sm ring-1 ring-violet-100">
                     <FileText size={19} />
                   </div>
 
                   <div>
-                    <h2 className="text-base font-bold text-slate-900">
-                      {selectedSession.clientName}
-                    </h2>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-base font-bold text-slate-900">
+                        {selectedSession.clientName}
+                      </h2>
+
+                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-extrabold text-emerald-700">
+                        STEP 3
+                      </span>
+                    </div>
 
                     <p className="mt-1 text-xs text-slate-400">
                       {selectedSession.displayDate} •{" "}
                       {selectedSession.displayTime}
+                    </p>
+
+                    <p className="mt-1 text-[10px] font-semibold text-violet-600">
+                      Click <span className="font-extrabold">Add Note</span> to
+                      start writing for this session.
                     </p>
                   </div>
                 </div>
@@ -917,7 +1046,7 @@ function Notes() {
                   <select
                     value={typeFilter}
                     onChange={(e) => setTypeFilter(e.target.value)}
-                    className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-600 outline-none focus:border-violet-500"
+                    className="h-10 rounded-xl border border-slate-200 bg-white px-3.5 text-xs font-semibold text-slate-600 shadow-sm outline-none transition hover:border-violet-200 focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
                   >
                     <option value="ALL">All Notes</option>
 
@@ -930,7 +1059,7 @@ function Notes() {
                     type="button"
                     onClick={handleOpenCreate}
                     disabled={savingNote}
-                    className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 text-xs font-semibold text-violet-700 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-violet-200 bg-gradient-to-r from-violet-50 to-indigo-50 px-3.5 text-xs font-bold text-violet-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Plus size={14} />
                     Add Note
@@ -980,23 +1109,30 @@ function Notes() {
                     ))
                   ) : (
                     <div className="px-5 py-14 text-center">
-                      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
+                      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-indigo-100 text-violet-500 shadow-sm ring-8 ring-violet-50">
                         <FileText size={21} />
                       </div>
 
-                      <p className="mt-4 text-sm font-semibold text-slate-700">
-                        No notes for this session
+                      <span className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-violet-50 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[0.12em] text-violet-700">
+                        Ready to document
+                      </span>
+
+                      <p className="mt-3 text-base font-extrabold tracking-tight text-slate-800">
+                        No notes for this session yet
                       </p>
 
-                      <p className="mt-1 text-xs text-slate-400">
-                        Create a note to document this session.
+                      <p className="mx-auto mt-1 max-w-md text-xs leading-5 text-slate-400">
+                        This is where your session notes will appear. Start by
+                        clicking <span className="font-bold text-violet-600">Add Note</span>,
+                        then choose whether the note is private or shared and
+                        write your session summary.
                       </p>
 
                       <button
                         type="button"
                         onClick={handleOpenCreate}
                         disabled={savingNote}
-                        className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2.5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                        className="mt-4 inline-flex items-center gap-1.5 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-violet-200 transition hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <Plus size={14} />
                         Create Note
@@ -1023,11 +1159,11 @@ function Notes() {
       ====================================================== */}
 
       {isEditorOpen && selectedSession && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-5 py-6 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-5 py-6 backdrop-blur-md">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[30px] border border-white/70 bg-white shadow-[0_30px_100px_-30px_rgba(15,23,42,0.45)]">
             {/* Modal Header */}
 
-            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-6">
+            <div className="flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-white via-violet-50/20 to-indigo-50/25 px-5 py-5 sm:px-6">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wide text-violet-600">
                   {editingNote ? "Edit Note" : "New Note"}
@@ -1052,13 +1188,33 @@ function Notes() {
                   setEditingNote(null);
                   setIsEditorOpen(false);
                 }}
-                className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                className="rounded-xl border border-slate-200 bg-white p-2 text-slate-400 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
               >
                 <X size={18} />
               </button>
             </div>
 
             {/* Editor */}
+
+            <div className="border-b border-violet-100 bg-gradient-to-r from-violet-50/80 to-indigo-50/70 px-5 py-3.5 sm:px-6">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-violet-600 shadow-sm ring-1 ring-violet-100">
+                  <ShieldCheck size={15} />
+                </div>
+
+                <div>
+                  <p className="text-[11px] font-extrabold text-slate-800">
+                    One important choice before you save
+                  </p>
+
+                  <p className="mt-0.5 text-[10px] leading-5 text-slate-500">
+                    Choose <span className="font-bold text-amber-600">Private</span>
+                    for therapist-only documentation, or <span className="font-bold text-emerald-600">Shared</span>
+                    when you want the selected client to be able to see the note.
+                  </p>
+                </div>
+              </div>
+            </div>
 
             <div className="p-5 sm:p-6">
               <NoteEditor
@@ -1088,6 +1244,60 @@ function Notes() {
 }
 
 /* =========================================================
+   GUIDED FLOW STEP
+========================================================= */
+
+function GuideStep({ number, title, description, active, completed }) {
+  return (
+    <div
+      className={`relative rounded-2xl border p-4 transition ${
+        completed
+          ? "border-emerald-200 bg-emerald-50/80"
+          : active
+            ? "border-violet-300 bg-white shadow-md shadow-violet-100/60"
+            : "border-slate-200 bg-white/70"
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-[10px] font-extrabold ${
+            completed
+              ? "bg-emerald-500 text-white"
+              : active
+                ? "bg-violet-600 text-white shadow-lg shadow-violet-200"
+                : "bg-slate-100 text-slate-400"
+          }`}
+        >
+          {completed ? <CheckCircle2 size={17} /> : number}
+        </div>
+
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-extrabold text-slate-800">{title}</p>
+
+            {active && !completed && (
+              <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-[0.12em] text-violet-700">
+                Start here
+              </span>
+            )}
+
+            {completed && (
+              <span className="rounded-full bg-white/80 px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-[0.12em] text-emerald-700">
+                Done
+              </span>
+            )}
+          </div>
+
+          <p className="mt-1 text-[10px] leading-5 text-slate-500">
+            {description}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
    PRIVACY CARD
 ========================================================= */
 
@@ -1096,18 +1306,18 @@ function PrivacyCard({ type, description, icon, variant }) {
 
   return (
     <div
-      className={`rounded-2xl border p-4 ${
+      className={`rounded-[24px] border p-4.5 shadow-[0_16px_45px_-30px_rgba(15,23,42,0.20)] transition duration-200 hover:-translate-y-0.5 hover:shadow-md ${
         isPrivate
-          ? "border-amber-100 bg-amber-50/70"
-          : "border-emerald-100 bg-emerald-50/70"
+          ? "border-amber-100 bg-gradient-to-r from-amber-50 via-white to-white"
+          : "border-emerald-100 bg-gradient-to-r from-emerald-50 via-white to-white"
       }`}
     >
       <div className="flex items-start gap-3">
         <div
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
             isPrivate
-              ? "bg-amber-100 text-amber-600"
-              : "bg-emerald-100 text-emerald-600"
+              ? "bg-amber-100 text-amber-700 shadow-sm"
+              : "bg-emerald-100 text-emerald-700 shadow-sm"
           }`}
         >
           {icon}
@@ -1131,17 +1341,17 @@ function NoteCard({ note, onEdit, onDelete, deleting }) {
   const isPrivate = note?.type === "PRIVATE";
 
   return (
-    <div className="p-5">
-      <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
+    <div className="border-b border-slate-50 p-5 last:border-b-0">
+      <div className="group rounded-2xl border border-slate-100 bg-gradient-to-br from-slate-50/80 via-white to-white p-4.5 shadow-sm transition duration-200 hover:border-violet-100 hover:shadow-md">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           {/* Left */}
 
           <div className="flex items-center gap-3">
             <div
-              className={`flex h-9 w-9 items-center justify-center rounded-lg ${
+              className={`flex h-10 w-10 items-center justify-center rounded-xl shadow-sm ${
                 isPrivate
-                  ? "bg-amber-50 text-amber-600"
-                  : "bg-emerald-50 text-emerald-600"
+                  ? "bg-amber-50 text-amber-700"
+                  : "bg-emerald-50 text-emerald-700"
               }`}
             >
               {isPrivate ? <ShieldCheck size={16} /> : <UserRound size={16} />}
@@ -1149,10 +1359,10 @@ function NoteCard({ note, onEdit, onDelete, deleting }) {
 
             <div>
               <span
-                className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${
+                className={`rounded-full border px-2.5 py-1.5 text-[10px] font-bold shadow-sm ${
                   isPrivate
-                    ? "bg-amber-50 text-amber-600"
-                    : "bg-emerald-50 text-emerald-600"
+                    ? "border-amber-100 bg-amber-50 text-amber-700"
+                    : "border-emerald-100 bg-emerald-50 text-emerald-700"
                 }`}
               >
                 {isPrivate ? "Private" : "Shared"}
@@ -1172,7 +1382,7 @@ function NoteCard({ note, onEdit, onDelete, deleting }) {
               type="button"
               onClick={onEdit}
               disabled={deleting}
-              className="rounded-lg p-2 text-slate-400 transition hover:bg-violet-50 hover:text-violet-600 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl border border-slate-200 bg-white p-2 text-slate-400 shadow-sm transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
               aria-label="Edit note"
             >
               <Edit3 size={15} />
@@ -1182,7 +1392,7 @@ function NoteCard({ note, onEdit, onDelete, deleting }) {
               type="button"
               onClick={onDelete}
               disabled={deleting}
-              className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl border border-slate-200 bg-white p-2 text-slate-400 shadow-sm transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
               aria-label="Delete note"
             >
               {deleting ? (
@@ -1211,21 +1421,21 @@ function NoteCard({ note, onEdit, onDelete, deleting }) {
 function SessionStatus({ status }) {
   const normalizedStatus = String(status || "").toUpperCase();
 
-  let className = "bg-slate-100 text-slate-500";
+  let className = "border border-slate-200 bg-slate-100 text-slate-500";
 
   if (normalizedStatus === "CONFIRMED") {
-    className = "bg-emerald-50 text-emerald-600";
+    className = "border border-emerald-100 bg-emerald-50 text-emerald-700";
   } else if (normalizedStatus === "PENDING") {
-    className = "bg-amber-50 text-amber-600";
+    className = "border border-amber-100 bg-amber-50 text-amber-700";
   } else if (normalizedStatus === "COMPLETED") {
-    className = "bg-violet-50 text-violet-600";
+    className = "border border-violet-100 bg-violet-50 text-violet-700";
   } else if (normalizedStatus === "CANCELLED") {
-    className = "bg-red-50 text-red-600";
+    className = "border border-red-100 bg-red-50 text-red-700";
   }
 
   return (
     <span
-      className={`rounded-full px-2.5 py-1 text-[9px] font-bold ${className}`}
+      className={`rounded-full px-2.5 py-1.5 text-[9px] font-bold shadow-sm ${className}`}
     >
       {formatStatus(status)}
     </span>

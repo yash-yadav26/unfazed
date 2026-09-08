@@ -584,19 +584,39 @@ function Schedule() {
   };
 
   // ===============================
+  // Guided Setup State
+  // ===============================
+
+  const enabledDayCount = availability.filter((day) => day.enabled).length;
+  const hasSessionSettings =
+    sessionDuration !== "" &&
+    bufferTime !== "" &&
+    sessionPrice !== "";
+
+  const hasWeeklySetup = enabledDayCount > 0;
+
+  const guideStep = showOverrideForm
+    ? 3
+    : hasSessionSettings && hasWeeklySetup
+      ? 3
+      : hasSessionSettings
+        ? 2
+        : 1;
+
+  // ===============================
   // Render
   // ===============================
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="relative min-h-screen overflow-hidden bg-[#f7f8fc] text-slate-900">
       {/* =====================================================
           HEADER
       ====================================================== */}
 
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
           <Link to="/therapist/dashboard" className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-600 text-white">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-200">
               <HeartHandshake size={19} />
             </div>
 
@@ -611,7 +631,7 @@ function Schedule() {
 
           <Link
             to="/therapist/dashboard"
-            className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition hover:text-violet-600"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-500 shadow-sm transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
           >
             <ArrowLeft size={14} />
             Back to Dashboard
@@ -619,40 +639,102 @@ function Schedule() {
         </div>
       </header>
 
+      <div className="pointer-events-none fixed -left-32 top-24 h-80 w-80 rounded-full bg-violet-200/20 blur-3xl" />
+      <div className="pointer-events-none fixed -right-28 top-16 h-96 w-96 rounded-full bg-indigo-200/20 blur-3xl" />
+      <div className="pointer-events-none fixed bottom-0 left-1/3 h-72 w-72 rounded-full bg-fuchsia-100/15 blur-3xl" />
+
       {/* =====================================================
           MAIN
       ====================================================== */}
 
-      <main className="px-5 py-7 sm:px-8 lg:px-10">
+      <main className="relative px-5 py-8 sm:px-8 lg:px-10 lg:py-10">
         <div className="mx-auto max-w-6xl">
           {/* ===============================
               HEADING
           =============================== */}
 
           <div>
-            <div className="flex items-center gap-2 text-violet-600">
-              <CalendarDays size={18} />
-
-              <span className="text-xs font-bold uppercase tracking-wide">
+            <div className="inline-flex items-center gap-2 rounded-full border border-violet-200/80 bg-white/85 px-3 py-1.5 shadow-sm backdrop-blur-sm">
+              <CalendarDays size={12} className="text-violet-600" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-violet-700">
                 Scheduling
               </span>
             </div>
 
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+            <h1 className="mt-4 text-3xl font-extrabold tracking-[-0.04em] text-slate-950 sm:text-4xl">
               Manage your availability
             </h1>
 
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-              Set the days and times when clients can book sessions with you.
+              Set up your booking schedule in three simple steps so clients
+              always see the correct days, times, duration, and price.
             </p>
           </div>
+
+          {/* ===============================
+              QUICK START GUIDE
+          =============================== */}
+
+          <section className="mt-6 overflow-hidden rounded-[28px] border border-violet-200/80 bg-gradient-to-br from-violet-50 via-white to-indigo-50/70 p-5 shadow-[0_18px_55px_-35px_rgba(124,58,237,0.35)] sm:p-6">
+            <div className="flex flex-col gap-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white/85 px-2.5 py-1 shadow-sm">
+                    <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
+                    <span className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-violet-700">
+                      Quick setup
+                    </span>
+                  </div>
+
+                  <h2 className="mt-2 text-base font-extrabold tracking-tight text-slate-900 sm:text-lg">
+                    Set your availability in 3 simple steps
+                  </h2>
+
+                  <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">
+                    New here? Start from the top and move down. You can change
+                    these settings anytime.
+                  </p>
+                </div>
+
+                <span className="self-start rounded-full border border-violet-200 bg-white/85 px-3 py-1.5 text-[10px] font-extrabold text-violet-700 shadow-sm">
+                  Step {guideStep} of 3
+                </span>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-3">
+                <GuideStep
+                  number="01"
+                  title="Set session basics"
+                  description="Choose session duration, buffer time, and your standard price."
+                  active={guideStep === 1}
+                  completed={hasSessionSettings}
+                />
+
+                <GuideStep
+                  number="02"
+                  title="Choose weekly hours"
+                  description="Turn days on and set the hours when clients can book you."
+                  active={guideStep === 2}
+                  completed={hasWeeklySetup}
+                />
+
+                <GuideStep
+                  number="03"
+                  title="Add exceptions"
+                  description="Block a date or create custom hours for a specific day."
+                  active={guideStep === 3}
+                  completed={overrides.length > 0}
+                />
+              </div>
+            </div>
+          </section>
 
           {/* ===============================
               ERROR
           =============================== */}
 
           {error && (
-            <div className="mt-5 rounded-xl border border-red-100 bg-red-50 px-4 py-3">
+            <div className="mt-5 rounded-2xl border border-red-100 bg-gradient-to-r from-red-50 to-white px-4 py-3.5 shadow-sm">
               <p className="text-xs font-medium text-red-600">{error}</p>
             </div>
           )}
@@ -662,7 +744,7 @@ function Schedule() {
           =============================== */}
 
           {success && (
-            <div className="mt-5 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+            <div className="mt-5 rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50 to-white px-4 py-3.5 shadow-sm">
               <p className="text-xs font-medium text-emerald-700">{success}</p>
             </div>
           )}
@@ -672,7 +754,7 @@ function Schedule() {
           =============================== */}
 
           {loading ? (
-            <div className="mt-7 flex min-h-[300px] items-center justify-center rounded-2xl border border-slate-200 bg-white">
+            <div className="mt-8 flex min-h-[320px] items-center justify-center rounded-[28px] border border-slate-200/80 bg-white shadow-[0_20px_60px_-35px_rgba(15,23,42,0.24)]">
               <div className="flex items-center gap-3 text-sm text-slate-500">
                 <span className="h-5 w-5 animate-spin rounded-full border-2 border-violet-200 border-t-violet-600" />
                 Loading availability...
@@ -684,19 +766,26 @@ function Schedule() {
                   SESSION SETTINGS
               ================================================== */}
 
-              <section className="mt-7 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+              <section className="relative mt-8 overflow-hidden rounded-[28px] border border-violet-100/80 bg-white p-5 shadow-[0_22px_65px_-35px_rgba(99,102,241,0.26)] sm:p-6">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-indigo-100 text-violet-700 shadow-sm ring-1 ring-violet-100">
                     <Clock3 size={19} />
                   </div>
 
                   <div>
-                    <h2 className="text-base font-bold text-slate-900">
-                      Session Settings
-                    </h2>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-base font-bold text-slate-900">
+                        Session Settings
+                      </h2>
 
-                    <p className="mt-1 text-xs text-slate-400">
-                      Set your session duration, buffer time, and session price.
+                      <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[0.12em] text-violet-700">
+                        Step 1
+                      </span>
+                    </div>
+
+                    <p className="mt-1 text-xs leading-5 text-slate-400">
+                      Start here. This becomes your default session setup for
+                      the days you make available.
                     </p>
                   </div>
                 </div>
@@ -721,11 +810,11 @@ function Schedule() {
                       value={sessionDuration}
                       onChange={(e) => setSessionDuration(e.target.value)}
                       placeholder="e.g. 30, 45, 60"
-                      className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-700 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
+                      className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 text-sm font-semibold text-slate-700 outline-none transition hover:border-violet-200 hover:bg-white focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100"
                     />
 
-                    <p className="mt-2 text-[11px] text-slate-400">
-                      Enter any whole number from 1 to 240 minutes.
+                    <p className="mt-2 text-[11px] leading-5 text-slate-400">
+                      How long one bookable session should last.
                     </p>
                   </div>
 
@@ -748,11 +837,11 @@ function Schedule() {
                       value={bufferTime}
                       onChange={(e) => setBufferTime(e.target.value)}
                       placeholder="e.g. 0, 5, 10, 15"
-                      className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-700 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
+                      className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 text-sm font-semibold text-slate-700 outline-none transition hover:border-violet-200 hover:bg-white focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100"
                     />
 
-                    <p className="mt-2 text-[11px] text-slate-400">
-                      Enter any whole number from 0 to 120 minutes.
+                    <p className="mt-2 text-[11px] leading-5 text-slate-400">
+                      Leave breathing room between consecutive sessions.
                     </p>
                   </div>
 
@@ -774,13 +863,20 @@ function Schedule() {
                       value={sessionPrice}
                       onChange={(e) => setSessionPrice(e.target.value)}
                       placeholder="Enter session price"
-                      className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-700 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
+                      className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 text-sm font-semibold text-slate-700 outline-none transition hover:border-violet-200 hover:bg-white focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100"
                     />
 
-                    <p className="mt-2 text-[11px] text-slate-400">
-                      Price charged for one session of the selected duration.
+                    <p className="mt-2 text-[11px] leading-5 text-slate-400">
+                      Your standard price for one session of this duration.
                     </p>
                   </div>
+                </div>
+                <div className="mt-5 flex items-center gap-2 rounded-2xl border border-violet-100 bg-violet-50/70 px-4 py-3">
+                  <Check size={14} className="shrink-0 text-violet-600" />
+                  <p className="text-[10px] font-semibold leading-5 text-violet-700">
+                    Next: turn on the days you work and set the hours clients
+                    can book.
+                  </p>
                 </div>
               </section>
 
@@ -788,20 +884,30 @@ function Schedule() {
                   WEEKLY AVAILABILITY
               ================================================== */}
 
-              <section className="mt-6 rounded-2xl border border-slate-200 bg-white">
-                <div className="border-b border-slate-100 px-5 py-5 sm:px-6">
-                  <h2 className="text-base font-bold text-slate-900">
-                    Weekly Availability
-                  </h2>
+              <section className="mt-7 overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_20px_60px_-35px_rgba(15,23,42,0.22)]">
+                <div className="border-b border-slate-100 bg-gradient-to-r from-white via-violet-50/20 to-indigo-50/30 px-5 py-5 sm:px-6">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-base font-bold text-slate-900">
+                      Weekly Availability
+                    </h2>
 
-                  <p className="mt-1 text-xs text-slate-400">
-                    Set your regular working hours for each day.
+                    <span className="rounded-full bg-indigo-100 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[0.12em] text-indigo-700">
+                      Step 2
+                    </span>
+                  </div>
+
+                  <p className="mt-1 text-xs leading-5 text-slate-400">
+                    Turn a day on, then choose its start and end time. Turn it
+                    off for your regular day off.
                   </p>
                 </div>
 
                 <div className="divide-y divide-slate-100">
                   {availability.map((day) => (
-                    <div key={day.day} className="px-5 py-5 sm:px-6">
+                    <div
+                      key={day.day}
+                      className="px-5 py-5 transition duration-200 hover:bg-violet-50/25 sm:px-6"
+                    >
                       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                         {/* Day */}
 
@@ -809,8 +915,10 @@ function Schedule() {
                           <button
                             type="button"
                             onClick={() => toggleDay(day.day)}
-                            className={`relative h-6 w-11 rounded-full transition ${
-                              day.enabled ? "bg-violet-600" : "bg-slate-200"
+                            className={`relative h-6 w-11 rounded-full shadow-inner transition ${
+                              day.enabled
+                                ? "bg-gradient-to-r from-violet-600 to-indigo-600"
+                                : "bg-slate-200"
                             }`}
                             aria-label={`Toggle ${day.day}`}
                           >
@@ -827,7 +935,9 @@ function Schedule() {
                             </p>
 
                             <p className="text-[11px] text-slate-400">
-                              {day.enabled ? "Available" : "Day off"}
+                              {day.enabled
+                                ? "Clients can book in this time range"
+                                : "Click the switch to make this day bookable"}
                             </p>
                           </div>
                         </div>
@@ -851,7 +961,7 @@ function Schedule() {
                                     e.target.value,
                                   )
                                 }
-                                className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
+                                className="h-11 rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 text-sm font-semibold text-slate-700 outline-none transition hover:border-violet-200 hover:bg-white focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100"
                               />
                             </div>
 
@@ -870,9 +980,13 @@ function Schedule() {
                                 onChange={(e) =>
                                   updateTime(day.day, "endTime", e.target.value)
                                 }
-                                className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
+                                className="h-11 rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 text-sm font-semibold text-slate-700 outline-none transition hover:border-violet-200 hover:bg-white focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100"
                               />
                             </div>
+
+                            <p className="text-[10px] leading-5 text-slate-400 sm:ml-2">
+                              Clients will only see slots inside these hours.
+                            </p>
                           </div>
                         ) : (
                           <div className="flex-1">
@@ -885,28 +999,49 @@ function Schedule() {
                     </div>
                   ))}
                 </div>
+
+                <div className="border-t border-slate-100 bg-slate-50/60 px-5 py-3.5 sm:px-6">
+                  <p className="text-[10px] font-medium leading-5 text-slate-500">
+                    Tip: this is your normal weekly routine. Use One-time
+                    Changes only when a specific date needs a different schedule.
+                  </p>
+                </div>
               </section>
 
               {/* =================================================
                   ONE-TIME CHANGES
               ================================================== */}
 
-              <section className="mt-6 rounded-2xl border border-slate-200 bg-white">
+              <section className="mt-7 overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_20px_60px_-35px_rgba(15,23,42,0.22)]">
                 <div className="flex flex-col gap-4 border-b border-slate-100 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                   <div>
-                    <h2 className="text-base font-bold text-slate-900">
-                      One-time Changes
-                    </h2>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-base font-bold text-slate-900">
+                        One-time Changes
+                      </h2>
 
-                    <p className="mt-1 text-xs text-slate-400">
-                      Add blocked dates or temporary schedule changes.
+                      <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[0.12em] text-emerald-700">
+                        Step 3 · Optional
+                      </span>
+                    </div>
+
+                    <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-400">
+                      Your weekly schedule stays the same unless you add an
+                      exception here. Use this for holidays, blocked dates, or
+                      a different schedule on one specific day.
                     </p>
                   </div>
+
+                  {!showOverrideForm && (
+                    <p className="text-[10px] font-semibold text-slate-400 sm:ml-auto">
+                      Need a date-specific change? Click Add Change.
+                    </p>
+                  )}
 
                   <button
                     type="button"
                     onClick={() => setShowOverrideForm(!showOverrideForm)}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 text-xs font-semibold text-white shadow-md shadow-violet-100 transition hover:bg-violet-700"
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 text-xs font-bold text-white shadow-lg shadow-violet-200 transition hover:-translate-y-0.5 hover:shadow-xl"
                   >
                     {showOverrideForm ? <X size={16} /> : <Plus size={16} />}
 
@@ -921,7 +1056,7 @@ function Schedule() {
                 {showOverrideForm && (
                   <form
                     onSubmit={addOverride}
-                    className="border-b border-slate-100 bg-slate-50 p-5 sm:p-6"
+                    className="border-b border-slate-100 bg-gradient-to-br from-slate-50/80 via-white to-violet-50/30 p-5 sm:p-6"
                   >
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                       {/* Date */}
@@ -942,7 +1077,7 @@ function Schedule() {
                           onChange={handleOverrideChange}
                           min={getTodayDate()}
                           required
-                          className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
+                          className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-700 outline-none transition hover:border-violet-200 focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
                         />
                       </div>
 
@@ -961,7 +1096,7 @@ function Schedule() {
                           name="type"
                           value={overrideForm.type}
                           onChange={handleOverrideChange}
-                          className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
+                          className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-700 outline-none transition hover:border-violet-200 focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
                         >
                           <option value="blocked">Block Entire Day</option>
 
@@ -988,7 +1123,7 @@ function Schedule() {
                               value={overrideForm.startTime}
                               onChange={handleOverrideChange}
                               required
-                              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
+                              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-700 outline-none transition hover:border-violet-200 focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
                             />
                           </div>
 
@@ -1007,7 +1142,7 @@ function Schedule() {
                               value={overrideForm.endTime}
                               onChange={handleOverrideChange}
                               required
-                              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
+                              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-700 outline-none transition hover:border-violet-200 focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
                             />
                           </div>
 
@@ -1030,7 +1165,7 @@ function Schedule() {
                               onChange={handleOverrideChange}
                               placeholder="e.g. 60"
                               required
-                              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
+                              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-700 outline-none transition hover:border-violet-200 focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
                             />
                           </div>
 
@@ -1053,7 +1188,7 @@ function Schedule() {
                               onChange={handleOverrideChange}
                               placeholder="e.g. 15"
                               required
-                              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
+                              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-700 outline-none transition hover:border-violet-200 focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
                             />
                           </div>
 
@@ -1075,13 +1210,21 @@ function Schedule() {
                               onChange={handleOverrideChange}
                               placeholder="Enter price"
                               required
-                              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
+                              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-700 outline-none transition hover:border-violet-200 focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
                             />
                           </div>
                         </>
                       )}
                     </div>
 
+                    <div className="mt-5 rounded-2xl border border-violet-100 bg-violet-50/60 px-4 py-3">
+                      <p className="text-[10px] font-semibold leading-5 text-violet-700">
+                        Choose <span className="font-extrabold">Block Entire Day</span>
+                        when you are unavailable. Choose <span className="font-extrabold">Custom Hours</span>
+                        when this date should have different hours, duration,
+                        buffer, or price than your normal schedule.
+                      </p>
+                    </div>
                     {/* ===============================
                         Add Change Button
                     =============================== */}
@@ -1090,7 +1233,7 @@ function Schedule() {
                       <button
                         type="submit"
                         disabled={overrideSaving}
-                        className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-900 px-4 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-xs font-bold text-white shadow-lg shadow-slate-200 transition hover:-translate-y-0.5 hover:bg-slate-900 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {overrideSaving ? (
                           <>
@@ -1114,7 +1257,7 @@ function Schedule() {
 
                 <div className="p-5 sm:p-6">
                   {overrides.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-5 py-8 text-center">
+                    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 px-5 py-10 text-center">
                       <CalendarDays
                         size={22}
                         className="mx-auto text-slate-300"
@@ -1133,7 +1276,7 @@ function Schedule() {
                       {overrides.map((item) => (
                         <div
                           key={item.id}
-                          className="flex flex-col gap-3 rounded-xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between"
+                          className="group flex flex-col gap-3 rounded-2xl border border-slate-200 bg-gradient-to-r from-white to-slate-50/60 p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
                         >
                           <div>
                             <div className="flex items-center gap-2">
@@ -1142,10 +1285,10 @@ function Schedule() {
                               </p>
 
                               <span
-                                className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
+                                className={`rounded-full border px-2.5 py-1.5 text-[10px] font-bold ${
                                   item.type === "blocked"
-                                    ? "bg-red-50 text-red-600"
-                                    : "bg-violet-50 text-violet-600"
+                                    ? "border-red-100 bg-red-50 text-red-700"
+                                    : "border-violet-100 bg-violet-50 text-violet-700"
                                 }`}
                               >
                                 {item.type === "blocked"
@@ -1172,7 +1315,7 @@ function Schedule() {
                           <button
                             type="button"
                             onClick={() => deleteOverride(item.id)}
-                            className="flex h-9 w-9 items-center justify-center self-start rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-500 sm:self-auto"
+                            className="flex h-10 w-10 items-center justify-center self-start rounded-xl border border-slate-200 bg-white text-slate-400 shadow-sm transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 sm:self-auto"
                             aria-label="Delete one-time change"
                           >
                             <Trash2 size={16} />
@@ -1188,7 +1331,7 @@ function Schedule() {
                   SAVE AREA
               ================================================== */}
 
-              <div className="mt-6 flex flex-col gap-4 rounded-2xl border border-violet-100 bg-violet-50 p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative mt-7 flex flex-col gap-4 overflow-hidden rounded-[26px] border border-violet-100 bg-gradient-to-r from-violet-50 via-white to-indigo-50 p-5 shadow-[0_18px_55px_-35px_rgba(99,102,241,0.28)] sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
                   <ShieldCheck
                     size={19}
@@ -1196,13 +1339,13 @@ function Schedule() {
                   />
 
                   <div>
-                    <p className="text-sm font-semibold text-slate-800">
-                      Availability settings
+                    <p className="text-sm font-extrabold text-slate-800">
+                      Almost done — save your schedule
                     </p>
 
-                    <p className="mt-1 text-xs leading-5 text-slate-500">
-                      Your saved availability will be used to generate bookable
-                      slots for clients.
+                    <p className="mt-1 max-w-xl text-xs leading-5 text-slate-500">
+                      Once saved, Unfazed uses these settings to generate the
+                      bookable slots your clients see.
                     </p>
                   </div>
                 </div>
@@ -1211,7 +1354,7 @@ function Schedule() {
                   type="button"
                   onClick={handleSave}
                   disabled={saving}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-violet-600 px-6 text-sm font-bold text-white shadow-lg shadow-violet-200 transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 via-violet-600 to-indigo-600 px-6 text-sm font-bold text-white shadow-lg shadow-violet-200 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-violet-300 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {saving ? (
                     <>
@@ -1269,5 +1412,59 @@ const formatDateForInput = (date) => {
 
   return `${year}-${month}-${day}`;
 };
+
+/* ===============================
+   GUIDED SETUP STEP
+=============================== */
+
+function GuideStep({ number, title, description, active, completed }) {
+  return (
+    <div
+      className={`rounded-2xl border p-4 transition ${
+        completed
+          ? "border-emerald-200 bg-emerald-50/80"
+          : active
+            ? "border-violet-300 bg-white shadow-md shadow-violet-100/60"
+            : "border-slate-200 bg-white/70"
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-[10px] font-extrabold ${
+            completed
+              ? "bg-emerald-500 text-white"
+              : active
+                ? "bg-violet-600 text-white shadow-lg shadow-violet-200"
+                : "bg-slate-100 text-slate-400"
+          }`}
+        >
+          {completed ? <Check size={17} /> : number}
+        </div>
+
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-extrabold text-slate-800">{title}</p>
+
+            {active && !completed && (
+              <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-[0.12em] text-violet-700">
+                Start here
+              </span>
+            )}
+
+            {completed && (
+              <span className="rounded-full bg-white/80 px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-[0.12em] text-emerald-700">
+                Done
+              </span>
+            )}
+          </div>
+
+          <p className="mt-1 text-[10px] leading-5 text-slate-500">
+            {description}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default Schedule;
