@@ -19,8 +19,7 @@ const paymentRoutes = require("./src/modules/payment");
 const notesRoutes = require("./src/modules/notes");
 const notificationRoutes = require("./src/modules/notification");
 const therapistAnalyticsRoutes = require("./src/modules/therapistanalytics");
-const  chatRoutes  = require("./src/modules/chat");
-
+const chatRoutes = require("./src/modules/chat");
 
 const app = express();
 
@@ -29,7 +28,11 @@ app.use(helmet());
 
 // CORS
 
-const allowedOrigins = ["http://localhost:5173", "http://localhost:5174"];
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  process.env.CLIENT_URL,
+].filter(Boolean);
 
 app.use(
   cors({
@@ -41,6 +44,9 @@ app.use(
       }
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    optionsSuccessStatus: 204,
   }),
 );
 
