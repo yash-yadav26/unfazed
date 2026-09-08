@@ -337,12 +337,12 @@ function Clients() {
   ========================================================== */
 
   return (
-    <div className="min-h-screen bg-[#f6f7fb] text-slate-900">
+    <div className="relative min-h-screen overflow-hidden bg-[#f6f7fb] text-slate-900">
       {/* =====================================================
           HEADER
       ====================================================== */}
 
-      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-white/70 bg-white/80 backdrop-blur-2xl">
         <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-10">
           {/* Logo */}
 
@@ -350,7 +350,7 @@ function Clients() {
             to="/therapist/dashboard"
             className="group flex items-center gap-3"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-md shadow-violet-200 transition group-hover:scale-105">
+            <div className="flex h-11 w-11 items-center justify-center rounded-[15px] bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 text-white shadow-xl shadow-violet-200/70 transition duration-300 group-hover:-translate-y-0.5 group-hover:shadow-2xl">
               <HeartHandshake size={19} />
             </div>
 
@@ -369,7 +369,7 @@ function Clients() {
 
           <Link
             to="/therapist/dashboard"
-            className="group inline-flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-violet-600"
+            className="group inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-4 py-2.5 text-xs font-bold text-slate-500 shadow-sm backdrop-blur-sm transition duration-200 hover:-translate-y-0.5 hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700 hover:shadow-md"
           >
             <ArrowLeft
               size={14}
@@ -379,6 +379,10 @@ function Clients() {
           </Link>
         </div>
       </header>
+
+      <div className="pointer-events-none fixed -left-36 top-20 h-96 w-96 rounded-full bg-violet-200/25 blur-3xl" />
+      <div className="pointer-events-none fixed -right-28 top-28 h-[420px] w-[420px] rounded-full bg-indigo-200/20 blur-3xl" />
+      <div className="pointer-events-none fixed bottom-0 left-[35%] h-80 w-80 rounded-full bg-fuchsia-100/20 blur-3xl" />
 
       {/* =====================================================
           MAIN
@@ -399,7 +403,7 @@ function Clients() {
           <section>
             <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div>
-                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-100 bg-violet-50 px-3 py-1.5">
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-violet-200/80 bg-white/80 px-3 py-1.5 shadow-sm backdrop-blur-sm">
                   <Users size={13} className="text-violet-600" />
 
                   <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-violet-600">
@@ -407,7 +411,7 @@ function Clients() {
                   </span>
                 </div>
 
-                <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+                <h1 className="text-3xl font-extrabold tracking-[-0.04em] text-slate-950 sm:text-4xl lg:text-[42px]">
                   Your Clients
                 </h1>
 
@@ -433,12 +437,12 @@ function Clients() {
               CLIENT TABLE
           ==================================================== */}
 
-          <section className="mt-8 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_20px_70px_-40px_rgba(15,23,42,0.35)]">
+          <section className="mt-8 overflow-hidden rounded-[30px] border border-slate-200/80 bg-white/95 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.34)] backdrop-blur-sm">
             {/* =================================================
                 TOOLBAR
             ================================================== */}
 
-            <div className="border-b border-slate-100 px-5 py-5 sm:px-6">
+            <div className="border-b border-slate-100 bg-gradient-to-r from-white via-violet-50/15 to-indigo-50/20 px-5 py-5 sm:px-6">
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 {/* Search */}
 
@@ -453,7 +457,7 @@ function Clients() {
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder="Search by name, email or phone..."
-                    className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/60 pl-11 pr-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-violet-400 focus:bg-white focus:ring-4 focus:ring-violet-100"
+                    className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/60 pl-11 pr-4 text-sm font-medium text-slate-800 outline-none transition duration-200 placeholder:text-slate-400 hover:border-violet-200 hover:bg-white focus:border-violet-400 focus:bg-white focus:ring-4 focus:ring-violet-100"
                   />
                 </div>
 
@@ -469,7 +473,7 @@ function Clients() {
                   <select
                     value={sortBy}
                     onChange={(event) => setSortBy(event.target.value)}
-                    className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                    className="h-11 rounded-2xl border border-slate-200 bg-white px-3.5 text-xs font-bold text-slate-600 shadow-sm outline-none transition duration-200 hover:border-violet-200 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
                   >
                     <option value="name">Sort by Name</option>
 
@@ -484,7 +488,7 @@ function Clients() {
             ================================================== */}
 
             {loading && (
-              <div className="px-5 py-20 text-center">
+              <div className="px-5 py-24 text-center">
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-50">
                   <div className="h-6 w-6 animate-spin rounded-full border-2 border-violet-200 border-t-violet-600" />
                 </div>
@@ -504,7 +508,7 @@ function Clients() {
             ================================================== */}
 
             {!loading && error && (
-              <div className="px-5 py-20 text-center">
+              <div className="px-5 py-24 text-center">
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50">
                   <XCircle size={24} className="text-red-500" />
                 </div>
@@ -534,7 +538,7 @@ function Clients() {
                   </colgroup>
 
                   <thead>
-                    <tr className="border-b border-slate-100 bg-slate-50/70">
+                    <tr className="border-b border-slate-100 bg-gradient-to-r from-slate-50/90 to-violet-50/25">
                       <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
                         Client
                       </th>
@@ -563,7 +567,7 @@ function Clients() {
                       return (
                         <tr
                           key={client?._id}
-                          className="group transition hover:bg-violet-50/30"
+                          className="group transition duration-200 hover:bg-violet-50/35"
                         >
                           {/* =================================================
                                 CLIENT
@@ -573,7 +577,7 @@ function Clients() {
                             <div className="flex items-start gap-3.5">
                               {/* Avatar */}
 
-                              <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-indigo-100 text-sm font-bold text-violet-700">
+                              <div className="relative flex h-13 w-13 shrink-0 items-center justify-center rounded-[18px] bg-gradient-to-br from-violet-100 via-white to-indigo-100 text-sm font-extrabold text-violet-700 shadow-sm ring-1 ring-violet-100 transition duration-200 group-hover:scale-[1.03]">
                                 {getInitials(client?.name || "Client")}
 
                                 {canChat && (
@@ -605,7 +609,7 @@ function Clients() {
                                 )}
 
                                 {canChat && (
-                                  <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-bold text-emerald-600">
+                                  <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1.5 text-[9px] font-bold text-emerald-700 shadow-sm">
                                     <MessageCircle size={10} />
                                     Chat available
                                   </span>
@@ -622,13 +626,30 @@ function Clients() {
                             {Array.isArray(client?.sessions) &&
                             client.sessions.length > 0 ? (
                               <div className="space-y-2.5">
-                                {client.sessions.map((session, index) => (
-                                  <SessionCard
-                                    key={session?._id || index}
-                                    session={session}
-                                    index={index}
-                                  />
-                                ))}
+                                {[...client.sessions]
+                                  .sort((a, b) => {
+                                    const dateA = new Date(a?.date || 0);
+                                    const dateB = new Date(b?.date || 0);
+
+                                    const dateDifference =
+                                      dateA.getTime() - dateB.getTime();
+
+                                    if (dateDifference !== 0) {
+                                      return dateDifference;
+                                    }
+
+                                    const timeA = String(a?.startTime || "");
+                                    const timeB = String(b?.startTime || "");
+
+                                    return timeA.localeCompare(timeB);
+                                  })
+                                  .map((session, index) => (
+                                    <SessionCard
+                                      key={session?._id || index}
+                                      session={session}
+                                      index={index}
+                                    />
+                                  ))}
                               </div>
                             ) : (
                               <span className="text-xs text-slate-400">
@@ -642,7 +663,7 @@ function Clients() {
                             ================================================== */}
 
                           <td className="px-5 py-6 align-top">
-                            <div className="inline-flex items-center gap-2 rounded-xl border border-violet-100 bg-violet-50 px-3 py-2">
+                            <div className="inline-flex items-center gap-2 rounded-2xl border border-violet-100 bg-gradient-to-r from-violet-50 to-indigo-50 px-3.5 py-2.5 shadow-sm">
                               <span className="text-sm font-bold text-violet-700">
                                 {client?.sessionsCount || 0}
                               </span>
@@ -664,10 +685,10 @@ function Clients() {
                               type="button"
                               onClick={() => handleOpenChat(client)}
                               disabled={!canChat}
-                              className={`relative inline-flex h-10 w-full min-w-[105px] items-center justify-center gap-2 rounded-xl px-3 text-xs font-bold transition ${
+                              className={`relative inline-flex h-11 w-full min-w-[112px] items-center justify-center gap-2 rounded-2xl px-3 text-xs font-bold shadow-sm transition duration-200 ${
                                 canChat
-                                  ? "border border-violet-200 bg-violet-50 text-violet-700 hover:border-violet-300 hover:bg-violet-100 hover:shadow-sm"
-                                  : "cursor-not-allowed border border-slate-100 bg-slate-50 text-slate-300"
+                                  ? "border border-violet-200 bg-gradient-to-r from-violet-50 to-indigo-50 text-violet-700 hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-md"
+                                  : "cursor-not-allowed border border-slate-100 bg-slate-50 text-slate-300 shadow-none"
                               }`}
                             >
                               <MessageCircle size={14} />
@@ -688,8 +709,8 @@ function Clients() {
                 ================================================== */}
 
                 {filteredClients.length === 0 && (
-                  <div className="px-5 py-20 text-center">
-                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 text-slate-400">
+                  <div className="px-5 py-24 text-center">
+                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[20px] bg-gradient-to-br from-violet-100 to-indigo-100 text-violet-500 shadow-sm ring-8 ring-violet-50">
                       <Users size={24} />
                     </div>
 
@@ -712,7 +733,7 @@ function Clients() {
               PRIVACY
           ==================================================== */}
 
-          <div className="mt-5 flex items-center justify-center gap-2 text-[11px] text-slate-400">
+          <div className="mt-6 flex items-center justify-center gap-2 text-[11px] font-medium text-slate-400">
             <ShieldCheck size={13} className="text-emerald-500" />
             Client information and conversations are private and securely
             handled.
@@ -731,7 +752,7 @@ function UnreadBadge({ count }) {
   const displayCount = count > 99 ? "99+" : count;
 
   return (
-    <span className="absolute -right-1 -top-2 flex min-h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-red-500 px-1.5 text-[9px] font-bold leading-none text-white shadow-sm">
+    <span className="absolute -right-1.5 -top-2 flex min-h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-gradient-to-r from-rose-500 to-red-500 px-1.5 text-[9px] font-extrabold leading-none text-white shadow-md shadow-red-200">
       {displayCount}
     </span>
   );
@@ -743,8 +764,10 @@ function UnreadBadge({ count }) {
 
 function SummaryCard({ value, label }) {
   return (
-    <div className="min-w-[82px] rounded-2xl border border-slate-200 bg-white px-3 py-3 text-center shadow-sm sm:min-w-[96px] sm:px-4">
-      <p className="text-lg font-bold tracking-tight text-slate-900">{value}</p>
+    <div className="group min-w-[82px] rounded-[20px] border border-slate-200/80 bg-white/90 px-3 py-3.5 text-center shadow-[0_16px_45px_-30px_rgba(15,23,42,0.28)] backdrop-blur-sm transition duration-300 hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-[0_22px_50px_-28px_rgba(99,102,241,0.25)] sm:min-w-[100px] sm:px-4">
+      <p className="text-xl font-extrabold tracking-tight text-slate-900">
+        {value}
+      </p>
 
       <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-slate-400">
         {label}
@@ -768,14 +791,14 @@ function SessionCard({ session, index }) {
 
   return (
     <div
-      className={`rounded-2xl border px-4 py-3 transition ${
+      className={`rounded-2xl border px-4 py-3.5 shadow-sm transition duration-200 hover:-translate-y-0.5 ${
         isCompleted
-          ? "border-emerald-100 bg-emerald-50/40"
+          ? "border-emerald-100 bg-gradient-to-r from-emerald-50/70 to-white"
           : isCancelled
-            ? "border-red-100 bg-red-50/40"
+            ? "border-red-100 bg-gradient-to-r from-red-50/70 to-white"
             : isInProgress
-              ? "border-amber-100 bg-amber-50/40"
-              : "border-slate-100 bg-slate-50/70 hover:border-violet-100 hover:bg-violet-50/30"
+              ? "border-amber-100 bg-gradient-to-r from-amber-50/70 to-white"
+              : "border-slate-100 bg-gradient-to-r from-slate-50/80 to-white hover:border-violet-100 hover:bg-violet-50/30"
       }`}
     >
       {/* Header */}
@@ -845,35 +868,35 @@ function SessionCard({ session, index }) {
 function SessionStatus({ status }) {
   const normalizedStatus = String(status || "").toUpperCase();
 
-  let className = "bg-slate-100 text-slate-500";
+  let className = "border border-slate-200 bg-slate-100 text-slate-500";
 
   let icon = null;
 
   if (normalizedStatus === "CONFIRMED") {
-    className = "bg-emerald-50 text-emerald-600";
+    className = "border border-emerald-100 bg-emerald-50 text-emerald-700";
 
     icon = <CheckCircle2 size={10} />;
   } else if (normalizedStatus === "PENDING") {
-    className = "bg-amber-50 text-amber-600";
+    className = "border border-amber-100 bg-amber-50 text-amber-700";
 
     icon = <Clock3 size={10} />;
   } else if (normalizedStatus === "IN_PROGRESS") {
-    className = "bg-amber-50 text-amber-700";
+    className = "border border-amber-100 bg-amber-50 text-amber-800";
 
     icon = <Clock3 size={10} />;
   } else if (normalizedStatus === "COMPLETED") {
-    className = "bg-violet-50 text-violet-600";
+    className = "border border-violet-100 bg-violet-50 text-violet-700";
 
     icon = <CheckCircle2 size={10} />;
   } else if (normalizedStatus === "CANCELLED") {
-    className = "bg-red-50 text-red-600";
+    className = "border border-red-100 bg-red-50 text-red-700";
 
     icon = <XCircle size={10} />;
   }
 
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[9px] font-bold ${className}`}
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[9px] font-bold shadow-sm ${className}`}
     >
       {icon}
 

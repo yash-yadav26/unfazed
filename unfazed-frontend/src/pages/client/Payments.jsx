@@ -89,21 +89,28 @@ function Payments() {
   ========================================================== */
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="min-h-screen overflow-hidden bg-[#f7f8fc] text-slate-900">
+      <div className="pointer-events-none fixed -left-32 top-24 h-80 w-80 rounded-full bg-violet-200/20 blur-3xl" />
+      <div className="pointer-events-none fixed -right-28 top-16 h-96 w-96 rounded-full bg-indigo-200/20 blur-3xl" />
+      <div className="pointer-events-none fixed bottom-0 left-1/3 h-72 w-72 rounded-full bg-fuchsia-100/20 blur-3xl" />
+
       <Header />
 
-      <main className="px-5 py-8 sm:px-8 lg:px-10">
+      <main className="px-5 py-8 sm:px-8 lg:px-10 lg:py-10">
         <div className="mx-auto max-w-6xl">
           {/* ===================================================
               PAGE HEADER
           ==================================================== */}
 
           <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-violet-600">
-              Payments
-            </p>
+            <div className="inline-flex items-center gap-2 rounded-full border border-violet-200/80 bg-white/85 px-3 py-1.5 shadow-sm backdrop-blur-sm">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-violet-700">
+                Payments
+              </span>
+            </div>
 
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+            <h1 className="mt-4 text-3xl font-extrabold tracking-[-0.04em] text-slate-950 sm:text-4xl">
               Payment History
             </h1>
 
@@ -120,9 +127,9 @@ function Payments() {
             <div className="mt-7 grid gap-4 sm:grid-cols-2">
               {/* Total Payments */}
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-5">
+              <div className="rounded-[24px] border border-slate-200/80 bg-white p-5 shadow-[0_18px_55px_-32px_rgba(15,23,42,0.22)] transition duration-300 hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-[0_24px_60px_-30px_rgba(99,102,241,0.22)]">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-indigo-100 text-violet-700 shadow-sm">
                     <Receipt size={20} />
                   </div>
 
@@ -143,9 +150,9 @@ function Payments() {
 
               {/* Total Amount */}
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-5">
+              <div className="rounded-[24px] border border-slate-200/80 bg-white p-5 shadow-[0_18px_55px_-32px_rgba(15,23,42,0.22)] transition duration-300 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-[0_24px_60px_-30px_rgba(16,185,129,0.18)]">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-100 to-teal-100 text-emerald-700 shadow-sm">
                     <IndianRupee size={20} />
                   </div>
 
@@ -168,9 +175,9 @@ function Payments() {
           ==================================================== */}
 
           {loading && (
-            <div className="mt-8 flex min-h-[320px] items-center justify-center rounded-2xl border border-slate-200 bg-white">
+            <div className="mt-8 flex min-h-[320px] items-center justify-center rounded-[28px] border border-slate-200/80 bg-white shadow-[0_20px_60px_-35px_rgba(15,23,42,0.24)]">
               <div className="text-center">
-                <div className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-violet-600 border-t-transparent" />
+                <div className="mx-auto h-10 w-10 animate-spin rounded-full border-[3px] border-violet-200 border-t-violet-600" />
 
                 <p className="mt-3 text-sm font-semibold text-slate-600">
                   Loading payment history...
@@ -184,7 +191,7 @@ function Payments() {
           ==================================================== */}
 
           {!loading && error && (
-            <div className="mt-8 rounded-2xl border border-red-100 bg-red-50 px-5 py-6">
+            <div className="mt-8 rounded-[24px] border border-red-100 bg-gradient-to-br from-red-50 to-white px-5 py-6 shadow-sm">
               <div className="flex items-start gap-3">
                 <XCircle size={18} className="mt-0.5 shrink-0 text-red-600" />
 
@@ -204,8 +211,8 @@ function Payments() {
           ==================================================== */}
 
           {!loading && !error && payments.length === 0 && (
-            <section className="mt-8 rounded-2xl border border-slate-200 bg-white px-5 py-14 text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+            <section className="mt-8 overflow-hidden rounded-[28px] border border-slate-200/80 bg-white px-5 py-16 text-center shadow-[0_20px_60px_-35px_rgba(15,23,42,0.20)]">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[20px] bg-gradient-to-br from-violet-100 to-indigo-100 text-violet-600 ring-8 ring-violet-50">
                 <CreditCard size={25} />
               </div>
 
@@ -220,7 +227,7 @@ function Payments() {
 
               <Link
                 to="/client/therapists"
-                className="mt-6 inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 text-xs font-bold text-white transition hover:bg-violet-700"
+                className="mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 text-xs font-bold text-white shadow-lg shadow-violet-200 transition hover:-translate-y-0.5 hover:shadow-xl"
               >
                 <CalendarDays size={15} />
                 Book a Session
@@ -239,7 +246,7 @@ function Payments() {
                   All Payments
                 </h2>
 
-                <span className="rounded-full bg-violet-50 px-3 py-1 text-[10px] font-bold text-violet-600">
+                <span className="rounded-full border border-violet-100 bg-violet-50 px-3 py-1.5 text-[10px] font-bold text-violet-700">
                   {payments.length}{" "}
                   {payments.length === 1 ? "Transaction" : "Transactions"}
                 </span>
@@ -257,7 +264,7 @@ function Payments() {
               SECURITY INFO
           ==================================================== */}
 
-          <section className="mt-8 rounded-2xl border border-violet-100 bg-violet-50 p-5 sm:p-6">
+          <section className="relative mt-8 overflow-hidden rounded-[26px] border border-violet-100 bg-gradient-to-r from-violet-50 via-white to-indigo-50 p-5 shadow-[0_18px_50px_-35px_rgba(99,102,241,0.22)] sm:p-6">
             <div className="flex items-start gap-3">
               <ShieldCheck
                 size={18}
@@ -304,7 +311,7 @@ function PaymentCard({ payment }) {
   const status = payment?.status || "CREATED";
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+    <div className="group relative overflow-hidden rounded-[28px] border border-slate-200/80 bg-white p-5 shadow-[0_18px_55px_-32px_rgba(15,23,42,0.22)] transition duration-300 hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-[0_26px_65px_-30px_rgba(99,102,241,0.24)] sm:p-6">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         {/* =================================================
             LEFT
@@ -312,7 +319,7 @@ function PaymentCard({ payment }) {
 
         <div className="flex items-start gap-4">
           <div
-            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
+            className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl shadow-sm ${
               status === "PAID"
                 ? "bg-emerald-50 text-emerald-600"
                 : status === "FAILED"
@@ -404,7 +411,7 @@ function PaymentCard({ payment }) {
             RIGHT
         ================================================== */}
 
-        <div className="flex flex-col items-start gap-2 lg:items-end">
+        <div className="flex min-w-[120px] flex-col items-start gap-2 rounded-2xl bg-gradient-to-br from-violet-50 via-white to-indigo-50 px-4 py-3 lg:items-end">
           <div className="flex items-center gap-1 text-xl font-bold text-slate-900">
             <IndianRupee size={17} />
             {amount.toLocaleString("en-IN")}
@@ -424,23 +431,23 @@ function PaymentCard({ payment }) {
 ========================================================= */
 
 function PaymentStatusBadge({ status }) {
-  let className = "bg-violet-50 text-violet-600";
+  let className = "border-violet-100 bg-violet-50 text-violet-700";
 
   if (status === "PAID") {
-    className = "bg-emerald-50 text-emerald-600";
+    className = "border-emerald-100 bg-emerald-50 text-emerald-700";
   }
 
   if (status === "FAILED") {
-    className = "bg-red-50 text-red-600";
+    className = "border-red-100 bg-red-50 text-red-700";
   }
 
   if (status === "REFUNDED") {
-    className = "bg-amber-50 text-amber-600";
+    className = "border-amber-100 bg-amber-50 text-amber-700";
   }
 
   return (
     <span
-      className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${className}`}
+      className={`rounded-full border px-3 py-1.5 text-[10px] font-bold ${className}`}
     >
       {formatStatus(status)}
     </span>
@@ -453,10 +460,10 @@ function PaymentStatusBadge({ status }) {
 
 function Header() {
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
+    <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8">
         <Link to="/client" className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-600 text-white">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-200">
             <HeartHandshake size={19} />
           </div>
 
@@ -471,7 +478,7 @@ function Header() {
 
         <Link
           to="/client"
-          className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition hover:text-violet-600"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-500 shadow-sm transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
         >
           <ArrowLeft size={14} />
           Back to Dashboard

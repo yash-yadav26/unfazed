@@ -10,6 +10,8 @@ import {
   HeartHandshake,
   IndianRupee,
   MapPin,
+  ShieldCheck,
+  Sparkles,
   UserRound,
 } from "lucide-react";
 
@@ -356,6 +358,7 @@ function BookingPage() {
   ========================================================== */
 
   if (bookingSuccess) {
+    const confirmedSlot = location.state?.selectedSlot || selectedSlot;
     const confirmedDuration = location.state?.duration ?? sessionDuration;
 
     const confirmedPrice = location.state?.amount ?? price;
@@ -370,7 +373,12 @@ function BookingPage() {
               {/* Success Icon */}
 
               <div className="text-center">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
+                <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-700">
+                  <CheckCircle2 size={12} />
+                  Step 05 · Confirmed
+                </div>
+
+                <div className="mx-auto mt-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 shadow-sm">
                   <CheckCircle2 size={30} />
                 </div>
 
@@ -409,7 +417,7 @@ function BookingPage() {
                 <BookingDetail
                   icon={<Clock3 size={16} />}
                   label="Time"
-                  value={formatTime(selectedSlot)}
+                  value={confirmedSlot ? formatTime(confirmedSlot) : "Session time"}
                 />
 
                 <BookingDetail
@@ -475,6 +483,39 @@ function BookingPage() {
   }
 
   /* =========================================================
+     BOOKING PROGRESS / GUIDANCE
+  ========================================================== */
+
+  const currentStep = !selectedDate ? 1 : !selectedSlot ? 2 : 3;
+
+  const bookingSteps = [
+    {
+      number: 1,
+      label: "Choose date",
+      helper: "Pick a day",
+      icon: CalendarDays,
+    },
+    {
+      number: 2,
+      label: "Choose time",
+      helper: "Select a slot",
+      icon: Clock3,
+    },
+    {
+      number: 3,
+      label: "Review",
+      helper: "Check your session",
+      icon: CheckCircle2,
+    },
+    {
+      number: 4,
+      label: "Payment",
+      helper: "Confirm securely",
+      icon: ShieldCheck,
+    },
+  ];
+
+  /* =========================================================
      MAIN BOOKING PAGE
   ========================================================== */
 
@@ -496,26 +537,133 @@ function BookingPage() {
 
           {/* Heading */}
 
-          <div className="mt-7">
-            <p className="text-xs font-bold uppercase tracking-wide text-violet-600">
-              Book a Session
-            </p>
+          <div className="mt-7 overflow-hidden rounded-[28px] border border-violet-100 bg-gradient-to-br from-white via-violet-50/60 to-indigo-50/70 p-6 shadow-[0_20px_60px_-35px_rgba(79,70,229,0.45)] sm:p-7">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+              <div className="max-w-2xl">
+                <div className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white/80 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-violet-700 shadow-sm">
+                  <Sparkles size={12} />
+                  Guided booking
+                </div>
 
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
-              Book with {therapist.name}
-            </h1>
+                <h1 className="mt-3 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
+                  Book a session with{" "}
+                  <span className="bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600 bg-clip-text text-transparent">
+                    {therapist.name}
+                  </span>
+                </h1>
 
-            <p className="mt-2 text-sm text-slate-500">
-              Choose a date and select an available session time.
-            </p>
+                <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">
+                  New to Unfazed? No worries. Just follow the steps below — we’ll
+                  guide you from choosing a date to secure payment.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-white/90 bg-white/85 px-4 py-3 shadow-sm backdrop-blur">
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                  You&apos;re on
+                </p>
+                <p className="mt-1 text-sm font-black text-slate-800">
+                  Step {currentStep} of 4
+                </p>
+              </div>
+            </div>
           </div>
+
+          {/* Guided booking steps */}
+
+          <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+            <div className="grid gap-3 md:grid-cols-4">
+              {bookingSteps.map((step) => {
+                const StepIcon = step.icon;
+                const complete = currentStep > step.number;
+                const active = currentStep === step.number;
+
+                return (
+                  <div
+                    key={step.number}
+                    className={`relative rounded-2xl border p-3.5 transition ${
+                      active
+                        ? "border-violet-300 bg-violet-50 shadow-sm"
+                        : complete
+                          ? "border-emerald-200 bg-emerald-50/70"
+                          : "border-slate-100 bg-slate-50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+                          active
+                            ? "bg-violet-600 text-white shadow-md shadow-violet-200"
+                            : complete
+                              ? "bg-emerald-500 text-white"
+                              : "bg-white text-slate-400 shadow-sm"
+                        }`}
+                      >
+                        {complete ? (
+                          <CheckCircle2 size={17} />
+                        ) : (
+                          <StepIcon size={17} />
+                        )}
+                      </div>
+
+                      <div className="min-w-0">
+                        <p
+                          className={`text-[10px] font-bold uppercase tracking-[0.12em] ${
+                            active
+                              ? "text-violet-600"
+                              : complete
+                                ? "text-emerald-600"
+                                : "text-slate-400"
+                          }`}
+                        >
+                          0{step.number}
+                        </p>
+                        <p className="mt-0.5 truncate text-xs font-bold text-slate-800">
+                          {step.label}
+                        </p>
+                        <p className="mt-0.5 text-[10px] text-slate-500">
+                          {step.helper}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-4 flex items-start gap-3 rounded-2xl border border-violet-100 bg-gradient-to-r from-violet-50 to-indigo-50 px-4 py-3.5">
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-violet-600 shadow-sm">
+                <Sparkles size={15} />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-violet-800">
+                  {currentStep === 1
+                    ? "Start here: choose a date"
+                    : currentStep === 2
+                      ? "Great — now choose a convenient time"
+                      : currentStep === 3
+                        ? "Almost there — review your session"
+                        : "Your session is ready for secure payment"}
+                </p>
+                <p className="mt-1 text-[11px] leading-5 text-violet-700/80">
+                  {currentStep === 1
+                    ? "Pick any date from today onward. We’ll load the therapist’s real availability for that day."
+                    : currentStep === 2
+                      ? "Only available slots for your selected date are shown. Tap one to continue."
+                      : currentStep === 3
+                        ? "Check the selected date, time, duration and price before moving to payment."
+                        : "You’ll be taken to the payment page next. Your booking is confirmed after successful payment."}
+                </p>
+              </div>
+            </div>
+          </section>
 
           {/* =====================================================
               THERAPIST CARD
           ====================================================== */}
 
-          <section className="mt-7 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <section className="mt-6 overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-[0_18px_50px_-32px_rgba(15,23,42,0.35)] sm:p-1">
+            <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <div className="flex items-center gap-4">
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">
                   <UserRound size={23} />
@@ -638,14 +786,27 @@ function BookingPage() {
             ==================================================== */}
 
             <section className="rounded-2xl border border-slate-200 bg-white">
-              <div className="border-b border-slate-100 px-5 py-4">
-                <h2 className="text-base font-bold text-slate-900">
-                  Choose Date
-                </h2>
+              <div className="border-b border-slate-100 bg-gradient-to-r from-white to-violet-50/70 px-5 py-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-700">
+                    <CalendarDays size={18} />
+                  </div>
 
-                <p className="mt-1 text-xs text-slate-400">
-                  Select any available date.
-                </p>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-violet-700">
+                        Step 01
+                      </span>
+                      <h2 className="text-base font-bold text-slate-900">
+                        Choose Date
+                      </h2>
+                    </div>
+
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      Select the day you&apos;d like to talk to your therapist.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div className="p-5">
@@ -716,16 +877,29 @@ function BookingPage() {
             ==================================================== */}
 
             <section className="rounded-2xl border border-slate-200 bg-white">
-              <div className="border-b border-slate-100 px-5 py-4">
-                <h2 className="text-base font-bold text-slate-900">
-                  Available Time Slots
-                </h2>
+              <div className="border-b border-slate-100 bg-gradient-to-r from-white to-indigo-50/70 px-5 py-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700">
+                    <Clock3 size={18} />
+                  </div>
 
-                <p className="mt-1 text-xs text-slate-400">
-                  {selectedDate
-                    ? formatDate(selectedDate)
-                    : "Choose a date first"}
-                </p>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-indigo-700">
+                        Step 02
+                      </span>
+                      <h2 className="text-base font-bold text-slate-900">
+                        Choose Time
+                      </h2>
+                    </div>
+
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      {selectedDate
+                        ? `Available slots for ${formatDate(selectedDate)}`
+                        : "Choose a date first to see available times."}
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div className="p-5">
@@ -858,34 +1032,53 @@ function BookingPage() {
                     ========================================== */}
 
                     {selectedSlot && (
-                      <div className="mt-6 rounded-xl bg-violet-50 p-4">
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-violet-600">
-                          Selected Slot
-                        </p>
-
-                        <div className="mt-2 flex items-center justify-between gap-4">
+                      <div className="mt-6 rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 via-white to-indigo-50 p-4 shadow-sm">
+                        <div className="flex items-center justify-between gap-3">
                           <div>
-                            <p className="text-sm font-bold text-slate-900">
-                              {formatDate(selectedDate)}
+                            <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-violet-700">
+                              Step 03 · Review
+                            </span>
+                            <p className="mt-2 text-sm font-black text-slate-900">
+                              Your session is selected
                             </p>
-
-                            <p className="mt-1 text-xs text-slate-500">
-                              {formatTime(selectedSlot)}
-                              {" • "}
-                              {sessionDuration
-                                ? `${sessionDuration} minutes`
-                                : "Session"}
+                            <p className="mt-1 text-[11px] leading-5 text-slate-500">
+                              Please check these details before continuing to payment.
                             </p>
-
-                            {price !== null && price !== undefined && (
-                              <p className="mt-2 flex items-center gap-1 text-sm font-bold text-violet-700">
-                                <IndianRupee size={14} />
-                                {price}
-                              </p>
-                            )}
                           </div>
 
-                          <CheckCircle2 size={19} className="text-violet-600" />
+                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-sm">
+                            <CheckCircle2 size={18} />
+                          </div>
+                        </div>
+
+                        <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                          <div className="rounded-xl bg-white px-3 py-2.5 shadow-sm">
+                            <p className="text-[9px] font-bold uppercase tracking-[0.11em] text-slate-400">
+                              Date
+                            </p>
+                            <p className="mt-1 text-xs font-bold text-slate-700">
+                              {formatDate(selectedDate)}
+                            </p>
+                          </div>
+
+                          <div className="rounded-xl bg-white px-3 py-2.5 shadow-sm">
+                            <p className="text-[9px] font-bold uppercase tracking-[0.11em] text-slate-400">
+                              Time
+                            </p>
+                            <p className="mt-1 text-xs font-bold text-slate-700">
+                              {formatTime(selectedSlot)}
+                            </p>
+                          </div>
+
+                          <div className="rounded-xl bg-white px-3 py-2.5 shadow-sm">
+                            <p className="text-[9px] font-bold uppercase tracking-[0.11em] text-slate-400">
+                              Amount
+                            </p>
+                            <p className="mt-1 flex items-center gap-1 text-xs font-black text-violet-700">
+                              <IndianRupee size={12} />
+                              {price ?? "—"}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -904,16 +1097,17 @@ function BookingPage() {
                         price === undefined ||
                         booking
                       }
-                      className="mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 text-xs font-bold text-white shadow-lg shadow-violet-200 transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600 px-4 text-xs font-black text-white shadow-[0_14px_30px_-14px_rgba(124,58,237,0.8)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_35px_-15px_rgba(124,58,237,0.9)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
                     >
                       {booking ? (
                         <>
                           <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                          Opening Payment...
+                          Preparing secure payment...
                         </>
                       ) : (
                         <>
-                          Continue to Payment
+                          <ShieldCheck size={15} />
+                          Continue to Secure Payment
                           <ArrowRight size={15} />
                         </>
                       )}
@@ -925,10 +1119,73 @@ function BookingPage() {
           </div>
 
           {/* =====================================================
+              WHAT HAPPENS NEXT
+          ====================================================== */}
+
+          <section className="mt-6 grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 text-white">
+                  <ShieldCheck size={18} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">
+                    Step 04
+                  </p>
+                  <h3 className="text-sm font-black text-slate-900">
+                    Secure payment & confirmation
+                  </h3>
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                <div className="rounded-xl bg-slate-50 px-3 py-3">
+                  <p className="text-[10px] font-bold text-slate-700">1. Continue</p>
+                  <p className="mt-1 text-[10px] leading-4 text-slate-500">
+                    Open the payment page with your selected session details.
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-slate-50 px-3 py-3">
+                  <p className="text-[10px] font-bold text-slate-700">2. Pay securely</p>
+                  <p className="mt-1 text-[10px] leading-4 text-slate-500">
+                    Complete the payment to confirm your booking.
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-slate-50 px-3 py-3">
+                  <p className="text-[10px] font-bold text-slate-700">3. Session booked</p>
+                  <p className="mt-1 text-[10px] leading-4 text-slate-500">
+                    You&apos;ll see the confirmed date, time and payment status.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 to-indigo-50 p-5">
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-violet-600 shadow-sm">
+                  <Sparkles size={16} />
+                </div>
+
+                <div>
+                  <p className="text-xs font-black text-violet-800">
+                    New client tip
+                  </p>
+                  <p className="mt-1 text-[11px] leading-5 text-violet-700/80">
+                    Choose a time when you can be comfortable and uninterrupted.
+                    You can review everything before payment.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* =====================================================
               INFO
           ====================================================== */}
 
-          <div className="mt-6 rounded-2xl border border-violet-100 bg-violet-50 px-5 py-4">
+          <div className="mt-6 rounded-2xl border border-violet-100 bg-gradient-to-r from-violet-50 to-indigo-50 px-5 py-4">
             <div className="flex items-start gap-3">
               <CalendarDays
                 size={18}
