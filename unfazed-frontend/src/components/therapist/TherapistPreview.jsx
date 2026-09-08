@@ -26,7 +26,7 @@ function TherapistPreview() {
   return (
     <section
       id="therapists"
-      className="relative overflow-hidden bg-gradient-to-br from-violet-50 via-white to-purple-50 py-20 sm:py-24"
+      className="relative overflow-hidden bg-gradient-to-br from-violet-50 via-white to-purple-50 py-12 sm:py-20 lg:py-24"
     >
       {/* Decorative Background */}
       <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-violet-200/30 blur-3xl" />
@@ -43,7 +43,7 @@ function TherapistPreview() {
         <span className="h-2 w-2 rounded-full bg-violet-300" />
       </div>
 
-      <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-5 sm:px-8 lg:grid-cols-2 lg:gap-16 lg:px-10">
+      <div className="relative mx-auto grid w-full max-w-7xl items-center gap-10 px-4 sm:gap-14 sm:px-8 lg:grid-cols-2 lg:gap-16 lg:px-10">
         {/* =========================================================
             LEFT CONTENT
         ========================================================= */}
@@ -62,7 +62,7 @@ function TherapistPreview() {
           </div>
 
           {/* Heading */}
-          <h2 className="mt-6 text-4xl font-bold leading-[1.12] tracking-tight text-slate-950 sm:text-5xl">
+          <h2 className="mt-5 text-3xl font-black leading-[1.12] tracking-tight text-slate-950 sm:mt-6 sm:text-5xl">
             Everything you need
             <br />
             to run{" "}
@@ -73,13 +73,13 @@ function TherapistPreview() {
           </h2>
 
           {/* Description */}
-          <p className="mt-6 max-w-lg text-base leading-7 text-slate-600 sm:text-lg">
+          <p className="mt-5 max-w-lg text-sm leading-6 text-slate-600 sm:mt-6 sm:text-lg sm:leading-7">
             Manage your practice, clients, sessions and communication from one
             simple, secure platform built around the way you work.
           </p>
 
           {/* Features */}
-          <div className="mt-8 space-y-4">
+          <div className="mt-7 space-y-3.5 sm:mt-8 sm:space-y-4">
             {features.map((feature) => (
               <div key={feature} className="group flex items-center gap-3">
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-sm shadow-violet-200 transition-transform duration-200 group-hover:scale-110">
@@ -96,7 +96,7 @@ function TherapistPreview() {
           {/* CTA */}
           <a
             href="/signup/therapist"
-            className="group mt-9 inline-flex items-center gap-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 px-6 py-3.5 text-sm font-bold text-white shadow-[0_10px_25px_rgba(124,58,237,0.25)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(124,58,237,0.32)]"
+            className="group mt-8 inline-flex w-full items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 px-5 py-3.5 text-sm font-black text-white shadow-[0_10px_25px_rgba(124,58,237,0.25)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(124,58,237,0.32)] sm:mt-9 sm:w-fit sm:px-6"
           >
             Get Started as a Therapist
             <ArrowRight
@@ -106,7 +106,7 @@ function TherapistPreview() {
           </a>
 
           {/* Trust text */}
-          <div className="mt-5 flex items-center gap-2 text-xs font-medium text-slate-500">
+          <div className="mt-4 flex items-center gap-2 text-[11px] font-medium text-slate-500 sm:mt-5 sm:text-xs">
             <ShieldCheck size={16} className="text-violet-500" />
 
             <span>Secure. Private. Built for you.</span>
@@ -121,7 +121,7 @@ function TherapistPreview() {
           <div className="absolute inset-8 rounded-[2.5rem] bg-violet-300/30 blur-3xl" />
 
           {/* Main Dashboard Card */}
-          <div className="relative rounded-[2rem] border border-white/80 bg-white/90 p-3 shadow-[0_25px_70px_rgba(76,29,149,0.16)] backdrop-blur sm:p-4">
+          <div className="relative rounded-[1.75rem] border border-white/80 bg-white/90 p-2.5 shadow-[0_25px_70px_rgba(76,29,149,0.16)] backdrop-blur sm:rounded-[2rem] sm:p-4">
             <div className="flex overflow-hidden rounded-[1.5rem] border border-violet-100 bg-white">
               {/* =====================================================
                   SIDEBAR
@@ -172,7 +172,7 @@ function TherapistPreview() {
               {/* =====================================================
                   DASHBOARD CONTENT
               ===================================================== */}
-              <div className="min-w-0 flex-1 bg-gradient-to-br from-white to-violet-50/40 p-4 sm:p-5">
+              <div className="min-w-0 flex-1 bg-gradient-to-br from-white to-violet-50/40 p-3.5 sm:p-5">
                 {/* Dashboard Header */}
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -203,16 +203,16 @@ function TherapistPreview() {
                 {/* =================================================
                     STATS
                 ================================================= */}
-                <div className="mt-5 grid grid-cols-2 gap-3">
+                <div className="mt-5 grid grid-cols-2 gap-2.5 sm:gap-3">
                   {/* Sessions */}
-                  <div className="rounded-2xl border border-violet-100 bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+                  <div className="rounded-2xl border border-violet-100 bg-white p-3.5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-4">
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="text-[10px] font-medium text-slate-500 sm:text-xs">
                           Today's Sessions
                         </p>
 
-                        <p className="mt-1.5 text-2xl font-bold text-slate-900">
+                        <p className="mt-1.5 text-xl font-black text-slate-900 sm:text-2xl">
                           6
                         </p>
 
@@ -228,14 +228,14 @@ function TherapistPreview() {
                   </div>
 
                   {/* Clients */}
-                  <div className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+                  <div className="rounded-2xl border border-emerald-100 bg-white p-3.5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-4">
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="text-[10px] font-medium text-slate-500 sm:text-xs">
                           Active Clients
                         </p>
 
-                        <p className="mt-1.5 text-2xl font-bold text-slate-900">
+                        <p className="mt-1.5 text-xl font-black text-slate-900 sm:text-2xl">
                           24
                         </p>
 
@@ -254,7 +254,7 @@ function TherapistPreview() {
                 {/* =================================================
                     PRACTICE TOOLS
                 ================================================= */}
-                <div className="mt-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                <div className="mt-3 rounded-2xl border border-slate-100 bg-white p-3.5 shadow-sm sm:p-4">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-bold text-slate-900">
                       Practice Tools
@@ -265,7 +265,7 @@ function TherapistPreview() {
                     </span>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-3 gap-2.5">
+                  <div className="mt-4 grid grid-cols-1 gap-2.5 min-[360px]:grid-cols-3 sm:gap-2.5">
                     {/* Calendar */}
                     <div className="group rounded-xl border border-slate-100 bg-white p-3 text-center transition duration-200 hover:-translate-y-0.5 hover:border-violet-200 hover:bg-violet-50/60">
                       <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-violet-100 text-violet-600 transition group-hover:bg-violet-600 group-hover:text-white">

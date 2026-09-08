@@ -22,7 +22,7 @@ function ClientPreview() {
   return (
     <section
       id="clients"
-      className="relative overflow-hidden bg-gradient-to-br from-emerald-50/60 via-white to-violet-50/40 py-20 sm:py-24"
+      className="relative overflow-hidden bg-gradient-to-br from-emerald-50/60 via-white to-violet-50/40 py-12 sm:py-20 lg:py-24"
     >
       {/* =========================================================
           BACKGROUND DECORATIONS
@@ -48,7 +48,7 @@ function ClientPreview() {
           MAIN CONTAINER
       ========================================================= */}
 
-      <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-5 sm:px-8 lg:grid-cols-2 lg:gap-16 lg:px-10">
+      <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 sm:gap-14 sm:px-8 lg:grid-cols-2 lg:gap-16 lg:px-10">
         {/* =======================================================
             CLIENT DASHBOARD PREVIEW
         ======================================================= */}
@@ -59,13 +59,13 @@ function ClientPreview() {
             <div className="absolute inset-8 rounded-[2.5rem] bg-emerald-300/25 blur-3xl" />
 
             {/* Main Dashboard */}
-            <div className="relative rounded-[2rem] border border-white/80 bg-white/90 p-3 shadow-[0_25px_70px_rgba(16,185,129,0.14)] backdrop-blur sm:p-4">
+            <div className="relative rounded-[1.75rem] border border-white/80 bg-white/90 p-2.5 shadow-[0_25px_70px_rgba(16,185,129,0.14)] backdrop-blur sm:rounded-[2rem] sm:p-4">
               <div className="overflow-hidden rounded-[1.5rem] border border-emerald-100 bg-white">
                 {/* =================================================
                     DASHBOARD HEADER
                 ================================================== */}
 
-                <div className="bg-gradient-to-r from-emerald-50 via-white to-violet-50/60 p-5 sm:p-6">
+                <div className="bg-gradient-to-r from-emerald-50 via-white to-violet-50/60 p-4 sm:p-6">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-xs font-semibold text-emerald-600">
@@ -91,7 +91,7 @@ function ClientPreview() {
                       NEXT SESSION
                   ================================================== */}
 
-                  <div className="mt-6 rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
+                  <div className="mt-5 rounded-2xl border border-emerald-100 bg-white p-3.5 shadow-sm sm:mt-6 sm:p-4">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
                         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
@@ -123,9 +123,9 @@ function ClientPreview() {
                       STATS
                   ================================================== */}
 
-                  <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div className="mt-4 grid grid-cols-2 gap-2.5 sm:gap-3">
                     {/* Sessions */}
-                    <div className="rounded-2xl border border-violet-100 bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+                    <div className="rounded-2xl border border-violet-100 bg-white p-3.5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-4">
                       <div className="flex items-start justify-between">
                         <div>
                           <p className="text-[10px] font-medium text-slate-400 sm:text-xs">
@@ -148,7 +148,7 @@ function ClientPreview() {
                     </div>
 
                     {/* Progress */}
-                    <div className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+                    <div className="rounded-2xl border border-emerald-100 bg-white p-3.5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-4">
                       <div className="flex items-start justify-between">
                         <div>
                           <p className="text-[10px] font-medium text-slate-400 sm:text-xs">
@@ -186,7 +186,7 @@ function ClientPreview() {
                       </span>
                     </div>
 
-                    <div className="mt-4 grid grid-cols-2 gap-3">
+                    <div className="mt-4 grid grid-cols-1 gap-2.5 min-[360px]:grid-cols-2 sm:gap-3">
                       {/* Find Therapist */}
                       <div className="group flex items-center gap-3 rounded-xl border border-slate-100 bg-white p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-violet-200 hover:bg-violet-50/60">
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-600 transition group-hover:bg-violet-600 group-hover:text-white">
@@ -280,7 +280,7 @@ function ClientPreview() {
           </div>
 
           {/* Heading */}
-          <h2 className="mt-6 text-4xl font-bold leading-[1.12] tracking-tight text-slate-950 sm:text-5xl">
+          <h2 className="mt-5 text-3xl font-black leading-[1.12] tracking-tight text-slate-950 sm:mt-6 sm:text-5xl">
             Therapy that fits
             <br />
             <span className="relative inline-block text-emerald-600">
@@ -290,13 +290,13 @@ function ClientPreview() {
           </h2>
 
           {/* Description */}
-          <p className="mt-6 max-w-lg text-base leading-7 text-slate-600 sm:text-lg">
+          <p className="mt-5 max-w-lg text-sm leading-6 text-slate-600 sm:mt-6 sm:text-lg sm:leading-7">
             Find the right therapist, book sessions that work for you, and keep
             your therapy journey organized in one simple, supportive place.
           </p>
 
           {/* Features */}
-          <div className="mt-8 space-y-4">
+          <div className="mt-7 space-y-3.5 sm:mt-8 sm:space-y-4">
             {features.map((feature) => (
               <div key={feature} className="group flex items-center gap-3">
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-sm shadow-emerald-200 transition-transform duration-200 group-hover:scale-110">
@@ -313,7 +313,7 @@ function ClientPreview() {
           {/* CTA */}
           <a
             href="/signup/client"
-            className="group mt-9 inline-flex items-center gap-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-3.5 text-sm font-bold text-white shadow-[0_10px_25px_rgba(16,185,129,0.22)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(16,185,129,0.30)]"
+            className="group mt-8 inline-flex w-full items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-3.5 text-sm font-black text-white shadow-[0_10px_25px_rgba(16,185,129,0.22)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(16,185,129,0.30)] sm:mt-9 sm:w-fit sm:px-6"
           >
             Get Started as a Client
             <ArrowRight
@@ -323,14 +323,14 @@ function ClientPreview() {
           </a>
 
           {/* Trust */}
-          <div className="mt-5 flex items-center gap-2 text-xs font-medium text-slate-500">
+          <div className="mt-4 flex items-center gap-2 text-[11px] font-medium text-slate-500 sm:mt-5 sm:text-xs">
             <ShieldCheck size={16} className="text-emerald-500" />
 
             <span>Private. Supportive. Designed around you.</span>
           </div>
 
           {/* Small reassurance */}
-          <div className="mt-7 flex items-center gap-3">
+          <div className="mt-6 flex items-center gap-3 sm:mt-7">
             <div className="flex -space-x-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-violet-100 text-[10px] font-bold text-violet-600">
                 A

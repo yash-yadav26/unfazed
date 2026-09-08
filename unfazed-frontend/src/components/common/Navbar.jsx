@@ -1,11 +1,4 @@
-import {
-  ChevronDown,
-  Menu,
-  X,
-  Brain,
-  Heart,
-  ArrowRight,
-} from "lucide-react";
+import { ChevronDown, Menu, X, Brain, Heart, ArrowRight } from "lucide-react";
 
 import { useState } from "react";
 
@@ -14,12 +7,11 @@ function Navbar() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-100 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
-
+    <header className="sticky top-0 z-50 border-b border-slate-100 bg-white/95 shadow-[0_8px_30px_-24px_rgba(15,23,42,0.35)] backdrop-blur-xl">
+      <div className="mx-auto flex h-[68px] max-w-7xl items-center justify-between px-4 sm:h-[72px] sm:px-8 lg:px-10">
         {/* Logo */}
-        <a href="/" className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-sm">
+        <a href="/" className="flex min-w-0 items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-500 text-white shadow-[0_8px_20px_-10px_rgba(124,58,237,0.8)]">
             <span className="text-base font-bold">U</span>
           </div>
 
@@ -35,7 +27,7 @@ function Navbar() {
         </a>
 
         {/* Desktop Navigation */}
-        <nav className="hidden items-center gap-8 lg:flex">
+        <nav className="hidden items-center gap-7 lg:flex xl:gap-8">
           <a
             href="#therapists"
             className="text-[13px] font-medium text-slate-600 transition hover:text-violet-600"
@@ -74,7 +66,6 @@ function Navbar() {
 
         {/* Desktop Auth */}
         <div className="hidden items-center gap-4 lg:flex">
-
           {/* Login */}
           <a
             href="/login"
@@ -87,7 +78,6 @@ function Navbar() {
 
           {/* Signup Dropdown */}
           <div className="relative">
-
             <button
               type="button"
               onClick={() => setIsSignupOpen(!isSignupOpen)}
@@ -103,7 +93,6 @@ function Navbar() {
               `}
             >
               Sign Up
-
               <ChevronDown
                 size={14}
                 strokeWidth={2}
@@ -129,7 +118,6 @@ function Navbar() {
                   ring-1 ring-violet-50
                 "
               >
-
                 {/* Dropdown Header */}
                 <div className="mb-1 rounded-xl bg-gradient-to-br from-violet-50 via-purple-50 to-white px-4 py-3.5">
                   <div className="flex items-center gap-2">
@@ -267,13 +255,12 @@ function Navbar() {
 
       {/* Mobile Navigation */}
       {isMobileOpen && (
-        <div className="border-t border-slate-100 bg-white px-5 py-5 lg:hidden">
+        <div className="border-t border-slate-100 bg-gradient-to-b from-white to-violet-50/30 px-4 py-4 shadow-[0_22px_45px_-35px_rgba(76,29,149,0.28)] sm:px-6 sm:py-5 lg:hidden">
           <nav className="flex flex-col gap-1">
-
             <a
               href="#therapists"
               onClick={() => setIsMobileOpen(false)}
-              className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-violet-50 hover:text-violet-600"
+              className="rounded-xl px-3.5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-violet-50 hover:text-violet-700 active:scale-[0.99]"
             >
               For Therapists
             </a>
@@ -281,7 +268,7 @@ function Navbar() {
             <a
               href="#clients"
               onClick={() => setIsMobileOpen(false)}
-              className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-violet-50 hover:text-violet-600"
+              className="rounded-xl px-3.5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-violet-50 hover:text-violet-700 active:scale-[0.99]"
             >
               For Clients
             </a>
@@ -289,7 +276,7 @@ function Navbar() {
             <a
               href="#how-it-works"
               onClick={() => setIsMobileOpen(false)}
-              className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-violet-50 hover:text-violet-600"
+              className="rounded-xl px-3.5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-violet-50 hover:text-violet-700 active:scale-[0.99]"
             >
               How It Works
             </a>
@@ -297,7 +284,7 @@ function Navbar() {
             <a
               href="#features"
               onClick={() => setIsMobileOpen(false)}
-              className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-violet-50 hover:text-violet-600"
+              className="rounded-xl px-3.5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-violet-50 hover:text-violet-700 active:scale-[0.99]"
             >
               Features
             </a>
@@ -305,55 +292,66 @@ function Navbar() {
             <a
               href="#about"
               onClick={() => setIsMobileOpen(false)}
-              className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-violet-50 hover:text-violet-600"
+              className="rounded-xl px-3.5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-violet-50 hover:text-violet-700 active:scale-[0.99]"
             >
               About Us
             </a>
 
             {/* Mobile Auth */}
-            <div className="mt-3 border-t border-slate-100 pt-3">
-
+            <div className="mt-3 border-t border-slate-200 pt-4">
               <a
                 href="/login"
-                className="block rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                className="flex items-center justify-between rounded-xl border border-slate-100 bg-white px-3.5 py-3 text-sm font-bold text-slate-700 shadow-sm transition hover:border-violet-100 hover:bg-violet-50 hover:text-violet-700"
               >
                 Log In
               </a>
 
-              <p className="px-3 pb-1 pt-4 text-[10px] font-bold uppercase tracking-wider text-violet-500">
+              <p className="px-3 pb-2 pt-5 text-[10px] font-black uppercase tracking-[0.16em] text-violet-600">
                 Join Unfazed
               </p>
 
               <a
                 href="/signup/therapist"
                 className="
-                  flex items-center gap-3
-                  rounded-xl px-3 py-3
-                  text-sm font-medium text-slate-700
-                  transition hover:bg-violet-50 hover:text-violet-600
+                  group flex items-center gap-3 rounded-xl border border-violet-100
+                  bg-white px-3.5 py-3.5 text-sm font-semibold text-slate-700
+                  shadow-sm transition-all duration-200
+                  hover:-translate-y-0.5 hover:border-violet-200 hover:bg-violet-50
+                  hover:text-violet-700 active:scale-[0.99]
                 "
               >
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-600">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-600 transition group-hover:bg-violet-600 group-hover:text-white">
                   <Brain size={16} />
                 </span>
 
-                Therapist Sign Up
+                <span className="min-w-0 flex-1">Therapist Sign Up</span>
+                <ArrowRight
+                  size={15}
+                  className="shrink-0 text-violet-300 transition group-hover:translate-x-0.5 group-hover:text-violet-600"
+                />
               </a>
+
+              <div className="mx-2 my-2 border-t border-slate-200" />
 
               <a
                 href="/signup/client"
                 className="
-                  flex items-center gap-3
-                  rounded-xl px-3 py-3
-                  text-sm font-medium text-slate-700
-                  transition hover:bg-fuchsia-50 hover:text-fuchsia-600
+                  group flex items-center gap-3 rounded-xl border border-fuchsia-100
+                  bg-white px-3.5 py-3.5 text-sm font-semibold text-slate-700
+                  shadow-sm transition-all duration-200
+                  hover:-translate-y-0.5 hover:border-fuchsia-200 hover:bg-fuchsia-50
+                  hover:text-fuchsia-700 active:scale-[0.99]
                 "
               >
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-fuchsia-100 text-fuchsia-600">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-fuchsia-100 text-fuchsia-600 transition group-hover:bg-fuchsia-600 group-hover:text-white">
                   <Heart size={16} />
                 </span>
 
-                Client Sign Up
+                <span className="min-w-0 flex-1">Client Sign Up</span>
+                <ArrowRight
+                  size={15}
+                  className="shrink-0 text-fuchsia-300 transition group-hover:translate-x-0.5 group-hover:text-fuchsia-600"
+                />
               </a>
             </div>
           </nav>
