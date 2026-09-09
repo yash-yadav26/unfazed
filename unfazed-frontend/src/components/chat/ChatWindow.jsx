@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Circle, MoreVertical, Send, User } from "lucide-react";
 import { io } from "socket.io-client";
+import toast from "react-hot-toast";
 
 import { getChatMessages, markMessagesAsRead } from "../../api/chatApi";
 
@@ -11,9 +12,11 @@ import MessageBubble from "./MessageBubble";
 /* -------------------------------------------------------------------------- */
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
+  "http://localhost:5000/api";
 
-const SOCKET_URL = API_BASE_URL.replace(/\/api\/?$/, "");
+const SOCKET_URL = API_BASE_URL.replace(/\/api\/?$/, "").replace(/\/$/, "");
 
 /* -------------------------------------------------------------------------- */
 /*                             Chat Window                                    */
@@ -99,11 +102,13 @@ const ChatWindow = ({ otherUserId, otherUserName = "User" }) => {
           return;
         }
 
-        setError(
+        const message =
           err?.response?.data?.message ||
-            err?.message ||
-            "Unable to load chat.",
-        );
+          err?.message ||
+          "Unable to load chat.";
+
+        setError(message);
+        toast.error(message);
       } finally {
         if (isMounted) {
           setLoadingMessages(false);
@@ -131,7 +136,9 @@ const ChatWindow = ({ otherUserId, otherUserName = "User" }) => {
 
     if (!token) {
       const errorTimer = setTimeout(() => {
-        setError("Authentication token not found.");
+        const message = "Authentication token not found.";
+        setError(message);
+        toast.error(message);
       }, 0);
 
       return () => clearTimeout(errorTimer);
@@ -165,7 +172,9 @@ const ChatWindow = ({ otherUserId, otherUserName = "User" }) => {
           if (!response?.success) {
             setChatJoined(false);
 
-            setError(response?.message || "Unable to join chat.");
+            const message = response?.message || "Unable to join chat.";
+            setError(message);
+            toast.error(message);
 
             return;
           }
@@ -183,7 +192,10 @@ const ChatWindow = ({ otherUserId, otherUserName = "User" }) => {
       setSocketConnected(false);
       setChatJoined(false);
 
-      setError(err?.message || "Unable to connect to chat server.");
+      const message = err?.message || "Unable to connect to chat server.";
+
+      setError(message);
+      toast.error(message);
     });
 
     /* ---------------------------------------------------------------------- */
@@ -194,7 +206,9 @@ const ChatWindow = ({ otherUserId, otherUserName = "User" }) => {
       if (!response?.success) {
         setChatJoined(false);
 
-        setError(response?.message || "Unable to join chat.");
+        const message = response?.message || "Unable to join chat.";
+        setError(message);
+        toast.error(message);
 
         return;
       }
@@ -253,7 +267,9 @@ const ChatWindow = ({ otherUserId, otherUserName = "User" }) => {
     /* ---------------------------------------------------------------------- */
 
     socket.on("chat-error", (response) => {
-      setError(response?.message || "Chat operation failed.");
+      const message = response?.message || "Chat operation failed.";
+      setError(message);
+      toast.error(message);
     });
 
     /* ---------------------------------------------------------------------- */
@@ -311,12 +327,16 @@ const ChatWindow = ({ otherUserId, otherUserName = "User" }) => {
     const socket = socketRef.current;
 
     if (!socket?.connected) {
-      setError("Chat is not connected.");
+      const message = "Chat is not connected.";
+      setError(message);
+      toast.error(message);
       return;
     }
 
     if (!chatJoined) {
-      setError("Please wait for the chat connection.");
+      const message = "Please wait for the chat connection.";
+      setError(message);
+      toast.loading(message, { id: "chat-connection-wait" });
       return;
     }
 
@@ -326,6 +346,8 @@ const ChatWindow = ({ otherUserId, otherUserName = "User" }) => {
 
     setSendingMessage(true);
     setError("");
+    toast.dismiss("chat-connection-wait");
+    toast.loading("Sending message...", { id: "chat-send" });
 
     socket.emit(
       "send-message",
@@ -337,7 +359,10 @@ const ChatWindow = ({ otherUserId, otherUserName = "User" }) => {
         setSendingMessage(false);
 
         if (!response?.success) {
-          setError(response?.message || "Unable to send message.");
+          const message = response?.message || "Unable to send message.";
+
+          setError(message);
+          toast.error(message);
 
           return;
         }
@@ -348,6 +373,8 @@ const ChatWindow = ({ otherUserId, otherUserName = "User" }) => {
          * and that event updates the messages state.
          */
         setMessageText("");
+        toast.dismiss("chat-send");
+        toast.success("Message sent.");
       },
     );
   };
