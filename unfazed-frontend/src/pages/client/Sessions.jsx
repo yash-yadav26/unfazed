@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 import { Link, useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 
@@ -332,10 +333,15 @@ function Sessions() {
     } catch (err) {
       console.error("Failed to join session:", err);
 
-      setError(
+      const errorMessage =
         err?.response?.data?.message ||
-          "Unable to join the session. Please try again.",
-      );
+        "Unable to join the session. Please try again.";
+
+      setError(errorMessage);
+
+      toast.error(errorMessage, {
+        id: "join-session-error",
+      });
     } finally {
       setJoiningSessionId(null);
     }

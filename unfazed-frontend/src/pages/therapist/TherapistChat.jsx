@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import toast from "react-hot-toast";
 
 import {
   ArrowLeft,
@@ -43,7 +44,9 @@ const TherapistChat = () => {
 
     const loadClient = async () => {
       if (!clientId) {
-        setError("Client ID is required.");
+        const message = "Client ID is required.";
+        setError(message);
+        toast.error(message);
         setLoading(false);
         return;
       }
@@ -65,9 +68,10 @@ const TherapistChat = () => {
         );
 
         if (!matchedClient) {
-          setError(
-            "Client not found or you are not authorized to access this client.",
-          );
+          const message =
+            "Client not found or you are not authorized to access this client.";
+          setError(message);
+          toast.error(message);
           return;
         }
 
@@ -79,7 +83,10 @@ const TherapistChat = () => {
 
         console.error("Failed to load client:", err);
 
-        setError(err?.response?.data?.message || "Unable to open this chat.");
+        const message =
+          err?.response?.data?.message || "Unable to open this chat.";
+        setError(message);
+        toast.error(message);
       } finally {
         if (isMounted) {
           setLoading(false);

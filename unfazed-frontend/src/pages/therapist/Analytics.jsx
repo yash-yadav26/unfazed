@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
 
 import {
@@ -115,10 +116,17 @@ function Analytics() {
     } catch (err) {
       console.error("Failed to fetch therapist analytics:", err);
 
-      setError(
+      const errorMessage =
         err?.response?.data?.message ||
-          "Unable to load analytics. Please try again.",
-      );
+        "Unable to load analytics. Please try again.";
+
+      setError(errorMessage);
+
+      if (isRefresh) {
+        toast.error(errorMessage, {
+          id: "analytics-refresh-error",
+        });
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -638,12 +646,16 @@ function StatCard({ title, value, subtitle, icon, accent = "violet" }) {
   const variant = variants[accent] || variants.violet;
 
   return (
-    <div className={`rounded-[24px] border bg-white p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.24)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_20px_60px_-34px_rgba(99,102,241,0.22)] ${variant.border}`}>
+    <div
+      className={`rounded-[24px] border bg-white p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.24)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_20px_60px_-34px_rgba(99,102,241,0.22)] ${variant.border}`}
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-xs font-medium text-slate-500">{title}</p>
 
-          <p className={`mt-2 truncate text-2xl font-extrabold tracking-tight ${variant.value}`}>
+          <p
+            className={`mt-2 truncate text-2xl font-extrabold tracking-tight ${variant.value}`}
+          >
             {value}
           </p>
 

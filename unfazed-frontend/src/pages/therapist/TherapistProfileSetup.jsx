@@ -12,6 +12,7 @@ import {
   User,
 } from "lucide-react";
 import { createTherapist } from "../../api/therapistApi";
+import toast from "react-hot-toast";
 
 const specializationOptions = [
   "Anxiety & Stress",
@@ -98,47 +99,45 @@ function TherapistProfileSetup() {
      SUBMIT
   ========================================================== */
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  if (formData.specializations.length === 0) {
-    alert("Please select at least one specialization.");
-    return;
-  }
+    if (formData.specializations.length === 0) {
+      toast.error("Please select at least one specialization.");
+      return;
+    }
 
-  if (formData.languages.length === 0) {
-    alert("Please select at least one language.");
-    return;
-  }
+    if (formData.languages.length === 0) {
+      toast.error("Please select at least one language.");
+      return;
+    }
 
-  try {
-    setSaving(true);
+    try {
+      setSaving(true);
 
-    const response = await createTherapist({
-      name: formData.name,
-      slug: formData.slug,
-      bio: formData.bio,
-      specializations: formData.specializations,
-      languages: formData.languages,
-    });
+      const response = await createTherapist({
+        name: formData.name,
+        slug: formData.slug,
+        bio: formData.bio,
+        specializations: formData.specializations,
+        languages: formData.languages,
+      });
 
-    console.log("Therapist profile created:", response);
+      console.log("Therapist profile created:", response);
 
-    navigate("/therapist/dashboard");
-  } catch (error) {
-    console.error(
-      "Therapist profile setup failed:",
-      error
-    );
+      toast.success("Therapist profile created successfully.");
+      navigate("/therapist/dashboard");
+    } catch (error) {
+      console.error("Therapist profile setup failed:", error);
 
-    alert(
-      error.response?.data?.message ||
-        "Unable to save therapist profile. Please try again."
-    );
-  } finally {
-    setSaving(false);
-  }
-};
+      toast.error(
+        error.response?.data?.message ||
+          "Unable to save therapist profile. Please try again.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-100">

@@ -26,6 +26,7 @@ import {
   getRevenueTrend,
 } from "../../api/therapistAnalyticsApi";
 import { joinSession } from "../../api/sessionApi";
+import toast from "react-hot-toast";
 
 /* =========================================================
    HELPERS
@@ -429,10 +430,12 @@ function TherapistDashboard() {
 
   const handleJoinSession = async (session) => {
     if (!session?._id) {
+      toast.error("Session details are unavailable.");
       return;
     }
 
     if (!isJoinableSession(session, currentTime)) {
+      toast.error("This session cannot be joined right now.");
       return;
     }
 
@@ -440,15 +443,18 @@ function TherapistDashboard() {
       setJoiningSessionId(session._id);
 
       await joinSession(session._id);
+      toast.success("Joining session…");
 
       navigate(`/therapist/sessions/${session._id}/video`);
     } catch (error) {
       console.error("Failed to join session:", error);
 
-      setError(
+      const message =
         error?.response?.data?.message ||
-          "Unable to join the session. Please try again.",
-      );
+        "Unable to join the session. Please try again.";
+
+      setError(message);
+      toast.error(message);
     } finally {
       setJoiningSessionId(null);
     }
@@ -512,10 +518,12 @@ function TherapistDashboard() {
     } catch (error) {
       console.error("Failed to fetch therapist dashboard:", error);
 
-      setError(
+      const message =
         error?.response?.data?.message ||
-          "Unable to load dashboard. Please try again.",
-      );
+        "Unable to load dashboard. Please try again.";
+
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
       setRefreshing(false);

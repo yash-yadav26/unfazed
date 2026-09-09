@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -289,7 +290,9 @@ function Schedule() {
     setSuccess("");
 
     if (!overrideForm.date) {
-      setError("Please select a date.");
+      const errorMessage = "Please select a date.";
+      setError(errorMessage);
+      toast.error(errorMessage, { id: "schedule-override-date" });
       return;
     }
 
@@ -297,7 +300,9 @@ function Schedule() {
       overrideForm.type === "custom" &&
       overrideForm.startTime >= overrideForm.endTime
     ) {
-      setError("End time must be later than start time.");
+      const errorMessage = "End time must be later than start time.";
+      setError(errorMessage);
+      toast.error(errorMessage, { id: "schedule-override-time" });
       return;
     }
 
@@ -312,9 +317,10 @@ function Schedule() {
         duration < 1 ||
         duration > 240
       ) {
-        setError(
-          "Session duration must be a whole number between 1 and 240 minutes.",
-        );
+        const errorMessage =
+          "Session duration must be a whole number between 1 and 240 minutes.";
+        setError(errorMessage);
+        toast.error(errorMessage, { id: "schedule-duration-error" });
         return;
       }
 
@@ -324,14 +330,17 @@ function Schedule() {
         buffer < 0 ||
         buffer > 120
       ) {
-        setError(
-          "Buffer time must be a whole number between 0 and 120 minutes.",
-        );
+        const errorMessage =
+          "Buffer time must be a whole number between 0 and 120 minutes.";
+        setError(errorMessage);
+        toast.error(errorMessage, { id: "schedule-buffer-error" });
         return;
       }
 
       if (overrideForm.price === "" || !Number.isFinite(price) || price < 0) {
-        setError("Please enter a valid session price.");
+        const errorMessage = "Please enter a valid session price.";
+        setError(errorMessage);
+        toast.error(errorMessage, { id: "schedule-price-error" });
         return;
       }
     }
@@ -416,13 +425,23 @@ function Schedule() {
 
       setShowOverrideForm(false);
 
-      setSuccess("One-time change added successfully.");
+      const successMessage = "One-time change added successfully.";
+      setSuccess(successMessage);
+
+      toast.success(successMessage, {
+        id: "schedule-override-success",
+      });
     } catch (error) {
       console.error("Failed to add one-time change:", error);
 
-      setError(
-        error.response?.data?.message || "Unable to add one-time change.",
-      );
+      const errorMessage =
+        error.response?.data?.message || "Unable to add one-time change.";
+
+      setError(errorMessage);
+
+      toast.error(errorMessage, {
+        id: "schedule-override-error",
+      });
     } finally {
       setOverrideSaving(false);
     }
@@ -441,13 +460,23 @@ function Schedule() {
 
       setOverrides((prev) => prev.filter((item) => item.id !== id));
 
-      setSuccess("One-time change deleted successfully.");
+      const successMessage = "One-time change deleted successfully.";
+      setSuccess(successMessage);
+
+      toast.success(successMessage, {
+        id: "schedule-override-delete-success",
+      });
     } catch (error) {
       console.error("Failed to delete one-time change:", error);
 
-      setError(
-        error.response?.data?.message || "Unable to delete one-time change.",
-      );
+      const errorMessage =
+        error.response?.data?.message || "Unable to delete one-time change.";
+
+      setError(errorMessage);
+
+      toast.error(errorMessage, {
+        id: "schedule-override-delete-error",
+      });
     }
   };
 
@@ -569,15 +598,25 @@ function Schedule() {
 
       await loadAvailability();
 
-      setSuccess("Availability saved successfully.");
+      const successMessage = "Availability saved successfully.";
+      setSuccess(successMessage);
+
+      toast.success(successMessage, {
+        id: "schedule-save-success",
+      });
     } catch (error) {
       console.error("Failed to save availability:", error);
 
-      setError(
+      const errorMessage =
         error.response?.data?.message ||
-          error.message ||
-          "Unable to save availability.",
-      );
+        error.message ||
+        "Unable to save availability.";
+
+      setError(errorMessage);
+
+      toast.error(errorMessage, {
+        id: "schedule-save-error",
+      });
     } finally {
       setSaving(false);
     }
@@ -589,9 +628,7 @@ function Schedule() {
 
   const enabledDayCount = availability.filter((day) => day.enabled).length;
   const hasSessionSettings =
-    sessionDuration !== "" &&
-    bufferTime !== "" &&
-    sessionPrice !== "";
+    sessionDuration !== "" && bufferTime !== "" && sessionPrice !== "";
 
   const hasWeeklySetup = enabledDayCount > 0;
 
@@ -1003,7 +1040,8 @@ function Schedule() {
                 <div className="border-t border-slate-100 bg-slate-50/60 px-5 py-3.5 sm:px-6">
                   <p className="text-[10px] font-medium leading-5 text-slate-500">
                     Tip: this is your normal weekly routine. Use One-time
-                    Changes only when a specific date needs a different schedule.
+                    Changes only when a specific date needs a different
+                    schedule.
                   </p>
                 </div>
               </section>
@@ -1027,8 +1065,8 @@ function Schedule() {
 
                     <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-400">
                       Your weekly schedule stays the same unless you add an
-                      exception here. Use this for holidays, blocked dates, or
-                      a different schedule on one specific day.
+                      exception here. Use this for holidays, blocked dates, or a
+                      different schedule on one specific day.
                     </p>
                   </div>
 
@@ -1219,8 +1257,10 @@ function Schedule() {
 
                     <div className="mt-5 rounded-2xl border border-violet-100 bg-violet-50/60 px-4 py-3">
                       <p className="text-[10px] font-semibold leading-5 text-violet-700">
-                        Choose <span className="font-extrabold">Block Entire Day</span>
-                        when you are unavailable. Choose <span className="font-extrabold">Custom Hours</span>
+                        Choose{" "}
+                        <span className="font-extrabold">Block Entire Day</span>
+                        when you are unavailable. Choose{" "}
+                        <span className="font-extrabold">Custom Hours</span>
                         when this date should have different hours, duration,
                         buffer, or price than your normal schedule.
                       </p>

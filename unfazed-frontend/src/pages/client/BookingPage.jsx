@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 
 import {
@@ -88,9 +89,11 @@ function BookingPage() {
 
         console.error("Failed to fetch therapist:", error);
 
-        setTherapistError(
-          error?.response?.data?.message || "Failed to load therapist details.",
-        );
+        const message =
+          error?.response?.data?.message || "Failed to load therapist details.";
+
+        setTherapistError(message);
+        toast.error(message);
       } finally {
         if (mounted) {
           setTherapistLoading(false);
@@ -180,10 +183,12 @@ function BookingPage() {
         setPrice(null);
         setSelectedSlot("");
 
-        setSlotError(
+        const message =
           error?.response?.data?.message ||
-            "Failed to load available time slots.",
-        );
+          "Failed to load available time slots.";
+
+        setSlotError(message);
+        toast.error(message);
       } finally {
         if (mounted) {
           setSlotLoading(false);
@@ -245,14 +250,30 @@ function BookingPage() {
   ========================================================== */
 
   const handleBooking = async () => {
-    if (
-      !therapist ||
-      !selectedDate ||
-      !selectedSlot ||
-      !sessionDuration ||
-      price === null ||
-      price === undefined
-    ) {
+    if (!therapist) {
+      toast.error("Therapist details are not available.");
+      return;
+    }
+
+    if (!selectedDate) {
+      toast.error("Please select a session date.");
+      return;
+    }
+
+    if (!selectedSlot) {
+      toast.error("Please select a session time.");
+      return;
+    }
+
+    if (!sessionDuration) {
+      toast.error("Session duration is not available for the selected date.");
+      return;
+    }
+
+    if (price === null || price === undefined) {
+      toast.error(
+        "Session price is not available. Please select another date.",
+      );
       return;
     }
 
@@ -294,6 +315,12 @@ function BookingPage() {
       });
     } catch (error) {
       console.error("Booking initialization failed:", error);
+
+      const message =
+        error?.response?.data?.message ||
+        "Unable to continue to payment. Please try again.";
+
+      toast.error(message);
     } finally {
       setBooking(false);
     }
@@ -417,7 +444,9 @@ function BookingPage() {
                 <BookingDetail
                   icon={<Clock3 size={16} />}
                   label="Time"
-                  value={confirmedSlot ? formatTime(confirmedSlot) : "Session time"}
+                  value={
+                    confirmedSlot ? formatTime(confirmedSlot) : "Session time"
+                  }
                 />
 
                 <BookingDetail
@@ -553,8 +582,8 @@ function BookingPage() {
                 </h1>
 
                 <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">
-                  New to Unfazed? No worries. Just follow the steps below — we’ll
-                  guide you from choosing a date to secure payment.
+                  New to Unfazed? No worries. Just follow the steps below —
+                  we’ll guide you from choosing a date to secure payment.
                 </p>
               </div>
 
@@ -1042,7 +1071,8 @@ function BookingPage() {
                               Your session is selected
                             </p>
                             <p className="mt-1 text-[11px] leading-5 text-slate-500">
-                              Please check these details before continuing to payment.
+                              Please check these details before continuing to
+                              payment.
                             </p>
                           </div>
 
@@ -1140,21 +1170,27 @@ function BookingPage() {
 
               <div className="mt-4 grid gap-2 sm:grid-cols-3">
                 <div className="rounded-xl bg-slate-50 px-3 py-3">
-                  <p className="text-[10px] font-bold text-slate-700">1. Continue</p>
+                  <p className="text-[10px] font-bold text-slate-700">
+                    1. Continue
+                  </p>
                   <p className="mt-1 text-[10px] leading-4 text-slate-500">
                     Open the payment page with your selected session details.
                   </p>
                 </div>
 
                 <div className="rounded-xl bg-slate-50 px-3 py-3">
-                  <p className="text-[10px] font-bold text-slate-700">2. Pay securely</p>
+                  <p className="text-[10px] font-bold text-slate-700">
+                    2. Pay securely
+                  </p>
                   <p className="mt-1 text-[10px] leading-4 text-slate-500">
                     Complete the payment to confirm your booking.
                   </p>
                 </div>
 
                 <div className="rounded-xl bg-slate-50 px-3 py-3">
-                  <p className="text-[10px] font-bold text-slate-700">3. Session booked</p>
+                  <p className="text-[10px] font-bold text-slate-700">
+                    3. Session booked
+                  </p>
                   <p className="mt-1 text-[10px] leading-4 text-slate-500">
                     You&apos;ll see the confirmed date, time and payment status.
                   </p>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { Link, useNavigate } from "react-router-dom";
 import {
   CheckCircle2,
@@ -85,6 +86,14 @@ function ClientProfileSetup() {
 
     setErrors(newErrors);
 
+    if (Object.keys(newErrors).length > 0) {
+      const firstError = Object.values(newErrors)[0];
+
+      toast.error(firstError || "Please review your details.", {
+        id: "client-profile-validation-error",
+      });
+    }
+
     return Object.keys(newErrors).length === 0;
   };
 
@@ -115,14 +124,15 @@ function ClientProfileSetup() {
 
       console.log("Client profile created:", response);
 
-      navigate("/client");
+      toast.success("Your profile has been saved successfully.", {
+        id: "client-profile-success",
+      });
+
+      window.setTimeout(() => {
+        navigate("/client");
+      }, 700);
     } catch (error) {
       console.error("Client setup failed:", error);
-
-      alert(
-        error.response?.data?.message ||
-          "Unable to save client profile. Please try again.",
-      );
     } finally {
       setSaving(false);
     }

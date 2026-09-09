@@ -43,11 +43,11 @@ function TherapistPreview() {
         <span className="h-2 w-2 rounded-full bg-violet-300" />
       </div>
 
-      <div className="relative mx-auto grid w-full max-w-7xl items-center gap-10 px-4 sm:gap-14 sm:px-8 lg:grid-cols-2 lg:gap-16 lg:px-10">
+      <div className="relative mx-auto grid w-full max-w-7xl min-w-0 items-center gap-10 px-3 sm:gap-14 sm:px-8 lg:grid-cols-2 lg:gap-16 lg:px-10">
         {/* =========================================================
             LEFT CONTENT
         ========================================================= */}
-        <div className="max-w-xl">
+        <div className="min-w-0 max-w-xl">
           {/* Badge */}
           <div className="inline-flex items-center gap-2 rounded-full border border-violet-100 bg-white/80 px-4 py-2 shadow-sm backdrop-blur">
             <Sparkles
@@ -81,12 +81,15 @@ function TherapistPreview() {
           {/* Features */}
           <div className="mt-7 space-y-3.5 sm:mt-8 sm:space-y-4">
             {features.map((feature) => (
-              <div key={feature} className="group flex items-center gap-3">
+              <div
+                key={feature}
+                className="group flex min-w-0 items-start gap-3"
+              >
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-sm shadow-violet-200 transition-transform duration-200 group-hover:scale-110">
                   <Check size={14} strokeWidth={3} />
                 </div>
 
-                <p className="text-sm font-medium text-slate-700 sm:text-[15px]">
+                <p className="min-w-0 flex-1 break-words text-sm font-medium text-slate-700 sm:text-[15px]">
                   {feature}
                 </p>
               </div>
@@ -106,23 +109,25 @@ function TherapistPreview() {
           </a>
 
           {/* Trust text */}
-          <div className="mt-4 flex items-center gap-2 text-[11px] font-medium text-slate-500 sm:mt-5 sm:text-xs">
+          <div className="mt-4 flex min-w-0 items-start gap-2 text-[11px] font-medium leading-5 text-slate-500 sm:mt-5 sm:text-xs">
             <ShieldCheck size={16} className="text-violet-500" />
 
-            <span>Secure. Private. Built for you.</span>
+            <span className="min-w-0 break-words">
+              Secure. Private. Built for you.
+            </span>
           </div>
         </div>
 
         {/* =========================================================
             THERAPIST DASHBOARD PREVIEW
         ========================================================= */}
-        <div className="relative">
+        <div className="relative min-w-0 w-full">
           {/* Glow behind dashboard */}
           <div className="absolute inset-8 rounded-[2.5rem] bg-violet-300/30 blur-3xl" />
 
           {/* Main Dashboard Card */}
-          <div className="relative rounded-[1.75rem] border border-white/80 bg-white/90 p-2.5 shadow-[0_25px_70px_rgba(76,29,149,0.16)] backdrop-blur sm:rounded-[2rem] sm:p-4">
-            <div className="flex overflow-hidden rounded-[1.5rem] border border-violet-100 bg-white">
+          <div className="relative w-full min-w-0 rounded-[1.5rem] border border-white/80 bg-white/90 p-2 shadow-[0_25px_70px_rgba(76,29,149,0.16)] backdrop-blur sm:rounded-[2rem] sm:p-4">
+            <div className="flex w-full min-w-0 overflow-hidden rounded-[1.25rem] border border-violet-100 bg-white sm:rounded-[1.5rem]">
               {/* =====================================================
                   SIDEBAR
               ===================================================== */}
@@ -172,20 +177,20 @@ function TherapistPreview() {
               {/* =====================================================
                   DASHBOARD CONTENT
               ===================================================== */}
-              <div className="min-w-0 flex-1 bg-gradient-to-br from-white to-violet-50/40 p-3.5 sm:p-5">
+              <div className="min-w-0 flex-1 overflow-hidden bg-gradient-to-br from-white to-violet-50/40 p-3 sm:p-5">
                 {/* Dashboard Header */}
-                <div className="flex items-start justify-between gap-3">
-                  <div>
+                <div className="flex min-w-0 items-start justify-between gap-2.5">
+                  <div className="min-w-0 flex-1">
                     <p className="text-xs font-semibold text-violet-600">
                       Therapist Dashboard
                     </p>
 
-                    <h3 className="mt-1 text-lg font-bold tracking-tight text-slate-900 sm:text-xl">
+                    <h3 className="mt-1 break-words text-[16px] font-bold leading-6 tracking-tight text-slate-900 sm:text-xl">
                       Good morning, Dr. Sarah 👋
                     </h3>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
                     {/* Notification */}
                     <div className="relative flex h-9 w-9 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-500 shadow-sm">
                       <Bell size={16} />
@@ -203,12 +208,12 @@ function TherapistPreview() {
                 {/* =================================================
                     STATS
                 ================================================= */}
-                <div className="mt-5 grid grid-cols-2 gap-2.5 sm:gap-3">
+                <div className="mt-4 grid min-w-0 grid-cols-2 gap-2 sm:mt-5 sm:gap-3">
                   {/* Sessions */}
-                  <div className="rounded-2xl border border-violet-100 bg-white p-3.5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="text-[10px] font-medium text-slate-500 sm:text-xs">
+                  <div className="min-w-0 rounded-2xl border border-violet-100 bg-white p-3 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-4">
+                    <div className="flex min-w-0 items-start justify-between gap-1.5">
+                      <div className="min-w-0">
+                        <p className="break-words text-[10px] font-medium text-slate-500 sm:text-xs">
                           Today's Sessions
                         </p>
 
@@ -216,7 +221,7 @@ function TherapistPreview() {
                           6
                         </p>
 
-                        <p className="mt-1 text-[10px] font-semibold text-emerald-500">
+                        <p className="break-words mt-1 text-[10px] font-semibold text-emerald-500">
                           +2 from yesterday
                         </p>
                       </div>
@@ -228,10 +233,10 @@ function TherapistPreview() {
                   </div>
 
                   {/* Clients */}
-                  <div className="rounded-2xl border border-emerald-100 bg-white p-3.5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="text-[10px] font-medium text-slate-500 sm:text-xs">
+                  <div className="min-w-0 rounded-2xl border border-emerald-100 bg-white p-3 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-4">
+                    <div className="flex min-w-0 items-start justify-between gap-1.5">
+                      <div className="min-w-0">
+                        <p className="break-words text-[10px] font-medium text-slate-500 sm:text-xs">
                           Active Clients
                         </p>
 
@@ -239,7 +244,7 @@ function TherapistPreview() {
                           24
                         </p>
 
-                        <p className="mt-1 text-[10px] font-semibold text-emerald-500">
+                        <p className="break-words mt-1 text-[10px] font-semibold text-emerald-500">
                           +5 this week
                         </p>
                       </div>
@@ -254,9 +259,9 @@ function TherapistPreview() {
                 {/* =================================================
                     PRACTICE TOOLS
                 ================================================= */}
-                <div className="mt-3 rounded-2xl border border-slate-100 bg-white p-3.5 shadow-sm sm:p-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-bold text-slate-900">
+                <div className="mt-3 w-full min-w-0 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm sm:p-4">
+                  <div className="flex min-w-0 items-center justify-between gap-2">
+                    <p className="min-w-0 text-sm font-bold text-slate-900">
                       Practice Tools
                     </p>
 
@@ -265,9 +270,9 @@ function TherapistPreview() {
                     </span>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-1 gap-2.5 min-[360px]:grid-cols-3 sm:gap-2.5">
+                  <div className="mt-4 grid min-w-0 grid-cols-2 gap-2 min-[400px]:grid-cols-3 sm:gap-2.5">
                     {/* Calendar */}
-                    <div className="group rounded-xl border border-slate-100 bg-white p-3 text-center transition duration-200 hover:-translate-y-0.5 hover:border-violet-200 hover:bg-violet-50/60">
+                    <div className="group min-w-0 rounded-xl border border-slate-100 bg-white p-2.5 text-center transition duration-200 hover:-translate-y-0.5 hover:border-violet-200 hover:bg-violet-50/60">
                       <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-violet-100 text-violet-600 transition group-hover:bg-violet-600 group-hover:text-white">
                         <CalendarDays size={17} />
                       </div>
@@ -282,7 +287,7 @@ function TherapistPreview() {
                     </div>
 
                     {/* Clients */}
-                    <div className="group rounded-xl border border-slate-100 bg-white p-3 text-center transition duration-200 hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50/60">
+                    <div className="group min-w-0 rounded-xl border border-slate-100 bg-white p-2.5 text-center transition duration-200 hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50/60">
                       <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-500 transition group-hover:bg-emerald-500 group-hover:text-white">
                         <Users size={17} />
                       </div>
@@ -297,7 +302,7 @@ function TherapistPreview() {
                     </div>
 
                     {/* Notes */}
-                    <div className="group rounded-xl border border-slate-100 bg-white p-3 text-center transition duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/60">
+                    <div className="group min-w-0 rounded-xl border border-slate-100 bg-white p-2.5 text-center transition duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/60">
                       <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-500 transition group-hover:bg-blue-500 group-hover:text-white">
                         <NotebookTabs size={17} />
                       </div>
@@ -313,13 +318,13 @@ function TherapistPreview() {
                   </div>
 
                   {/* Secure Communication */}
-                  <div className="mt-3 flex items-center gap-3 rounded-xl border border-violet-100 bg-gradient-to-r from-violet-50 to-purple-50 p-3">
+                  <div className="mt-3 flex min-w-0 items-center gap-2.5 rounded-xl border border-violet-100 bg-gradient-to-r from-violet-50 to-purple-50 p-3">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white shadow-sm">
                       <MessageCircle size={17} />
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-bold text-slate-900">
+                      <p className="break-words text-[11px] font-bold text-slate-900">
                         Secure client communication
                       </p>
 

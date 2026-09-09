@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
   ArrowLeft,
   Check,
@@ -72,7 +73,7 @@ function TherapistProfile() {
       } catch (error) {
         console.error("Failed to fetch therapist profile:", error);
 
-        alert(
+        toast.error(
           error.response?.data?.message || "Unable to load therapist profile.",
         );
       } finally {
@@ -162,12 +163,12 @@ function TherapistProfile() {
     e.preventDefault();
 
     if (formData.specializations.length === 0) {
-      alert("Please select at least one specialization.");
+      toast.error("Please select at least one specialization.");
       return;
     }
 
     if (formData.languages.length === 0) {
-      alert("Please select at least one language.");
+      toast.error("Please select at least one language.");
       return;
     }
 
@@ -196,10 +197,11 @@ function TherapistProfile() {
       setProfile(updatedProfile);
       setFormData(updatedProfile);
       setIsEditing(false);
+      toast.success("Therapist profile updated successfully.");
     } catch (error) {
       console.error("Therapist profile update failed:", error);
 
-      alert(
+      toast.error(
         error.response?.data?.message ||
           "Unable to update therapist profile. Please try again.",
       );
@@ -353,13 +355,13 @@ function TherapistProfile() {
 
               <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center">
                 <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-[24px] bg-gradient-to-br from-violet-100 to-indigo-100 text-2xl font-extrabold text-violet-700 shadow-sm ring-8 ring-white/70">
-                {getInitials(profile.name)}
+                  {getInitials(profile.name)}
                 </div>
 
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-xl font-extrabold text-slate-900">
-                  {profile.name}
+                      {profile.name}
                     </h2>
 
                     <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[0.12em] text-emerald-700">
@@ -676,7 +678,10 @@ function TherapistProfile() {
 
                 <div className="flex flex-col gap-3 rounded-2xl border border-violet-100 bg-gradient-to-r from-violet-50/70 via-white to-indigo-50/70 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-start gap-3">
-                    <ShieldCheck size={17} className="mt-0.5 shrink-0 text-violet-600" />
+                    <ShieldCheck
+                      size={17}
+                      className="mt-0.5 shrink-0 text-violet-600"
+                    />
                     <div>
                       <p className="text-xs font-extrabold text-slate-800">
                         Ready to publish your changes?
@@ -689,24 +694,24 @@ function TherapistProfile() {
                   </div>
 
                   <div className="flex flex-col gap-2 sm:flex-row">
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    disabled={saving}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-xs font-bold text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <X size={15} />
-                    Cancel
-                  </button>
+                    <button
+                      type="button"
+                      onClick={handleCancel}
+                      disabled={saving}
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-xs font-bold text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <X size={15} />
+                      Cancel
+                    </button>
 
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-6 text-xs font-extrabold text-white shadow-lg shadow-violet-200 transition hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <Save size={16} />
-                    {saving ? "Saving..." : "Save Changes"}
-                  </button>
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-6 text-xs font-extrabold text-white shadow-lg shadow-violet-200 transition hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <Save size={16} />
+                      {saving ? "Saving..." : "Save Changes"}
+                    </button>
                   </div>
                 </div>
               </form>

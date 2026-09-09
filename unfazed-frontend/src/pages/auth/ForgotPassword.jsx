@@ -1,4 +1,5 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -61,6 +62,7 @@ function ForgotPassword() {
 
     if (!email.trim()) {
       setError("Email is required.");
+      toast.error("Email is required.");
       return;
     }
 
@@ -74,15 +76,19 @@ function ForgotPassword() {
       setSuccess(
         "If the account exists, a password reset OTP has been sent to your email.",
       );
+      toast.success(
+        "If the account exists, a password reset OTP has been sent to your email.",
+      );
 
       setStep("OTP");
     } catch (error) {
       console.error("Forgot password failed:", error);
 
-      setError(
+      const message =
         error.response?.data?.message ||
-          "Unable to send OTP. Please try again.",
-      );
+        "Unable to send OTP. Please try again.";
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -100,11 +106,13 @@ function ForgotPassword() {
 
     if (!otp.trim()) {
       setError("OTP is required.");
+      toast.error("OTP is required.");
       return;
     }
 
     if (!/^\d{6}$/.test(otp.trim())) {
       setError("OTP must be exactly 6 digits.");
+      toast.error("OTP must be exactly 6 digits.");
       return;
     }
 
@@ -117,12 +125,16 @@ function ForgotPassword() {
       });
 
       setSuccess("OTP verified successfully.");
+      toast.success("OTP verified successfully.");
 
       setStep("RESET");
     } catch (error) {
       console.error("OTP verification failed:", error);
 
-      setError(error.response?.data?.message || "Invalid or expired OTP.");
+      const message =
+        error.response?.data?.message || "Invalid or expired OTP.";
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -140,11 +152,13 @@ function ForgotPassword() {
 
     if (password.length < 6) {
       setError("Password must be at least 6 characters.");
+      toast.error("Password must be at least 6 characters.");
       return;
     }
 
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
+      toast.error("Passwords do not match.");
       return;
     }
 
@@ -160,6 +174,9 @@ function ForgotPassword() {
       setSuccess(
         "Password reset successfully. You can now login with your new password.",
       );
+      toast.success(
+        "Password reset successfully. You can now login with your new password.",
+      );
 
       setTimeout(() => {
         navigate("/login");
@@ -167,10 +184,11 @@ function ForgotPassword() {
     } catch (error) {
       console.error("Password reset failed:", error);
 
-      setError(
+      const message =
         error.response?.data?.message ||
-          "Unable to reset password. Please try again.",
-      );
+        "Unable to reset password. Please try again.";
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -192,10 +210,13 @@ function ForgotPassword() {
       });
 
       setSuccess("A new OTP has been sent to your email.");
+      toast.success("A new OTP has been sent to your email.");
     } catch (error) {
       console.error("Resend OTP failed:", error);
 
-      setError(error.response?.data?.message || "Unable to resend OTP.");
+      const message = error.response?.data?.message || "Unable to resend OTP.";
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }

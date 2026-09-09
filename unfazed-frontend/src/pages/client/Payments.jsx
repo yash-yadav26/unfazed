@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
 
 import {
@@ -56,10 +57,15 @@ function Payments() {
 
         console.error("Failed to fetch payment history:", err);
 
-        setError(
+        const errorMessage =
           err?.response?.data?.message ||
-            "Unable to load payment history. Please try again.",
-        );
+          "Unable to load payment history. Please try again.";
+
+        setError(errorMessage);
+
+        toast.error(errorMessage, {
+          id: "payments-load-error",
+        });
 
         setPayments([]);
       } finally {

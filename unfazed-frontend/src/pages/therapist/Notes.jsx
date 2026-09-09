@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -371,7 +372,9 @@ function Notes() {
 
   const handleOpenCreate = () => {
     if (!selectedSession) {
-      alert("Please select a session first.");
+      toast.error("Please select a session first.", {
+        id: "note-select-session",
+      });
       return;
     }
 
@@ -401,7 +404,9 @@ function Notes() {
     }
 
     if (!content?.trim()) {
-      alert("Please write something in the note.");
+      toast.error("Please write something in the note.", {
+        id: "note-empty-content",
+      });
       return;
     }
 
@@ -419,8 +424,7 @@ function Notes() {
           content,
         });
       } else {
-
-      /* -----------------------------------------------------
+        /* -----------------------------------------------------
          CREATE NEW NOTE
       ----------------------------------------------------- */
         await createNote({
@@ -439,13 +443,27 @@ function Notes() {
 
       setEditingNote(null);
       setIsEditorOpen(false);
+
+      toast.success(
+        editingNote
+          ? "Note updated successfully."
+          : "Note created successfully.",
+        {
+          id: "note-save-success",
+        },
+      );
     } catch (error) {
       console.error("Failed to save note:", error);
 
-      setNotesError(
+      const errorMessage =
         error?.response?.data?.message ||
-          "Failed to save note. Please try again.",
-      );
+        "Failed to save note. Please try again.";
+
+      setNotesError(errorMessage);
+
+      toast.error(errorMessage, {
+        id: "note-save-error",
+      });
     } finally {
       setSavingNote(false);
     }
@@ -476,13 +494,22 @@ function Notes() {
        * Delete ke baad latest notes fetch.
        */
       await refreshSessionNotes();
+
+      toast.success("Note deleted successfully.", {
+        id: "note-delete-success",
+      });
     } catch (error) {
       console.error("Failed to delete note:", error);
 
-      setNotesError(
+      const errorMessage =
         error?.response?.data?.message ||
-          "Failed to delete note. Please try again.",
-      );
+        "Failed to delete note. Please try again.";
+
+      setNotesError(errorMessage);
+
+      toast.error(errorMessage, {
+        id: "note-delete-error",
+      });
     } finally {
       setDeletingNoteId(null);
     }
@@ -694,8 +721,8 @@ function Notes() {
                   </div>
 
                   <p className="mt-0.5 text-[11px] text-slate-400">
-                    Start here — click a client to unlock their sessions.
-                    Only clients who have booked with you are shown.
+                    Start here — click a client to unlock their sessions. Only
+                    clients who have booked with you are shown.
                   </p>
                 </div>
               </div>
@@ -823,9 +850,7 @@ function Notes() {
 
                       <div className="mt-3 flex items-center justify-between">
                         <span className="text-[10px] font-semibold text-slate-400">
-                          {isSelected
-                            ? "Client selected"
-                            : "Click to select"}
+                          {isSelected ? "Client selected" : "Click to select"}
                         </span>
 
                         <div className="flex items-center gap-2">
@@ -1123,8 +1148,11 @@ function Notes() {
 
                       <p className="mx-auto mt-1 max-w-md text-xs leading-5 text-slate-400">
                         This is where your session notes will appear. Start by
-                        clicking <span className="font-bold text-violet-600">Add Note</span>,
-                        then choose whether the note is private or shared and
+                        clicking{" "}
+                        <span className="font-bold text-violet-600">
+                          Add Note
+                        </span>
+                        , then choose whether the note is private or shared and
                         write your session summary.
                       </p>
 
@@ -1208,9 +1236,12 @@ function Notes() {
                   </p>
 
                   <p className="mt-0.5 text-[10px] leading-5 text-slate-500">
-                    Choose <span className="font-bold text-amber-600">Private</span>
-                    for therapist-only documentation, or <span className="font-bold text-emerald-600">Shared</span>
-                    when you want the selected client to be able to see the note.
+                    Choose{" "}
+                    <span className="font-bold text-amber-600">Private</span>
+                    for therapist-only documentation, or{" "}
+                    <span className="font-bold text-emerald-600">Shared</span>
+                    when you want the selected client to be able to see the
+                    note.
                   </p>
                 </div>
               </div>

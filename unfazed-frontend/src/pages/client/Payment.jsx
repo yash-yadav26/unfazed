@@ -1,4 +1,5 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import {
@@ -152,6 +153,13 @@ function Payment() {
 
   const handlePayment = async () => {
     if (!hasValidBooking || paymentLoading) {
+      if (!hasValidBooking && !paymentLoading) {
+        toast.error(
+          "Some booking details are missing. Please go back and select the therapist, date and session slot again.",
+          { id: "payment-invalid-booking" },
+        );
+      }
+
       return;
     }
 
@@ -209,6 +217,10 @@ function Payment() {
         throw new Error("Invalid payment amount received from server.");
       }
 
+      toast.success("Secure payment checkout is ready.", {
+        id: "payment-checkout-ready",
+      });
+
       /* -------------------------------------------------------
          RAZORPAY CHECKOUT
       ------------------------------------------------------- */
@@ -231,6 +243,10 @@ function Payment() {
             setPaymentLoading(true);
             setPaymentError("");
 
+            toast.loading("Verifying your payment...", {
+              id: "payment-verification",
+            });
+
             /* -----------------------------------------------
                VERIFY PAYMENT + CREATE SESSION
             ------------------------------------------------ */
@@ -244,6 +260,12 @@ function Payment() {
             });
 
             const completeData = completeResponse?.data;
+
+            toast.dismiss("payment-verification");
+
+            toast.success("Payment verified. Your session is confirmed.", {
+              id: "payment-success",
+            });
 
             /* -----------------------------------------------
                PAYMENT + SESSION SUCCESS
@@ -282,10 +304,16 @@ function Payment() {
           } catch (error) {
             console.error("Payment verification failed:", error);
 
-            setPaymentError(
+            const errorMessage =
               error?.response?.data?.message ||
-                "Payment was received but verification failed. Please contact support.",
-            );
+              "Payment was received but verification failed. Please contact support.";
+
+            toast.dismiss("payment-verification");
+            setPaymentError(errorMessage);
+
+            toast.error(errorMessage, {
+              id: "payment-verification-error",
+            });
           } finally {
             setPaymentLoading(false);
           }
@@ -298,6 +326,11 @@ function Payment() {
         modal: {
           ondismiss: () => {
             setPaymentLoading(false);
+
+            toast("Payment checkout was closed.", {
+              id: "payment-checkout-closed",
+              icon: "ℹ️",
+            });
           },
         },
       };
@@ -311,9 +344,14 @@ function Payment() {
       razorpay.on("payment.failed", (response) => {
         console.error("Razorpay payment failed:", response);
 
-        setPaymentError(
-          response?.error?.description || "Payment failed. Please try again.",
-        );
+        const errorMessage =
+          response?.error?.description || "Payment failed. Please try again.";
+
+        setPaymentError(errorMessage);
+
+        toast.error(errorMessage, {
+          id: "payment-failed",
+        });
 
         setPaymentLoading(false);
       });
@@ -322,11 +360,16 @@ function Payment() {
     } catch (error) {
       console.error("Payment initialization failed:", error);
 
-      setPaymentError(
+      const errorMessage =
         error?.response?.data?.message ||
-          error?.message ||
-          "Unable to start payment. Please try again.",
-      );
+        error?.message ||
+        "Unable to start payment. Please try again.";
+
+      setPaymentError(errorMessage);
+
+      toast.error(errorMessage, {
+        id: "payment-init-error",
+      });
 
       setPaymentLoading(false);
     }

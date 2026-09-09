@@ -38,19 +38,19 @@ const clientProfileSchema = z
     occupation: z
       .string()
       .trim()
-      .min(2, "Occupation must be at least 2 characters.")
+      .min(1, "Occupation must be at least 1 characters.")
       .max(100, "Occupation cannot exceed 100 characters."),
 
     presentingConcern: z
       .string()
       .trim()
-      .min(10, "Presenting concern must be at least 10 characters.")
+      .min(5, "Presenting concern must be at least 5 characters.")
       .max(2000, "Presenting concern cannot exceed 2000 characters."),
 
     relevantHistory: z
       .string()
       .trim()
-      .min(10, "Relevant history must be at least 10 characters.")
+      .min(1, "Relevant history must be at least 1 characters.")
       .max(4000, "Relevant history cannot exceed 4000 characters."),
 
     consent: z.literal(true, {

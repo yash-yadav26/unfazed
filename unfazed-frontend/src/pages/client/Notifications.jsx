@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
 
 import {
   ArrowLeft,
@@ -187,8 +188,13 @@ function Notifications() {
        */
 
       setUnreadCount((previousCount) => Math.max(previousCount - 1, 0));
+      toast.success("Notification marked as read.");
     } catch (error) {
       console.error("Failed to mark notification as read:", error);
+      toast.error(
+        error?.response?.data?.message ||
+          "Unable to mark the notification as read. Please try again.",
+      );
     }
   };
 
@@ -215,8 +221,14 @@ function Notifications() {
       if (!notification.isRead) {
         setUnreadCount((previousCount) => Math.max(previousCount - 1, 0));
       }
+
+      toast.success("Notification deleted.");
     } catch (error) {
       console.error("Failed to delete notification:", error);
+      toast.error(
+        error?.response?.data?.message ||
+          "Unable to delete the notification. Please try again.",
+      );
     } finally {
       setDeletingId(null);
     }
@@ -249,8 +261,13 @@ function Notifications() {
       );
 
       setUnreadCount(0);
+      toast.success("All notifications marked as read.");
     } catch (error) {
       console.error("Failed to mark all notifications as read:", error);
+      toast.error(
+        error?.response?.data?.message ||
+          "Unable to mark all notifications as read. Please try again.",
+      );
     } finally {
       setMarkingAllRead(false);
     }

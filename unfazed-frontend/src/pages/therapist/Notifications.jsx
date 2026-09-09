@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 
 import {
   Bell,
@@ -108,6 +109,12 @@ function TherapistNotifications() {
         "Failed to mark notification as read:",
         error,
       );
+
+      toast.error(
+        error?.response?.data?.message ||
+          "Unable to mark the notification as read. Please try again.",
+        { id: "therapist-notification-read-error" },
+      );
     }
   };
 
@@ -132,10 +139,20 @@ function TherapistNotifications() {
       );
 
       setUnreadCount(0);
+
+      toast.success("All notifications marked as read.", {
+        id: "therapist-mark-all-success",
+      });
     } catch (error) {
       console.error(
         "Failed to mark all notifications as read:",
         error,
+      );
+
+      toast.error(
+        error?.response?.data?.message ||
+          "Unable to mark all notifications as read. Please try again.",
+        { id: "therapist-mark-all-error" },
       );
     }
   };
@@ -169,10 +186,20 @@ function TherapistNotifications() {
           Math.max(current - 1, 0),
         );
       }
+
+      toast.success("Notification deleted.", {
+        id: "therapist-notification-delete-success",
+      });
     } catch (error) {
       console.error(
         "Failed to delete notification:",
         error,
+      );
+
+      toast.error(
+        error?.response?.data?.message ||
+          "Unable to delete the notification. Please try again.",
+        { id: "therapist-notification-delete-error" },
       );
     }
   };

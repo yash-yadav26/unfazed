@@ -11,7 +11,7 @@ const registerSchema = z
     name: z
       .string()
       .trim()
-      .min(2, "Name must be at least 2 characters.")
+      .min(1, "Name must be at least 1 characters.")
       .max(100, "Name cannot exceed 100 characters."),
 
     email: z

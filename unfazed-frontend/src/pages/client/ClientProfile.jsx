@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -62,7 +63,10 @@ function ClientProfile() {
       } catch (error) {
         console.error("Failed to fetch client profile:", error);
 
-        alert(error.response?.data?.message || "Unable to load your profile.");
+        const message =
+          error?.response?.data?.message || "Unable to load your profile.";
+
+        toast.error(message);
       } finally {
         setLoading(false);
       }
@@ -125,6 +129,7 @@ function ClientProfile() {
       });
 
       setEditMode(false);
+      toast.success(response?.message || "Profile updated successfully.");
     } catch (error) {
       console.error("Client profile update failed:", error);
 

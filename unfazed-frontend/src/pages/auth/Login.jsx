@@ -1,4 +1,5 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -102,6 +103,10 @@ function Login() {
 
     setErrors(newErrors);
 
+    if (Object.keys(newErrors).length > 0) {
+      toast.error(Object.values(newErrors)[0]);
+    }
+
     return Object.keys(newErrors).length === 0;
   };
 
@@ -138,6 +143,7 @@ function Login() {
       });
 
       console.log("Login successful:", response);
+      toast.success("Login successful.");
 
       const { token, user } = response.data;
 

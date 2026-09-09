@@ -1,4 +1,5 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -82,6 +83,10 @@ function TherapistSignup() {
 
     setErrors(newErrors);
 
+    if (Object.keys(newErrors).length > 0) {
+      toast.error(Object.values(newErrors)[0]);
+    }
+
     return Object.keys(newErrors).length === 0;
   };
 
@@ -114,14 +119,28 @@ function TherapistSignup() {
       });
       console.log("Therapist signup successful:", response);
 
+      toast.success(response?.message || "Account created successfully.");
       navigate("/login");
     } catch (error) {
       console.error("Therapist signup failed:", error);
 
+      const apiData = error?.response?.data;
+      const validationMessages = Array.isArray(apiData?.errors)
+        ? apiData.errors.map((item) => item?.message).filter(Boolean)
+        : [];
+
+      const message =
+        validationMessages.length > 0
+          ? validationMessages.join(" • ")
+          : apiData?.message ||
+            error?.message ||
+            "Unable to create account. Please try again.";
+
+      toast.error(message);
+
       setErrors({
         general:
-          error.response?.data?.message ||
-          "Unable to create account. Please try again.",
+          apiData?.message || "Unable to create account. Please try again.",
       });
     } finally {
       setLoading(false);
