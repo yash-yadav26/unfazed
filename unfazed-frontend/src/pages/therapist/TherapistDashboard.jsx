@@ -200,6 +200,26 @@ const isActiveSession = (session) => {
   return ["PENDING", "CONFIRMED", "IN_PROGRESS"].includes(status);
 };
 
+const isCurrentSession = (session, currentTime) => {
+  const status = normalizeStatus(session?.status);
+
+  if (status !== "IN_PROGRESS") {
+    return false;
+  }
+
+  const startTime = getSessionDateTime(session);
+  const endTime = getSessionEndDateTime(session);
+
+  if (
+    startTime === Number.MAX_SAFE_INTEGER ||
+    endTime === Number.MAX_SAFE_INTEGER
+  ) {
+    return false;
+  }
+
+  return currentTime >= startTime && currentTime <= endTime;
+};
+
 const isJoinableSession = (session, currentTime) => {
   const status = normalizeStatus(session?.status);
 
@@ -265,6 +285,38 @@ const getSessionStatusLabel = (status) => {
     default:
       return normalizedStatus || "Unknown";
   }
+};
+
+const getTimelineDotClassName = (status, active) => {
+  const normalizedStatus = normalizeStatus(status);
+
+  // Currently running session.
+  if (active) {
+    return "bg-violet-600 ring-4 ring-violet-100 shadow-lg shadow-violet-200";
+  }
+
+  // Future confirmed session.
+  if (normalizedStatus === "CONFIRMED") {
+    return "bg-slate-300";
+  }
+
+  // Completed session.
+  if (normalizedStatus === "COMPLETED") {
+    return "bg-emerald-500 ring-4 ring-emerald-100 shadow-lg shadow-emerald-200";
+  }
+
+  // Missed session.
+  if (normalizedStatus === "NO_SHOW") {
+    return "bg-orange-400 ring-4 ring-orange-100 shadow-sm shadow-orange-100";
+  }
+
+  // Cancelled session.
+  if (normalizedStatus === "CANCELLED") {
+    return "bg-red-500 ring-4 ring-red-100 shadow-sm shadow-red-100";
+  }
+
+  // Pending / unknown.
+  return "bg-slate-300";
 };
 
 const getStatusClassName = (status) => {
@@ -371,9 +423,13 @@ function TherapistDashboard() {
   const greeting = getGreeting();
 
   const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+    import.meta.env.VITE_API_URL ||
+    import.meta.env.VITE_API_BASE_URL ||
+    "http://localhost:5000/api";
 
-  const SOCKET_URL = API_BASE_URL.replace(/\/api\/?$/, "");
+  const SOCKET_URL = API_BASE_URL
+    .replace(/\/api\/?$/, "")
+    .replace(/\/$/, "");
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -407,6 +463,10 @@ function TherapistDashboard() {
   const [currentTime, setCurrentTime] = useState(0);
 
   const [joiningSessionId, setJoiningSessionId] = useState(null);
+
+  const [todayPage, setTodayPage] = useState(1);
+
+  const TODAY_SESSIONS_PER_PAGE = 5;
 
   /* =========================================================
      CURRENT TIME
@@ -570,7 +630,8 @@ function TherapistDashboard() {
       auth: {
         token,
       },
-      transports: ["websocket", "polling"],
+      transports: ["polling", "websocket"],
+      upgrade: true,
     });
 
     socket.on("connect", () => {
@@ -650,6 +711,37 @@ function TherapistDashboard() {
       })
       .sort((a, b) => getSessionDateTime(a) - getSessionDateTime(b));
   }, [allSessions]);
+
+  /* =========================================================
+     TODAY PAGINATION
+  ========================================================== */
+
+  const todayTotalPages = Math.max(
+    1,
+    Math.ceil(todaySessions.length / TODAY_SESSIONS_PER_PAGE),
+  );
+
+  const safeTodayPage = Math.min(todayPage, todayTotalPages);
+
+  const paginatedTodaySessions = useMemo(() => {
+    const startIndex =
+      (safeTodayPage - 1) * TODAY_SESSIONS_PER_PAGE;
+
+    return todaySessions.slice(
+      startIndex,
+      startIndex + TODAY_SESSIONS_PER_PAGE,
+    );
+  }, [todaySessions, safeTodayPage]);
+
+  const todayPageStart =
+    todaySessions.length === 0
+      ? 0
+      : (safeTodayPage - 1) * TODAY_SESSIONS_PER_PAGE + 1;
+
+  const todayPageEnd = Math.min(
+    safeTodayPage * TODAY_SESSIONS_PER_PAGE,
+    todaySessions.length,
+  );
 
   /* =========================================================
      UPCOMING SESSIONS
@@ -1263,17 +1355,60 @@ function TherapistDashboard() {
                       description="Your schedule is clear for today."
                     />
                   ) : (
-                    <div className="space-y-4">
-                      {todaySessions.map((session, index) => (
-                        <TimelineItem
-                          key={session?._id}
-                          time={formatTime(session.startTime)}
-                          title={session.clientName}
-                          status={getSessionStatusLabel(session.status)}
-                          active={index === 0}
-                        />
-                      ))}
-                    </div>
+                    <>
+                      <div className="min-h-[420px] space-y-4">
+                        {paginatedTodaySessions.map((session) => (
+                          <TimelineItem
+                            key={session?._id}
+                            time={formatTime(session.startTime)}
+                            title={session.clientName}
+                            status={getSessionStatusLabel(session.status)}
+                            active={isCurrentSession(session, currentTime)}
+                          />
+                        ))}
+                      </div>
+
+                      {todayTotalPages > 1 && (
+                        <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                          <p className="text-[10px] font-medium text-slate-400">
+                            Showing {todayPageStart}–{todayPageEnd} of{" "}
+                            {todaySessions.length} sessions
+                          </p>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setTodayPage((page) =>
+                                  Math.max(page - 1, 1),
+                                )
+                              }
+                              disabled={todayPage === 1}
+                              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[10px] font-semibold text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              Previous
+                            </button>
+
+                            <span className="min-w-[72px] text-center text-[10px] font-bold text-slate-600">
+                              Page {todayPage} of {todayTotalPages}
+                            </span>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setTodayPage((page) =>
+                                  Math.min(page + 1, todayTotalPages),
+                                )
+                              }
+                              disabled={todayPage === todayTotalPages}
+                              className="rounded-xl bg-violet-600 px-3 py-2 text-[10px] font-semibold text-white shadow-sm shadow-violet-100 transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              Next
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </section>
@@ -1515,11 +1650,10 @@ function TimelineItem({ time, title, status, active = false }) {
       </div>
 
       <div
-        className={`h-3 w-3 shrink-0 rounded-full ${
-          active
-            ? "bg-violet-600 ring-4 ring-violet-100 shadow-lg shadow-violet-200"
-            : "bg-slate-300"
-        }`}
+        className={`h-3 w-3 shrink-0 rounded-full ${getTimelineDotClassName(
+          status,
+          active,
+        )}`}
       />
 
       <div className="min-w-0 flex-1 rounded-2xl border border-slate-100 bg-gradient-to-r from-slate-50 to-violet-50/30 px-3.5 py-3">

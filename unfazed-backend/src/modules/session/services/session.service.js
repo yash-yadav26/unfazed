@@ -319,7 +319,7 @@ const completeExpiredSessions = async () => {
       );
 
       /* -------------------------------------------------------------------- */
-      /*                     Client Did Not Join                               */
+      /*                     Client Did Not Join                              */
       /* -------------------------------------------------------------------- */
 
       if (!session.clientJoined && session.therapistJoined) {
@@ -637,15 +637,36 @@ const getAvailableSlots = async (therapistId, date) => {
       selectedDate,
     );
 
-  const bookedSlots = new Set(
-    bookedSessions
-      .filter((session) => ACTIVE_SESSION_STATUSES.includes(session.status))
-      .map((session) => session.startTime),
+  const activeBookedSessions = bookedSessions.filter((session) =>
+    ACTIVE_SESSION_STATUSES.includes(session.status),
   );
 
-  /* ------------------------- Remove Booked Slots -------------------------- */
+  /* ------------------------------------------------------------------------ */
+  /*                     Remove Overlapping Slots                             */
+  /* ------------------------------------------------------------------------ */
 
-  const availableSlots = futureSlots.filter((slot) => !bookedSlots.has(slot));
+  const availableSlots = futureSlots.filter((slot) => {
+    const slotStart = timeToMinutes(slot);
+    const slotEnd = slotStart + sessionDuration;
+
+    return !activeBookedSessions.some((session) => {
+      const bookedStart = timeToMinutes(session.startTime);
+      const bookedEnd = timeToMinutes(session.endTime);
+
+      /*
+       * A slot is unavailable when it overlaps
+       * with an existing active session.
+       *
+       * Example:
+       * Existing session: 04:45 - 05:25
+       *
+       * 05:10 - 05:20 -> blocked
+       * 05:20 - 05:30 -> blocked
+       * 05:30 - 05:40 -> allowed
+       */
+      return slotStart < bookedEnd && slotEnd > bookedStart;
+    });
+  });
 
   return {
     date,
@@ -863,6 +884,7 @@ const joinSession = async ({ userId, sessionId }) => {
   const now = new Date();
 
   const sessionStart = getSessionDateTime(session, "startTime");
+
   const sessionEnd = getSessionDateTime(session, "endTime");
 
   if (!sessionStart || !sessionEnd) {
@@ -979,6 +1001,7 @@ const joinSession = async ({ userId, sessionId }) => {
 /* -------------------------------------------------------------------------- */
 /*                            Get My Sessions                                 */
 /* -------------------------------------------------------------------------- */
+
 const getMySessions = async (userId) => {
   await completeExpiredSessions();
 
@@ -1014,7 +1037,6 @@ const getMySessions = async (userId) => {
     upcoming,
     completed,
     cancelled,
-    
   };
 };
 
