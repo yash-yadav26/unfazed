@@ -658,27 +658,22 @@ function TherapistDashboard() {
   const upcomingSessions = useMemo(() => {
     return allSessions
       .filter((session) => {
-        const status = normalizeStatus(session?.status);
-
         if (!isActiveSession(session)) {
           return false;
         }
 
-        const startTime = getSessionDateTime(session);
-
         const endTime = getSessionEndDateTime(session);
 
         /*
-          IN_PROGRESS session remains visible until
-          its scheduled end time so therapist can
-          reconnect to the session.
+          Keep CONFIRMED and IN_PROGRESS sessions visible
+          until their scheduled end time.
+
+          This ensures a session that has already started
+          is still shown in Upcoming Sessions so the
+          therapist can join or reconnect before the
+          meeting window ends.
         */
-
-        if (status === "IN_PROGRESS") {
-          return endTime >= currentTime;
-        }
-
-        return startTime >= currentTime;
+        return endTime >= currentTime;
       })
       .sort((a, b) => getSessionDateTime(a) - getSessionDateTime(b))
       .slice(0, 4);
