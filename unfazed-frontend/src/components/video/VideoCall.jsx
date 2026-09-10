@@ -12,10 +12,11 @@ import {
 } from "lucide-react";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
+  "http://localhost:5000/api";
 
-// http://localhost:5000/api -> http://localhost:5000
-const SOCKET_URL = API_BASE_URL.replace(/\/api\/?$/, "");
+const SOCKET_URL = API_BASE_URL.replace(/\/api\/?$/, "").replace(/\/$/, "");
 
 const VideoCall = () => {
   const { id: sessionId } = useParams();
@@ -143,27 +144,30 @@ const VideoCall = () => {
   // ------------------------------------------------------------
   // Handle Offer
   // ------------------------------------------------------------
-  const handleOffer = useCallback(async (offer) => {
-    try {
-      const peerConnection = createPeerConnection();
+  const handleOffer = useCallback(
+    async (offer) => {
+      try {
+        const peerConnection = createPeerConnection();
 
-      await peerConnection.setRemoteDescription(
-        new RTCSessionDescription(offer),
-      );
+        await peerConnection.setRemoteDescription(
+          new RTCSessionDescription(offer),
+        );
 
-      const answer = await peerConnection.createAnswer();
+        const answer = await peerConnection.createAnswer();
 
-      await peerConnection.setLocalDescription(answer);
+        await peerConnection.setLocalDescription(answer);
 
-      socketRef.current?.emit("answer", {
-        sessionId,
-        answer,
-      });
-    } catch (err) {
-      console.error("Offer handling failed:", err);
-      setError("Unable to establish the video connection.");
-    }
-  }, [createPeerConnection, sessionId]);
+        socketRef.current?.emit("answer", {
+          sessionId,
+          answer,
+        });
+      } catch (err) {
+        console.error("Offer handling failed:", err);
+        setError("Unable to establish the video connection.");
+      }
+    },
+    [createPeerConnection, sessionId],
+  );
 
   // ------------------------------------------------------------
   // Handle Answer
@@ -342,7 +346,7 @@ const VideoCall = () => {
           auth: {
             token,
           },
-          transports: ["websocket"],
+          transports: ["websocket", "polling"],
         });
 
         socketRef.current = socket;

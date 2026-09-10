@@ -199,7 +199,7 @@ const initializeSocket = (server) => {
   });
 
   /* ------------------------------------------------------------------------ */
-  /*                           Connection                                    */
+  /*                           Connection                                     */
   /* ------------------------------------------------------------------------ */
 
   io.on("connection", (socket) => {
@@ -213,16 +213,22 @@ const initializeSocket = (server) => {
     /*                             Join Room                                  */
     /* ---------------------------------------------------------------------- */
 
-    socket.on("join-room", async ({ sessionId }) => {
+    socket.on("join-room", async ({ sessionId } = {}, acknowledgement) => {
       try {
         /* -------------------------- Validate Input ------------------------- */
 
         if (!sessionId) {
-          emitSocketError(
-            socket,
-            "Session ID is required.",
-            "SESSION_ID_REQUIRED",
-          );
+          const errorResponse = {
+            success: false,
+            code: "SESSION_ID_REQUIRED",
+            message: "Session ID is required.",
+          };
+
+          if (typeof acknowledgement === "function") {
+            acknowledgement(errorResponse);
+          }
+
+          emitSocketError(socket, errorResponse.message, errorResponse.code);
 
           return;
         }
@@ -236,7 +242,17 @@ const initializeSocket = (server) => {
           .lean();
 
         if (!session) {
-          emitSocketError(socket, "Session not found.", "SESSION_NOT_FOUND");
+          const errorResponse = {
+            success: false,
+            code: "SESSION_NOT_FOUND",
+            message: "Session not found.",
+          };
+
+          if (typeof acknowledgement === "function") {
+            acknowledgement(errorResponse);
+          }
+
+          emitSocketError(socket, errorResponse.message, errorResponse.code);
 
           return;
         }
@@ -244,11 +260,17 @@ const initializeSocket = (server) => {
         /* ------------------------- Validate Status ------------------------ */
 
         if (!ALLOWED_SESSION_STATUSES.includes(session.status)) {
-          emitSocketError(
-            socket,
-            "This session is not available for video calling.",
-            "SESSION_NOT_AVAILABLE",
-          );
+          const errorResponse = {
+            success: false,
+            code: "SESSION_NOT_AVAILABLE",
+            message: "This session is not available for video calling.",
+          };
+
+          if (typeof acknowledgement === "function") {
+            acknowledgement(errorResponse);
+          }
+
+          emitSocketError(socket, errorResponse.message, errorResponse.code);
 
           return;
         }
@@ -261,11 +283,17 @@ const initializeSocket = (server) => {
         );
 
         if (!participant) {
-          emitSocketError(
-            socket,
-            "You are not a participant of this session.",
-            "SESSION_ACCESS_DENIED",
-          );
+          const errorResponse = {
+            success: false,
+            code: "SESSION_ACCESS_DENIED",
+            message: "You are not a participant of this session.",
+          };
+
+          if (typeof acknowledgement === "function") {
+            acknowledgement(errorResponse);
+          }
+
+          emitSocketError(socket, errorResponse.message, errorResponse.code);
 
           return;
         }
@@ -273,11 +301,18 @@ const initializeSocket = (server) => {
         /* ----------------------- Join REST Check -------------------------- */
 
         if (!hasParticipantJoined(session, participant.role)) {
-          emitSocketError(
-            socket,
-            "Join the session through the session API before entering the video room.",
-            "SESSION_NOT_JOINED",
-          );
+          const errorResponse = {
+            success: false,
+            code: "SESSION_NOT_JOINED",
+            message:
+              "Join the session through the session API before entering the video room.",
+          };
+
+          if (typeof acknowledgement === "function") {
+            acknowledgement(errorResponse);
+          }
+
+          emitSocketError(socket, errorResponse.message, errorResponse.code);
 
           return;
         }
@@ -301,16 +336,27 @@ const initializeSocket = (server) => {
          * Prevent extra sockets from entering the room.
          */
         if (!socket.rooms.has(roomId) && currentParticipants >= 2) {
-          emitSocketError(
-            socket,
-            "This session already has both participants connected.",
-            "SESSION_ROOM_FULL",
-          );
+          const errorResponse = {
+            success: false,
+            code: "SESSION_ROOM_FULL",
+            message: "This session already has both participants connected.",
+          };
+
+          if (typeof acknowledgement === "function") {
+            acknowledgement(errorResponse);
+          }
+
+          emitSocketError(socket, errorResponse.message, errorResponse.code);
 
           return;
         }
 
         /* ---------------------------- Join -------------------------------- */
+
+        // Keep one active video-session room per socket.
+        if (socket.sessionRoom && socket.sessionRoom.roomId !== roomId) {
+          socket.leave(socket.sessionRoom.roomId);
+        }
 
         socket.join(roomId);
 
@@ -320,33 +366,57 @@ const initializeSocket = (server) => {
           role: participant.role,
         };
 
+        const peerCount = io.sockets.adapter.rooms.get(roomId)?.size || 0;
+
         console.log(
-          `[Socket.io] ${participant.role} ${socket.user.id} joined ${roomId}`,
+          `[Socket.io] ${participant.role} ${socket.user.id} joined ${roomId} (${peerCount}/2 participants)`,
         );
 
         /* ----------------------- Current Participant ---------------------- */
 
-        socket.emit("room-joined", {
+        const roomJoinedPayload = {
           success: true,
           roomId,
-          sessionId: session._id,
+          sessionId: session._id.toString(),
           participant: participant.role,
-        });
+          peerCount,
+        };
+
+        socket.emit("room-joined", roomJoinedPayload);
+
+        /**
+         * Supports frontend Socket.io acknowledgement callbacks.
+         *
+         * Example:
+         * socket.emit("join-room", payload, (response) => {});
+         */
+        if (typeof acknowledgement === "function") {
+          acknowledgement(roomJoinedPayload);
+        }
 
         /* ---------------------- Notify Other Side ------------------------- */
 
         socket.to(roomId).emit("participant-joined", {
           participant: participant.role,
           socketId: socket.id,
+          peerCount,
         });
       } catch (error) {
         console.error("[Socket.io] Join room failed:", error);
 
-        emitSocketError(
-          socket,
-          "Unable to join the video room.",
-          "ROOM_JOIN_FAILED",
-        );
+        const message = error?.message || "Unable to join the video room.";
+
+        const errorResponse = {
+          success: false,
+          code: "ROOM_JOIN_FAILED",
+          message,
+        };
+
+        if (typeof acknowledgement === "function") {
+          acknowledgement(errorResponse);
+        }
+
+        emitSocketError(socket, message, "ROOM_JOIN_FAILED");
       }
     });
 
