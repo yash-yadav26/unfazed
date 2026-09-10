@@ -19,7 +19,12 @@ import ChatWindow from "../../components/chat/ChatWindow";
 /*                                  Constants                                 */
 /* -------------------------------------------------------------------------- */
 
-const VALID_CHAT_STATUSES = ["CONFIRMED", "IN_PROGRESS", "COMPLETED"];
+const VALID_CHAT_STATUSES = [
+  "CONFIRMED",
+  "IN_PROGRESS",
+  "COMPLETED",
+  "NO_SHOW",
+];
 
 /* -------------------------------------------------------------------------- */
 /*                             Client Chat Page                               */
@@ -197,7 +202,7 @@ const ClientChat = () => {
               </h1>
 
               <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-                Chat is available only for confirmed, active, or completed
+                Chat is available for confirmed, active, completed, or missed
                 therapy sessions.
               </p>
 

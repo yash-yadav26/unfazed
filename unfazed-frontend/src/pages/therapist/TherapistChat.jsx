@@ -21,7 +21,12 @@ import ChatWindow from "../../components/chat/ChatWindow";
 /*                                  Constants                                 */
 /* -------------------------------------------------------------------------- */
 
-const CHAT_ALLOWED_STATUSES = ["CONFIRMED", "IN_PROGRESS", "COMPLETED"];
+const CHAT_ALLOWED_STATUSES = [
+  "CONFIRMED",
+  "IN_PROGRESS",
+  "COMPLETED",
+  "NO_SHOW",
+];
 
 /* -------------------------------------------------------------------------- */
 /*                           Therapist Chat Page                              */
@@ -213,8 +218,8 @@ const TherapistChat = () => {
               </h1>
 
               <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-                This client does not currently have a confirmed, active, or
-                completed session with you.
+                This client does not currently have a confirmed, active,
+                completed, or missed session with you.
               </p>
 
               <button

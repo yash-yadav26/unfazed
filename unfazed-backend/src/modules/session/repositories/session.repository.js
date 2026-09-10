@@ -224,7 +224,7 @@ const findSessionBetweenClientAndTherapist = async (clientId, therapistId) => {
     clientId,
     therapistId,
     status: {
-      $in: ["CONFIRMED", "IN_PROGRESS", "COMPLETED"],
+      $in: ["CONFIRMED", "IN_PROGRESS", "COMPLETED", "NO_SHOW"],
     },
   })
     .select("_id clientId therapistId status")

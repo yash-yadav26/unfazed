@@ -59,6 +59,7 @@ function Sessions() {
   const [sessions, setSessions] = useState({
     upcoming: [],
     completed: [],
+    missed: [],
     cancelled: [],
   });
 
@@ -128,10 +129,43 @@ function Sessions() {
 
         const data = response?.data || {};
 
+        const completedSessions = Array.isArray(data.completed)
+          ? data.completed
+          : [];
+
+        const missedSessions = Array.isArray(data.missed) ? data.missed : [];
+
+        /*
+         * Backward compatible handling:
+         * If backend still sends NO_SHOW inside `completed`,
+         * move those sessions to the dedicated Missed section.
+         */
+        const completedOnly = completedSessions.filter(
+          (session) =>
+            String(session?.status || "").toUpperCase() !==
+            SESSION_STATUSES.NO_SHOW,
+        );
+
+        const missedFromCompleted = completedSessions.filter(
+          (session) =>
+            String(session?.status || "").toUpperCase() ===
+            SESSION_STATUSES.NO_SHOW,
+        );
+
+        const mergedMissed = [...missedSessions, ...missedFromCompleted].filter(
+          (session, index, array) =>
+            index ===
+            array.findIndex(
+              (item) => String(item?._id) === String(session?._id),
+            ),
+        );
+
         setSessions({
           upcoming: Array.isArray(data.upcoming) ? data.upcoming : [],
 
-          completed: Array.isArray(data.completed) ? data.completed : [],
+          completed: completedOnly,
+
+          missed: mergedMissed,
 
           cancelled: Array.isArray(data.cancelled) ? data.cancelled : [],
         });
@@ -324,6 +358,10 @@ function Sessions() {
           item._id === updatedSession?._id ? updatedSession : item,
         ),
 
+        missed: previous.missed.map((item) =>
+          item._id === updatedSession?._id ? updatedSession : item,
+        ),
+
         cancelled: previous.cancelled.map((item) =>
           item._id === updatedSession?._id ? updatedSession : item,
         ),
@@ -361,7 +399,8 @@ function Sessions() {
     if (
       status !== SESSION_STATUSES.CONFIRMED &&
       status !== SESSION_STATUSES.IN_PROGRESS &&
-      status !== SESSION_STATUSES.COMPLETED
+      status !== SESSION_STATUSES.COMPLETED &&
+      status !== SESSION_STATUSES.NO_SHOW
     ) {
       return;
     }
@@ -506,13 +545,11 @@ function Sessions() {
           <section className="mt-12">
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-600">
+                <p className="mt-1 text-xl font-bold tracking-tight text-slate-950">
                   Session history
                 </p>
 
-                <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-                  Completed Sessions
-                </h2>
+                <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950"></h2>
 
                 <p className="mt-1 text-sm text-slate-500">
                   Keep access to your previous therapy conversations.
@@ -552,6 +589,56 @@ function Sessions() {
               />
             )}
           </section>
+
+          {/* ===================================================
+              MISSED SESSIONS
+          ==================================================== */}
+
+          {sessions.missed.length > 0 && (
+            <section className="mt-12">
+              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-red-500">
+                    Session history
+                  </p>
+
+                  <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
+                    Missed Sessions
+                  </h2>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    Sessions that were not attended. You can still continue
+                    chatting with your therapist.
+                  </p>
+                </div>
+
+                <div className="inline-flex w-fit items-center gap-2 rounded-full border border-red-100 bg-white px-3.5 py-2 shadow-sm">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-red-50 text-[10px] font-bold text-red-500">
+                    {sessions.missed.length}
+                  </span>
+
+                  <span className="text-xs font-semibold text-slate-600">
+                    Missed
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {sessions.missed.map((session) => (
+                  <SessionCard
+                    key={session._id}
+                    session={session}
+                    type="missed"
+                    currentTime={currentTime}
+                    joiningSessionId={joiningSessionId}
+                    onJoin={handleJoinSession}
+                    onChat={handleOpenChat}
+                    unreadCount={getSessionUnreadCount(session, unreadCounts)}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* ===================================================
               CANCELLED SESSIONS
@@ -682,6 +769,46 @@ function PageHeader() {
 }
 
 /* =========================================================
+   MISSED SESSION REASON
+========================================================= */
+
+function getMissedSessionMessage(session) {
+  const clientJoined = Boolean(session?.clientJoined);
+  const therapistJoined = Boolean(session?.therapistJoined);
+
+  /*
+   * Therapist did not join, client did.
+   */
+  if (clientJoined && !therapistJoined) {
+    return {
+      title: "Your therapist missed the session",
+      description:
+        "Your therapist did not join the scheduled session. You can still continue chatting with them.",
+    };
+  }
+
+  /*
+   * Client did not join, therapist did.
+   */
+  if (!clientJoined && therapistJoined) {
+    return {
+      title: "You missed the session",
+      description:
+        "You did not join the scheduled session. You can still continue chatting with your therapist.",
+    };
+  }
+
+  /*
+   * Neither participant joined.
+   */
+  return {
+    title: "Session missed",
+    description:
+      "Neither participant joined the scheduled session. You can still continue chatting with your therapist.",
+  };
+}
+
+/* =========================================================
    SESSION CARD
 ========================================================= */
 
@@ -712,12 +839,17 @@ function SessionCard({
 
   const isCompleted = type === "completed";
 
+  const isMissed = type === "missed";
+
   const isCancelled = type === "cancelled";
+
+  const missedMessage = isMissed ? getMissedSessionMessage(session) : null;
 
   const canChat =
     status === SESSION_STATUSES.CONFIRMED ||
     status === SESSION_STATUSES.IN_PROGRESS ||
-    status === SESSION_STATUSES.COMPLETED;
+    status === SESSION_STATUSES.COMPLETED ||
+    status === SESSION_STATUSES.NO_SHOW;
 
   const joinState = useMemo(() => {
     return getJoinState(session, currentTime);
@@ -730,11 +862,13 @@ function SessionCard({
       className={`group relative overflow-hidden rounded-3xl border bg-white shadow-[0_18px_50px_-35px_rgba(15,23,42,0.45)] transition duration-300 ${
         isCancelled
           ? "border-red-100"
-          : isCompleted
-            ? "border-emerald-100"
-            : status === SESSION_STATUSES.IN_PROGRESS
-              ? "border-amber-200"
-              : "border-slate-200 hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-[0_22px_60px_-35px_rgba(109,40,217,0.28)]"
+          : isMissed
+            ? "border-red-100"
+            : isCompleted
+              ? "border-emerald-100"
+              : status === SESSION_STATUSES.IN_PROGRESS
+                ? "border-amber-200"
+                : "border-slate-200 hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-[0_22px_60px_-35px_rgba(109,40,217,0.28)]"
       }`}
     >
       {/* Top accent */}
@@ -742,11 +876,13 @@ function SessionCard({
       {!isCancelled && (
         <div
           className={`h-1 w-full ${
-            isCompleted
-              ? "bg-gradient-to-r from-emerald-400 to-emerald-300"
-              : status === SESSION_STATUSES.IN_PROGRESS
-                ? "bg-gradient-to-r from-amber-400 to-orange-300"
-                : "bg-gradient-to-r from-violet-500 via-violet-500 to-indigo-500"
+            isMissed
+              ? "bg-gradient-to-r from-red-400 to-rose-300"
+              : isCompleted
+                ? "bg-gradient-to-r from-emerald-400 to-emerald-300"
+                : status === SESSION_STATUSES.IN_PROGRESS
+                  ? "bg-gradient-to-r from-amber-400 to-orange-300"
+                  : "bg-gradient-to-r from-violet-500 via-violet-500 to-indigo-500"
           }`}
         />
       )}
@@ -760,14 +896,18 @@ function SessionCard({
               className={`relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${
                 isCancelled
                   ? "bg-red-50 text-red-500"
-                  : isCompleted
-                    ? "bg-emerald-50 text-emerald-600"
-                    : status === SESSION_STATUSES.IN_PROGRESS
-                      ? "bg-amber-50 text-amber-600"
-                      : "bg-violet-50 text-violet-600"
+                  : isMissed
+                    ? "bg-red-50 text-red-500"
+                    : isCompleted
+                      ? "bg-emerald-50 text-emerald-600"
+                      : status === SESSION_STATUSES.IN_PROGRESS
+                        ? "bg-amber-50 text-amber-600"
+                        : "bg-violet-50 text-violet-600"
               }`}
             >
-              {isCompleted ? (
+              {isMissed ? (
+                <XCircle size={23} />
+              ) : isCompleted ? (
                 <CheckCircle2 size={23} />
               ) : isCancelled ? (
                 <XCircle size={23} />
@@ -974,6 +1114,39 @@ function SessionCard({
 
                     <p className="text-[10px] text-emerald-600/70">
                       Your session has ended
+                    </p>
+                  </div>
+                </div>
+
+                {canChat && (
+                  <button
+                    type="button"
+                    onClick={() => onChat(session)}
+                    className="group/button relative inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 text-xs font-bold text-violet-700 transition hover:bg-violet-100"
+                  >
+                    <MessageCircle size={15} />
+                    Continue Chat
+                    {unreadCount > 0 && <UnreadBadge count={unreadCount} />}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {isMissed && (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2 rounded-2xl border border-red-100 bg-red-50 px-3.5 py-3">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white">
+                    <XCircle size={14} className="text-red-500" />
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] font-bold text-red-600">
+                      {missedMessage?.title || "Session missed"}
+                    </p>
+
+                    <p className="text-[10px] text-red-500/70">
+                      {missedMessage?.description ||
+                        "You can still continue chatting with your therapist."}
                     </p>
                   </div>
                 </div>

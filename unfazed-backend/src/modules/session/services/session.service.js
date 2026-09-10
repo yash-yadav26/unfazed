@@ -2,9 +2,7 @@ const Availability = require("../../scheduling/models/availability.model");
 const Therapist = require("../../therapist/models/therapist.model");
 const Client = require("../../client/models/client.model");
 const Session = require("../models/session.model");
-
 const notificationService = require("../../notification/services/notification.service");
-
 const sessionRepository = require("../repositories/session.repository");
 const ApiError = require("../../../utils/apiError");
 
@@ -23,9 +21,6 @@ const ACTIVE_SESSION_STATUSES = ["PENDING", "CONFIRMED", "IN_PROGRESS"];
  *
  * PENDING is intentionally excluded because
  * it may represent an unpaid/unconfirmed booking.
- *
- * COMPLETED is also excluded because once both
- * participants join, the session is immediately completed.
  */
 const SESSION_END_CHECK_STATUSES = ["CONFIRMED", "IN_PROGRESS"];
 
@@ -221,26 +216,21 @@ const getSessionEndDateTime = (session) => {
  *
  * Rules:
  *
- * 1. Both participants already joined
- *    -> session would already be COMPLETED
- *       and therefore is not processed here.
+ * 1. Both participants joined
+ *    -> COMPLETED
  *
  * 2. Client joined, therapist did not join
  *    -> NO_SHOW
- *    -> Client gets notification
  *
  * 3. Therapist joined, client did not join
  *    -> NO_SHOW
- *    -> Therapist gets notification
  *
  * 4. Neither joined
  *    -> NO_SHOW
- *    -> Client + Therapist get notification
  *
  * Important:
- * COMPLETED is NOT based on session duration.
- * The session becomes COMPLETED immediately when
- * the second participant joins.
+ * COMPLETED is NOT decided when the second participant joins.
+ * It is decided only after the scheduled session end time.
  */
 const completeExpiredSessions = async () => {
   const today = parseDate(getTodayDateString());
@@ -286,10 +276,8 @@ const completeExpiredSessions = async () => {
 
   for (const session of expiredSessions) {
     /**
-     * Normally this condition will not occur because
-     * both joined sessions are immediately marked COMPLETED.
-     *
-     * It is kept as a safety check.
+     * Both participants joined during the scheduled session.
+     * Mark the session completed after the scheduled end time.
      */
     if (session.clientJoined && session.therapistJoined) {
       const completedSession = await sessionRepository.markSessionAsCompleted(
@@ -368,7 +356,7 @@ const completeExpiredSessions = async () => {
       }
 
       /* -------------------------------------------------------------------- */
-      /*                         Neither Joined                                */
+      /*                         Neither Joined                               */
       /* -------------------------------------------------------------------- */
 
       if (!session.clientJoined && !session.therapistJoined) {
@@ -396,7 +384,7 @@ const completeExpiredSessions = async () => {
       }
     } catch (error) {
       /**
-       * Session status is already updated successfully.
+       * Session status has already been updated successfully.
        * Notification failure should not rollback the session result.
        */
       console.error("Failed to create session no-show notifications:", error);
@@ -730,27 +718,17 @@ const createSession = async ({ userId, therapistId, date, startTime }) => {
     const session = await sessionRepository.createSession({
       clientId: client._id,
       therapistId,
-
       date: sessionDate,
-
       startTime,
       endTime,
-
       duration: slotData.sessionDuration,
-
       status: "PENDING",
-
       paymentStatus: "PENDING",
-
       paymentId: null,
-
       cancelledAt: null,
-
       cancelledBy: null,
-
       clientJoined: false,
       clientJoinedAt: null,
-
       therapistJoined: false,
       therapistJoinedAt: null,
     });
@@ -785,17 +763,11 @@ const createSession = async ({ userId, therapistId, date, startTime }) => {
  *
  * Role is NOT accepted from request body.
  *
- * Lifecycle:
+ * IMPORTANT:
+ * Session remains IN_PROGRESS while the meeting is active.
+ * The session is NOT marked COMPLETED when the second participant joins.
  *
- * CONFIRMED
- *    ↓
- * first participant joins
- *    ↓
- * IN_PROGRESS
- *    ↓
- * second participant joins
- *    ↓
- * COMPLETED
+ * It becomes COMPLETED only after the scheduled end time.
  */
 const joinSession = async ({ userId, sessionId }) => {
   /* --------------------------- Find Session ------------------------------ */
@@ -850,11 +822,33 @@ const joinSession = async ({ userId, sessionId }) => {
     userId,
   }).select("_id userId name slug");
 
+  /* ------------------------------------------------------------------------ */
+  /*                    Normalize Therapist Session ID                        */
+  /* ------------------------------------------------------------------------ */
+
+  /**
+   * findSessionById() populates therapistId.
+   *
+   * Therefore:
+   * session.therapistId can be:
+   *   - ObjectId
+   *   - populated therapist object
+   *
+   * Always compare using the actual _id.
+   */
+  const sessionTherapistId = session?.therapistId?._id || session?.therapistId;
+
+  const sessionClientId = session?.clientId?._id || session?.clientId;
+
   const isClient =
-    client && client._id.toString() === session.clientId.toString();
+    client &&
+    sessionClientId &&
+    client._id.toString() === sessionClientId.toString();
 
   const isTherapist =
-    therapist && therapist._id.toString() === session.therapistId.toString();
+    therapist &&
+    sessionTherapistId &&
+    therapist._id.toString() === sessionTherapistId.toString();
 
   if (!isClient && !isTherapist) {
     throw new ApiError(
@@ -869,7 +863,6 @@ const joinSession = async ({ userId, sessionId }) => {
   const now = new Date();
 
   const sessionStart = getSessionDateTime(session, "startTime");
-
   const sessionEnd = getSessionDateTime(session, "endTime");
 
   if (!sessionStart || !sessionEnd) {
@@ -884,7 +877,6 @@ const joinSession = async ({ userId, sessionId }) => {
    * Join is allowed only between
    * session start and session end.
    */
-
   if (now < sessionStart) {
     throw new ApiError(
       400,
@@ -904,6 +896,13 @@ const joinSession = async ({ userId, sessionId }) => {
   if (isClient) {
     /* ------------------------ Already Joined ----------------------------- */
 
+    /**
+     * Do NOT reject a reconnect.
+     *
+     * The participant may have temporarily disconnected
+     * from the actual video/socket layer and can reconnect
+     * while the scheduled session is still active.
+     */
     if (session.clientJoined) {
       return {
         session,
@@ -913,22 +912,18 @@ const joinSession = async ({ userId, sessionId }) => {
     }
 
     /**
-     * If therapist has already joined,
-     * this client is the second participant.
+     * First client join or client joining after therapist.
      *
-     * Both have joined -> COMPLETED immediately.
+     * Either way the session remains IN_PROGRESS.
      *
-     * Otherwise first participant -> IN_PROGRESS.
+     * NEVER mark COMPLETED here.
      */
-
-    const newStatus = session.therapistJoined ? "COMPLETED" : "IN_PROGRESS";
-
     const updatedSession = await sessionRepository.updateSessionJoinStatus(
       sessionId,
       {
         clientJoined: true,
         clientJoinedAt: now,
-        status: newStatus,
+        status: "IN_PROGRESS",
       },
     );
 
@@ -943,6 +938,13 @@ const joinSession = async ({ userId, sessionId }) => {
   /*                           THERAPIST JOIN                                 */
   /* ------------------------------------------------------------------------ */
 
+  /**
+   * Do NOT reject a reconnect.
+   *
+   * If therapistJoined is already true, the participant
+   * can still re-enter the video room while the session
+   * is within its scheduled time window.
+   */
   if (session.therapistJoined) {
     return {
       session,
@@ -952,22 +954,18 @@ const joinSession = async ({ userId, sessionId }) => {
   }
 
   /**
-   * If client has already joined,
-   * therapist is the second participant.
+   * First therapist join or therapist joining after client.
    *
-   * Both have joined -> COMPLETED immediately.
+   * The session remains IN_PROGRESS.
    *
-   * Otherwise first participant -> IN_PROGRESS.
+   * NEVER mark COMPLETED here.
    */
-
-  const newStatus = session.clientJoined ? "COMPLETED" : "IN_PROGRESS";
-
   const updatedSession = await sessionRepository.updateSessionJoinStatus(
     sessionId,
     {
       therapistJoined: true,
       therapistJoinedAt: now,
-      status: newStatus,
+      status: "IN_PROGRESS",
     },
   );
 
@@ -981,12 +979,7 @@ const joinSession = async ({ userId, sessionId }) => {
 /* -------------------------------------------------------------------------- */
 /*                            Get My Sessions                                 */
 /* -------------------------------------------------------------------------- */
-
 const getMySessions = async (userId) => {
-  /**
-   * Self-correct expired sessions in case
-   * the cron has not run yet.
-   */
   await completeExpiredSessions();
 
   const client = await getClient(userId);
@@ -996,7 +989,6 @@ const getMySessions = async (userId) => {
   const upcoming = [];
   const completed = [];
   const cancelled = [];
-  const noShow = [];
 
   for (const session of sessions) {
     /* ----------------------------- Cancelled ----------------------------- */
@@ -1006,21 +998,14 @@ const getMySessions = async (userId) => {
       continue;
     }
 
-    /* ------------------------------ No Show ------------------------------ */
+    /* ---------------------- Completed / No Show ------------------------- */
 
-    if (session.status === "NO_SHOW") {
-      noShow.push(session);
-      continue;
-    }
-
-    /* ------------------------------ Completed ---------------------------- */
-
-    if (session.status === "COMPLETED") {
+    if (session.status === "COMPLETED" || session.status === "NO_SHOW") {
       completed.push(session);
       continue;
     }
 
-    /* --------------------------- Upcoming / Active ----------------------- */
+    /* --------------------------- Upcoming ------------------------------- */
 
     upcoming.push(session);
   }
@@ -1029,7 +1014,7 @@ const getMySessions = async (userId) => {
     upcoming,
     completed,
     cancelled,
-    noShow,
+    
   };
 };
 
@@ -1052,7 +1037,12 @@ const cancelSession = async ({ userId, sessionId }) => {
 
   /* --------------------------- Ownership Check --------------------------- */
 
-  if (session.clientId.toString() !== client._id.toString()) {
+  const sessionClientId = session?.clientId?._id || session?.clientId;
+
+  if (
+    !sessionClientId ||
+    sessionClientId.toString() !== client._id.toString()
+  ) {
     throw new ApiError(
       403,
       "You are not allowed to cancel this session.",
@@ -1112,7 +1102,9 @@ const cancelSession = async ({ userId, sessionId }) => {
   /* ------------------------------------------------------------------------ */
 
   try {
-    const therapist = await getTherapist(session.therapistId);
+    const therapistId = session?.therapistId?._id || session?.therapistId;
+
+    const therapist = await getTherapist(therapistId);
 
     /* --------------------------- Client ---------------------------------- */
 
@@ -1159,7 +1151,12 @@ const getSessionById = async ({ userId, sessionId }) => {
 
   /* --------------------------- Ownership Check --------------------------- */
 
-  if (session.clientId.toString() !== client._id.toString()) {
+  const sessionClientId = session?.clientId?._id || session?.clientId;
+
+  if (
+    !sessionClientId ||
+    sessionClientId.toString() !== client._id.toString()
+  ) {
     throw new ApiError(
       403,
       "You are not allowed to access this session.",

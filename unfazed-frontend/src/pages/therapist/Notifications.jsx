@@ -248,19 +248,6 @@ function TherapistNotifications() {
               <span aria-hidden="true">←</span>
               Back to Dashboard
             </a>
-
-            {/* Mark all */}
-
-            {unreadCount > 0 && (
-              <button
-                type="button"
-                onClick={handleMarkAllAsRead}
-                className="inline-flex items-center gap-2 rounded-xl bg-violet-50 px-3.5 py-2 text-xs font-semibold text-violet-700 transition hover:bg-violet-100"
-              >
-                <Check size={14} />
-                Mark all as read
-              </button>
-            )}
           </div>
         </div>
       </header>
@@ -408,6 +395,19 @@ function TherapistNotifications() {
         {/* =====================================================
             NOTIFICATIONS LIST
         ====================================================== */}
+
+        {!loading && unreadCount > 0 && notifications.length > 0 && (
+          <div className="mb-4 flex justify-end">
+            <button
+              type="button"
+              onClick={handleMarkAllAsRead}
+              className="inline-flex items-center gap-2 rounded-xl bg-violet-50 px-4 py-2.5 text-xs font-semibold text-violet-700 shadow-sm transition hover:bg-violet-100"
+            >
+              <Check size={14} />
+              Mark all as read
+            </button>
+          </div>
+        )}
 
         {!loading &&
           !error &&

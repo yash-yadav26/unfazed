@@ -28,7 +28,7 @@ import {
    CONSTANTS
 ========================================================= */
 
-const CHAT_ALLOWED_STATUSES = ["CONFIRMED", "IN_PROGRESS", "COMPLETED"];
+const CHAT_ALLOWED_STATUSES = ["CONFIRMED", "IN_PROGRESS", "COMPLETED" , "NO_SHOW"];
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
