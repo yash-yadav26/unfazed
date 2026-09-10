@@ -346,7 +346,8 @@ const VideoCall = () => {
           auth: {
             token,
           },
-          transports: ["websocket", "polling"],
+          transports: ["polling", "websocket"],
+          upgrade: true,
         });
 
         socketRef.current = socket;
